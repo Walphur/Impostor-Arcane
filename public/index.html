@@ -9,9 +9,11 @@
 </head>
 <body>
 
+  <div class="bg-dots"></div>
+
   <div id="ejectionOverlay" class="ejection-overlay" style="display: none;">
     <div class="ejection-content">
-      <div id="ejectedName" class="eject-title">Jugador expulsado...</div>
+      <div id="ejectedName" class="eject-title">...</div>
       <div id="ejectedRole" class="eject-subtitle">...</div>
     </div>
   </div>
@@ -21,7 +23,6 @@
     
     <div class="menu-card">
       <div class="avatar-preview">🕵️</div>
-      
       <div class="tabs">
         <button id="tabCreate" class="tab-btn active">Crear</button>
         <button id="tabJoin" class="tab-btn">Unirse</button>
@@ -30,92 +31,86 @@
       <div id="panelCreate">
         <div class="input-group">
           <label>Tu Nombre</label>
-          <input type="text" id="hostName" maxlength="10" placeholder="Nombre">
+          <input type="text" id="hostName" maxlength="10" placeholder="Ej: Juan">
         </div>
+
+        <div class="input-group">
+            <label>Categorías</label>
+            <div class="cat-grid">
+                <label class="cat-option"><input type="checkbox" value="lugares" checked> 📍 Lugares</label>
+                <label class="cat-option"><input type="checkbox" value="comidas" checked> 🍔 Comidas</label>
+                <label class="cat-option"><input type="checkbox" value="objetos"> 🛠️ Objetos</label>
+                <label class="cat-option"><input type="checkbox" value="animales"> 🦁 Animales</label>
+                <label class="cat-option"><input type="checkbox" value="profesiones"> 👮 Profesiones</label>
+            </div>
+        </div>
+
         <div class="input-group flex-group">
-          <div>
-            <label>Jugadores</label>
-            <input type="number" id="maxPlayers" value="10" min="4" max="15">
-          </div>
-          <div>
-            <label>Impostores</label>
-            <input type="number" id="impostors" value="2" min="1" max="4">
-          </div>
+          <div><label>Jugadores</label><input type="number" id="maxPlayers" value="10" min="4" max="15"></div>
+          <div><label>Impostores</label><input type="number" id="impostors" value="2" min="1" max="4"></div>
         </div>
         <button id="btnCreateRoom" class="btn-main btn-primary">CREAR SALA</button>
       </div>
 
       <div id="panelJoin" style="display: none;">
-        <div class="input-group">
-          <label>Tu Nombre</label>
-          <input type="text" id="joinName" maxlength="10" placeholder="Nombre">
-        </div>
-        <div class="input-group">
-          <label>CÓDIGO DE SALA</label>
-          <input type="text" id="joinCode" class="code-input" placeholder="ARC-XXXX">
-        </div>
+        <div class="input-group"><label>Tu Nombre</label><input type="text" id="joinName" maxlength="10" placeholder="Nombre"></div>
+        <div class="input-group"><label>CÓDIGO DE SALA</label><input type="text" id="joinCode" class="code-input" placeholder="ARC-XXXX"></div>
         <button id="btnJoinRoom" class="btn-main btn-secondary">UNIRSE</button>
       </div>
     </div>
-    <p class="version-text">v3.0 Online • Max 15 Jugadores</p>
+    <p class="version-text">v4.0 Final</p>
   </div>
 
-  <main id="mainContent" class="app-container blurred">
-    
-    <section class="game-area">
-      
-      <div class="top-bar">
-        <div class="room-info">
-            <span class="room-label">SALA</span>
-            <span id="roomCodeDisplay" class="room-code">---</span>
-        </div>
-        <div id="phasePill" class="phase-pill">LOBBY</div>
-      </div>
-
-      <div class="game-center">
+  <main id="mainContent" class="blurred">
+    <div class="game-board">
         
-        <div id="viewCard" class="center-view">
-           <div class="secret-card">
-              <div class="secret-label">TU CARTA SECRETA</div>
-              <div class="secret-word" id="wordDisplay">? ? ?</div>
-              <div class="secret-role" id="roleDisplay">Esperando inicio...</div>
-           </div>
-        </div>
+        <section class="game-area">
+            <div class="top-bar">
+                <div class="room-info">
+                    <span class="room-label">SALA</span>
+                    <span id="roomCodeDisplay" class="room-code">---</span>
+                </div>
+                <div id="phasePill" class="phase-pill">LOBBY</div>
+            </div>
 
-        <div id="viewTurn" class="center-view" style="display:none;">
-           <div class="turn-container">
-              <div class="turn-avatar-circle">
-                 <span id="turnTimerDisplay">15</span>
-              </div>
-              <h2 id="turnPlayerName" style="font-size: 2rem; margin-bottom: 10px;">Jugador</h2>
-              <p class="turn-hint">TURNO DE HABLAR</p>
-           </div>
-        </div>
+            <div class="game-center">
+                <div id="viewCard" class="center-view">
+                    <div class="secret-card">
+                        <div class="secret-label">TU CARTA SECRETA</div>
+                        <div class="secret-word" id="wordDisplay">? ? ?</div>
+                        <div class="secret-role" id="roleDisplay">Esperando...</div>
+                        <div class="teammate-hint" id="teammateDisplay" style="display:none;"></div>
+                    </div>
+                </div>
 
-        <div id="viewVoting" class="center-view" style="display:none;">
-           <h2 class="vote-title">¿QUIÉN ES EL IMPOSTOR?</h2>
-           <div class="voting-grid" id="votingGrid">
-              </div>
-        </div>
+                <div id="viewTurn" class="center-view" style="display:none;">
+                    <div class="turn-container">
+                        <div class="turn-avatar-circle"><span id="turnTimerDisplay">15</span></div>
+                        <h2 id="turnPlayerName">Jugador</h2>
+                        <p class="turn-hint">TURNO DE HABLAR</p>
+                    </div>
+                </div>
 
-      </div>
+                <div id="viewVoting" class="center-view" style="display:none;">
+                    <h2 class="vote-title">¿QUIÉN ES EL IMPOSTOR?</h2>
+                    <div class="voting-grid" id="votingGrid"></div>
+                </div>
+            </div>
 
-      <div class="bottom-bar">
-         <div class="action-buttons">
-             <button id="btnStartRound" class="btn-action btn-start" disabled>INICIAR PARTIDA</button>
-             <button id="btnSkipVote" class="btn-action btn-skip" style="display:none;">SALTAR VOTO 💨</button>
-         </div>
-      </div>
-    </section>
+            <div class="bottom-bar">
+                <div class="action-buttons">
+                    <button id="btnStartRound" class="btn-action btn-start" disabled>INICIAR PARTIDA</button>
+                    <button id="btnSkipVote" class="btn-action btn-skip" style="display:none;">SALTAR VOTO 💨</button>
+                </div>
+            </div>
+        </section>
 
-    <aside class="sidebar">
-      <div style="margin-bottom: 15px; font-weight: bold; color: #64748b; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">
-        JUGADORES EN SALA <span id="myInfo" style="float:right; color: #ef4444;"></span>
-      </div>
-      <div id="playersList" class="player-list">
-        </div>
-    </aside>
+        <aside class="sidebar">
+            <div class="sidebar-header">JUGADORES <span id="myInfo"></span></div>
+            <div id="playersList" class="player-list"></div>
+        </aside>
 
+    </div>
   </main>
 
   <script src="/socket.io/socket.io.js"></script>
