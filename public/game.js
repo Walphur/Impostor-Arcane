@@ -1,36 +1,37 @@
 const socket = io();
 
-// ELEMENTOS DOM PRINCIPALES
+// DOM References
 const lobbyOverlay = document.getElementById('lobbyOverlay');
 const mainContent = document.getElementById('mainContent');
 const phasePill = document.getElementById('phasePill');
 const roomCodeDisplay = document.getElementById('roomCodeDisplay');
-const myInfoDisplay = document.getElementById('myInfo');
+const playersListEl = document.getElementById('playersList');
+const votingGrid = document.getElementById('votingGrid');
 
-// BOTONES ACCION
-const btnStart = document.getElementById('btnStartRound');
-const btnSkip = document.getElementById('btnSkipVote');
-
-// VISTAS CENTRALES
+// Views
 const viewCard = document.getElementById('viewCard');
 const viewTurn = document.getElementById('viewTurn');
 const viewVoting = document.getElementById('viewVoting');
 
-// ELEMENTOS DINÁMICOS
+// Dynamics
 const turnPlayerName = document.getElementById('turnPlayerName');
 const turnTimerDisplay = document.getElementById('turnTimerDisplay');
-const wordDisplay = document.getElementById('wordDisplay');
+const turnAvatar = document.querySelector('.turn-avatar-circle');
 const roleDisplay = document.getElementById('roleDisplay');
-const votingGrid = document.getElementById('votingGrid');
+const wordDisplay = document.getElementById('wordDisplay');
 const ejectionOverlay = document.getElementById('ejectionOverlay');
 
-// VARIABLES ESTADO
+// Buttons
+const btnStart = document.getElementById('btnStartRound');
+const btnSkip = document.getElementById('btnSkipVote');
+
+// State
 let myId = null;
 let isHost = false;
 let localTimer = null;
 let selectedVoteId = null;
 
-// --- GESTIÓN TABS LOBBY ---
+// --- TABS ---
 document.getElementById('tabCreate').onclick = (e) => switchTab(e, 'panelCreate');
 document.getElementById('tabJoin').onclick = (e) => switchTab(e, 'panelJoin');
 
@@ -41,18 +42,20 @@ function switchTab(e, panelId) {
     document.getElementById('panelJoin').style.display = panelId === 'panelJoin' ? 'block' : 'none';
 }
 
-// --- CONEXIÓN ---
+// --- CONNECT ---
 document.getElementById('btnCreateRoom').onclick = () => {
-    const name = document.getElementById('hostName').value || 'Host';
-    const maxPlayers = document.getElementById('maxPlayers').value;
-    const impostors = document.getElementById('impostors').value;
-    socket.emit('createRoom', { name, maxPlayers, impostors }, handleConnection);
+    socket.emit('createRoom', { 
+        name: document.getElementById('hostName').value || 'Host',
+        maxPlayers: document.getElementById('maxPlayers').value,
+        impostors: document.getElementById('impostors').value
+    }, handleConnection);
 };
 
 document.getElementById('btnJoinRoom').onclick = () => {
-    const name = document.getElementById('joinName').value || 'Player';
-    const code = document.getElementById('joinCode').value;
-    socket.emit('joinRoom', { name, roomCode: code }, handleConnection);
+    socket.emit('joinRoom', { 
+        name: document.getElementById('joinName').value || 'Player',
+        roomCode: document.getElementById('joinCode').value
+    }, handleConnection);
 };
 
 function handleConnection(res) {
@@ -62,187 +65,182 @@ function handleConnection(res) {
         myId = res.me.id;
         isHost = res.isHost;
         roomCodeDisplay.innerText = res.roomCode;
-        
-        if (res.discordLink) {
-            console.log("Abriendo Discord...", res.discordLink);
-            window.open(res.discordLink, '_blank');
-        }
+        if (res.discordLink) window.open(res.discordLink, '_blank');
     } else {
         alert(res.error);
     }
 }
 
-// --- ACCIONES ---
+// --- GAME LOGIC ---
 btnStart.onclick = () => socket.emit('startRound');
-
 btnSkip.onclick = () => {
     socket.emit('submitVote', { targetId: null });
-    // Feedback visual inmediato
     btnSkip.innerText = "ESPERANDO...";
     btnSkip.disabled = true;
-    document.querySelectorAll('.vote-card').forEach(c => c.style.opacity = '0.5');
 };
 
-// --- SOCKET LISTENERS ---
 socket.on('roomState', (room) => {
     updateHeader(room);
+    renderSidebar(room); // Renderiza tarjetas sidebar
     updateGameView(room);
 });
 
 socket.on('yourRole', (data) => {
-    // Configuramos visualmente la carta según el rol
-    const cardElement = document.querySelector('.secret-card');
-    
+    const card = document.querySelector('.secret-card');
     if (data.role === 'impostor') {
         roleDisplay.innerText = 'ERES EL IMPOSTOR';
-        roleDisplay.style.color = 'white';
         wordDisplay.innerText = '???';
-        cardElement.style.background = 'linear-gradient(135deg, #020617, #7f1d1d)';
+        card.style.background = 'linear-gradient(135deg, #020617, #7f1d1d)';
     } else {
         roleDisplay.innerText = 'CIUDADANO';
         wordDisplay.innerText = data.word;
-        cardElement.style.background = 'linear-gradient(135deg, #f97316, #9f1239)';
+        card.style.background = 'linear-gradient(135deg, #f97316, #9f1239)';
     }
 });
 
 socket.on('votingResults', (data) => {
-    // ACTIVAR PANTALLA DRAMÁTICA
+    ejectionOverlay.style.display = 'flex';
     const title = document.getElementById('ejectedName');
     const subtitle = document.getElementById('ejectedRole');
     
-    ejectionOverlay.style.display = 'flex'; 
-    
-    // 1. MOSTRAR QUIÉN FUE EXPULSADO
     if (data.kickedPlayer) {
         title.innerText = `${data.kickedPlayer.name} fue expulsado.`;
-        if (data.isImpostor) {
-            subtitle.innerText = "ERA EL IMPOSTOR";
-            subtitle.className = "eject-subtitle impostor-text";
-        } else {
-            subtitle.innerText = "ERA INOCENTE";
-            subtitle.className = "eject-subtitle innocent-text";
-        }
+        subtitle.innerText = data.isImpostor ? "ERA EL IMPOSTOR" : "ERA INOCENTE";
+        subtitle.className = data.isImpostor ? "eject-subtitle impostor-text" : "eject-subtitle innocent-text";
     } else {
         title.innerText = "Nadie fue expulsado.";
-        subtitle.innerText = "EMPATE / SKIP";
+        subtitle.innerText = "SKIP / EMPATE";
         subtitle.className = "eject-subtitle";
     }
 
-    // 2. MOSTRAR SI EL JUEGO TERMINÓ (VICTORIA)
     if (data.gameResult) {
         setTimeout(() => {
             title.innerText = "JUEGO TERMINADO";
-            if (data.gameResult === 'citizensWin') {
-                subtitle.innerText = "¡VICTORIA CIUDADANA!";
-                subtitle.className = "eject-subtitle innocent-text";
-            } else {
-                subtitle.innerText = "¡VICTORIA IMPOSTORA!";
-                subtitle.className = "eject-subtitle impostor-text";
-            }
-        }, 2000); // Cambio de texto a los 2 segundos
+            subtitle.innerText = data.gameResult === 'citizensWin' ? "¡VICTORIA CIUDADANA!" : "¡VICTORIA IMPOSTORA!";
+            subtitle.className = data.gameResult === 'citizensWin' ? "eject-subtitle innocent-text" : "eject-subtitle impostor-text";
+        }, 2000);
     }
 
-    // Ocultar overlay después de 5 segundos
     setTimeout(() => {
         ejectionOverlay.style.display = 'none';
-        // Resetear botones voto
-        btnSkip.innerText = "SALTAR VOTO 💨";
+        btnSkip.innerText = "SALTAR VOTO";
         btnSkip.disabled = false;
-        // Resetear opacidad cartas
-        document.querySelectorAll('.vote-card').forEach(c => c.style.opacity = '1');
     }, 5000);
 });
 
-// --- LÓGICA DE VISTAS ---
-function updateHeader(room) {
-    phasePill.innerText = room.phase.toUpperCase();
-    
-    // Botón Iniciar solo en Lobby para Host
-    if (room.phase === 'lobby') {
-        btnStart.style.display = 'block';
-        btnSkip.style.display = 'none';
-        if (isHost && room.players.length >= 3) {
-            btnStart.disabled = false;
-            btnStart.innerText = "INICIAR PARTIDA";
-            btnStart.style.opacity = "1";
-        } else {
-            btnStart.disabled = true;
-            btnStart.innerText = "ESPERANDO JUGADORES...";
-            btnStart.style.opacity = "0.5";
+// --- RENDER FUNCTIONS ---
+function renderSidebar(room) {
+    playersListEl.innerHTML = '';
+    room.players.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'player-card';
+        // Borde del color del jugador
+        card.style.borderLeftColor = p.color;
+        
+        // Si está hablando, iluminar
+        if (room.phase === 'palabras' && room.players[room.turnIndex]?.id === p.id) {
+            card.classList.add('talking');
         }
-    } else if (room.phase === 'votacion') {
-        btnStart.style.display = 'none';
-        btnSkip.style.display = 'block';
-    } else {
-        // En partida
-        btnStart.style.display = 'block';
-        btnStart.disabled = true;
-        btnStart.innerText = "PARTIDA EN CURSO";
-        btnSkip.style.display = 'none';
-    }
-    
-    myInfoDisplay.innerText = isHost ? '👑 Eres el Anfitrión' : '👤 Eres Jugador';
+
+        // Icono de estado (Check si votó)
+        let statusIcon = '';
+        if (room.phase === 'votacion' && p.hasVoted) statusIcon = '✅';
+
+        card.innerHTML = `
+            <div class="p-avatar" style="background:${p.color}"></div>
+            <div class="p-name">${p.name} ${p.id === myId ? '(Tú)' : ''}</div>
+            <div class="p-status">${statusIcon}</div>
+        `;
+        playersListEl.appendChild(card);
+    });
 }
 
 function updateGameView(room) {
-    const cardEl = document.querySelector('.secret-card');
-
-    // 1. FASE DE LECTURA (Nuevo: Zoom y atención)
+    // 1. LECTURA
     if (room.phase === 'lectura') {
         showView(viewCard);
-        cardEl.style.transform = "scale(1.1)"; // Zoom in
+        document.querySelector('.secret-card').style.transform = "scale(1.1)";
         roleDisplay.innerText = "¡MIRA TU ROL!";
         stopLocalTimer();
         return;
     }
-
-    // 2. FASE VOTACIÓN
+    // 2. VOTACION
     if (room.phase === 'votacion') {
-        cardEl.style.transform = "scale(1)";
+        document.querySelector('.secret-card').style.transform = "scale(1)";
         showView(viewVoting);
         renderVotingGrid(room.players);
         stopLocalTimer();
         return;
     }
-
-    // 3. FASE PALABRAS (TURNOS)
+    // 3. TURNOS
     if (room.phase === 'palabras') {
-        cardEl.style.transform = "scale(1)";
+        document.querySelector('.secret-card').style.transform = "scale(1)";
         const activePlayer = room.players[room.turnIndex];
-        
         if (activePlayer) {
             showView(viewTurn);
             turnPlayerName.innerText = activePlayer.name;
-            
-            // Iniciar temporizador
+            turnPlayerName.style.color = activePlayer.color;
+            turnAvatar.style.borderColor = activePlayer.color;
             startLocalTimer(room.timeLeft);
-            
-            // Si soy yo, cambiar color
-            if (activePlayer.id === myId) {
-                turnPlayerName.style.color = '#f59e0b';
-                document.querySelector('.turn-avatar-circle').style.borderColor = '#f59e0b';
-                document.querySelector('.turn-hint').innerText = "¡ES TU TURNO DE HABLAR!";
-            } else {
-                turnPlayerName.style.color = 'white';
-                document.querySelector('.turn-avatar-circle').style.borderColor = '#1e293b';
-                document.querySelector('.turn-hint').innerText = "TURNO DE HABLAR";
-            }
         }
         return;
     }
-
-    // 4. LOBBY (Default)
-    cardEl.style.transform = "scale(1)";
+    // 4. LOBBY
+    document.querySelector('.secret-card').style.transform = "scale(1)";
     showView(viewCard);
     stopLocalTimer();
 }
 
-function showView(element) {
-    [viewCard, viewTurn, viewVoting].forEach(el => el.style.display = 'none');
-    element.style.display = 'block';
+function renderVotingGrid(players) {
+    votingGrid.innerHTML = '';
+    players.forEach(p => {
+        if (p.id === myId) return; // No votarse a sí mismo
+
+        const card = document.createElement('div');
+        card.className = 'vote-card';
+        if (selectedVoteId === p.id) card.classList.add('selected');
+
+        card.innerHTML = `
+            <div class="vote-avatar" style="background:${p.color}"></div>
+            <div class="vote-name">${p.name}</div>
+        `;
+        card.onclick = () => {
+            document.querySelectorAll('.vote-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            selectedVoteId = p.id;
+            socket.emit('submitVote', { targetId: p.id });
+        };
+        votingGrid.appendChild(card);
+    });
 }
 
-// --- UTILS ---
+function updateHeader(room) {
+    phasePill.innerText = room.phase.toUpperCase();
+    if (room.phase === 'lobby') {
+        btnStart.style.display = 'block';
+        btnSkip.style.display = 'none';
+        if (isHost && room.players.length >= 3) {
+            btnStart.disabled = false;
+            btnStart.style.opacity = '1';
+        } else {
+            btnStart.disabled = true;
+            btnStart.style.opacity = '0.5';
+        }
+    } else if (room.phase === 'votacion') {
+        btnStart.style.display = 'none';
+        btnSkip.style.display = 'block';
+    } else {
+        btnStart.style.display = 'block';
+        btnStart.disabled = true;
+        btnSkip.style.display = 'none';
+    }
+}
+
+function showView(el) {
+    [viewCard, viewTurn, viewVoting].forEach(v => v.style.display = 'none');
+    el.style.display = 'block';
+}
+
 function startLocalTimer(seconds) {
     stopLocalTimer();
     turnTimerDisplay.innerText = seconds;
@@ -253,34 +251,4 @@ function startLocalTimer(seconds) {
         if (seconds === 0) stopLocalTimer();
     }, 1000);
 }
-
-function stopLocalTimer() {
-    if (localTimer) clearInterval(localTimer);
-}
-
-function renderVotingGrid(players) {
-    votingGrid.innerHTML = '';
-    
-    players.forEach(p => {
-        // Opción: No votarse a sí mismo
-        if (p.id === myId) return;
-
-        const card = document.createElement('div');
-        card.className = 'vote-card';
-        if (selectedVoteId === p.id) card.classList.add('selected');
-        
-        card.innerHTML = `
-            <div class="vote-avatar">👤</div>
-            <div class="vote-name">${p.name}</div>
-        `;
-        
-        card.onclick = () => {
-            document.querySelectorAll('.vote-card').forEach(c => c.classList.remove('selected'));
-            card.classList.add('selected');
-            selectedVoteId = p.id;
-            socket.emit('submitVote', { targetId: p.id });
-        };
-        
-        votingGrid.appendChild(card);
-    });
-}
+function stopLocalTimer() { if (localTimer) clearInterval(localTimer); }

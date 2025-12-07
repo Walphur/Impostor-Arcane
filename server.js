@@ -26,85 +26,25 @@ if (DISCORD_TOKEN) {
     console.log('⚠️ No hay DISCORD_TOKEN configurado.');
 }
 
-// --- FUNCIÓN PARA CREAR CANALES (MODO FANTASMA) ---
-async function crearCanalDiscord(nombreSala) {
-    try {
-        const guild = discordClient.guilds.cache.get(GUILD_ID);
-        if (!guild) {
-            console.error("❌ No se encontró el servidor (Guild). Revisa la ID en Render.");
-            return null;
-        }
+// --- 2. COLORES Y PALABRAS ---
+const PLAYER_COLORS = [
+    '#ef4444', // Rojo
+    '#3b82f6', // Azul
+    '#22c55e', // Verde
+    '#eab308', // Amarillo
+    '#f97316', // Naranja
+    '#a855f7', // Violeta
+    '#ec4899', // Rosa
+    '#06b6d4', // Cyan
+    '#84cc16', // Lima
+    '#78716c', // Marrón
+    '#f43f5e', // Coral
+    '#6366f1', // Indigo
+    '#14b8a6', // Teal
+    '#d946ef', // Fuchsia
+    '#64748b'  // Gris
+];
 
-        // Crear Canal de VOZ Invisible pero accesible por link
-        const canalVoz = await guild.channels.create({
-            name: `Sala ${nombreSala}`,
-            type: ChannelType.GuildVoice,
-            parent: CATEGORIA_ID,
-            userLimit: 10,
-            permissionOverwrites: [
-                {
-                    // Configuración para @everyone (todos los usuarios)
-                    id: guild.roles.everyone.id,
-                    deny: [
-                        PermissionFlagsBits.ViewChannel // 🚫 NO se ve en la lista
-                    ],
-                    allow: [
-                        PermissionFlagsBits.Connect,    // ✅ SÍ pueden entrar con link
-                        PermissionFlagsBits.Speak       // ✅ SÍ pueden hablar
-                    ]
-                }
-            ]
-        });
-
-        // Crear una INVITACIÓN
-        const invite = await canalVoz.createInvite({
-            maxAge: 0, 
-            maxUses: 0 
-        });
-
-        console.log(`✅ Canal Fantasma creado: ${canalVoz.name} | Link: ${invite.url}`);
-
-        return {
-            voiceId: canalVoz.id,
-            inviteLink: invite.url 
-        };
-
-    } catch (err) {
-        console.error("Error creando canales Discord:", err);
-        return null;
-    }
-}
-
-// --- FUNCIÓN PARA BORRAR CANALES ---
-async function borrarCanalDiscord(canalId) {
-    if (!canalId) return;
-    try {
-        const guild = discordClient.guilds.cache.get(GUILD_ID);
-        if (!guild) return;
-
-        const canal = guild.channels.cache.get(canalId);
-        if (canal) {
-            await canal.delete();
-            console.log(`🗑️ Canal Discord ${canalId} eliminado.`);
-        }
-    } catch (err) {
-        console.error("Error borrando canal:", err);
-    }
-}
-
-// --- 2. SERVIDOR WEB Y JUEGO ---
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
-
-const CLIENT_DIR = path.join(__dirname, 'public');
-app.use(express.static(CLIENT_DIR));
-
-// CONSTANTES
-const TIEMPO_TURNO = 15 * 1000;
-const TIEMPO_VOTACION = 120 * 1000;
-
-// --- LISTA DE PALABRAS COMPLETA ---
 const WORDS = [
     'SAUNA', 'CEMENTERIO', 'SUBMARINO', 'ASCENSOR', 'IGLÚ', 
     'CASINO', 'PELUQUERÍA', 'CIRCO', 'ESTACIÓN ESPACIAL', 'HORMIGUERO', 
@@ -120,10 +60,70 @@ const WORDS = [
     'PRESIDENTE', 'FANTASMA'
 ];
 
-// DATOS EN MEMORIA
+// --- 3. FUNCIONES DE DISCORD ---
+async function crearCanalDiscord(nombreSala, limiteJugadores) {
+    try {
+        const guild = discordClient.guilds.cache.get(GUILD_ID);
+        if (!guild) {
+            console.error("❌ No se encontró el servidor (Guild).");
+            return null;
+        }
+
+        // Crear Canal de VOZ Invisible pero accesible por link
+        const canalVoz = await guild.channels.create({
+            name: `Sala ${nombreSala}`,
+            type: ChannelType.GuildVoice,
+            parent: CATEGORIA_ID,
+            userLimit: limiteJugadores || 10, // Límite dinámico según la sala
+            permissionOverwrites: [
+                {
+                    id: guild.roles.everyone.id,
+                    deny: [PermissionFlagsBits.ViewChannel], // Invisible
+                    allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak] // Accesible con link
+                }
+            ]
+        });
+
+        const invite = await canalVoz.createInvite({ maxAge: 0, maxUses: 0 });
+        console.log(`✅ Canal creado: ${canalVoz.name}`);
+
+        return { voiceId: canalVoz.id, inviteLink: invite.url };
+
+    } catch (err) {
+        console.error("Error creando canales Discord:", err);
+        return null;
+    }
+}
+
+async function borrarCanalDiscord(canalId) {
+    if (!canalId) return;
+    try {
+        const guild = discordClient.guilds.cache.get(GUILD_ID);
+        if (guild) {
+            const canal = guild.channels.cache.get(canalId);
+            if (canal) await canal.delete();
+        }
+    } catch (err) {
+        console.error("Error borrando canal:", err);
+    }
+}
+
+// --- 4. SERVIDOR WEB ---
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: '*' } });
+const CLIENT_DIR = path.join(__dirname, 'public');
+app.use(express.static(CLIENT_DIR));
+
+// CONSTANTES JUEGO
+const TIEMPO_TURNO = 15 * 1000;
+const TIEMPO_VOTACION = 120 * 1000;
+
+// MEMORIA
 const rooms = {};
 const socketRoom = {};
 
+// --- 5. HELPERS DEL JUEGO ---
 function randomWord() { return WORDS[Math.floor(Math.random() * WORDS.length)]; }
 
 function generateCode() {
@@ -143,6 +143,13 @@ function getRoomOfSocket(socketId) {
     return code ? rooms[code] : null;
 }
 
+// Asignar color que no esté usado
+function assignColor(room) {
+    const usedColors = room.players.map(p => p.color);
+    const available = PLAYER_COLORS.find(c => !usedColors.includes(c));
+    return available || '#ffffff'; // Fallback blanco
+}
+
 function emitRoomState(room) {
     if (!room) return;
     const now = Date.now();
@@ -160,10 +167,17 @@ function emitRoomState(room) {
         turnIndex: room.turnIndex,
         timeLeft: timeLeft,
         discordLink: room.discordLink, 
-        players: room.players.map(p => ({ id: p.id, name: p.name }))
+        // Enviamos lista completa con colores y estado de voto
+        players: room.players.map(p => ({ 
+            id: p.id, 
+            name: p.name, 
+            color: p.color,
+            hasVoted: !!room.votes[p.id] // True si ya votó
+        }))
     });
 }
 
+// --- 6. LÓGICA DE JUEGO (CORE) ---
 function nextTurn(room) {
     if (room.timer) clearTimeout(room.timer);
 
@@ -183,6 +197,7 @@ function nextTurn(room) {
     room.turnIndex = nextIndex;
     room.turnDeadline = Date.now() + TIEMPO_TURNO;
 
+    // Timer automático para pasar turno
     room.timer = setTimeout(() => {
         if(room.players[room.turnIndex]) {
             room.spoken[room.players[room.turnIndex].id] = true;
@@ -208,11 +223,9 @@ function startVoting(room) {
     }, TIEMPO_VOTACION);
 }
 
-// --- FUNCIÓN CLAVE: DECIDIR EL RESULTADO ---
 function finishVoting(room, reason) {
     if (room.timer) clearTimeout(room.timer);
     
-    // Contar votos
     const tally = {};
     Object.values(room.votes).forEach(v => { if(v) tally[v] = (tally[v]||0)+1; });
 
@@ -222,25 +235,25 @@ function finishVoting(room, reason) {
     }
 
     let isImpostor = false;
-    let gameResult = null; // null = sigue jugando, 'citizensWin', 'impostorsWin'
+    let gameResult = null; 
 
     if (kicked) {
         isImpostor = (room.roles[kicked.id] === 'impostor');
         
-        // Eliminar jugador y sus datos
+        // Eliminar jugador
         room.players = room.players.filter(p => p.id !== kicked.id);
         delete room.roles[kicked.id];
         delete socketRoom[kicked.id];
         delete room.spoken[kicked.id];
 
-        // --- VERIFICAR CONDICIÓN DE VICTORIA ---
+        // CONDICIÓN DE VICTORIA
         const impostorsAlive = room.players.filter(p => room.roles[p.id] === 'impostor').length;
         const citizensAlive = room.players.filter(p => room.roles[p.id] === 'ciudadano').length;
 
         if (impostorsAlive === 0) {
-            gameResult = 'citizensWin'; // Ganaron Ciudadanos
+            gameResult = 'citizensWin'; 
         } else if (impostorsAlive >= citizensAlive) {
-            gameResult = 'impostorsWin'; // Ganaron Impostores (empate o mayoría)
+            gameResult = 'impostorsWin'; 
         }
     }
 
@@ -248,70 +261,48 @@ function finishVoting(room, reason) {
         reason,
         kickedPlayer: kicked ? { name: kicked.name } : null,
         isImpostor,
-        gameResult // Enviamos al cliente si el juego terminó
+        gameResult
     });
 
-    // --- DECISIÓN DE FLUJO ---
     if (gameResult) {
-        // CASO A: Juego Terminado -> Volver a Lobby
+        // Juego Terminado -> Lobby
         room.phase = 'lobby';
-        room.spoken = {};
-        room.votes = {};
-        // 5 segundos para ver el resultado y reseteamos
+        room.spoken = {}; room.votes = {};
         setTimeout(() => emitRoomState(room), 5000);
-
     } else {
-        // CASO B: Juego Sigue -> Nueva Ronda de Palabras
+        // Sigue el Juego -> Palabras
         room.phase = 'palabras';
-        room.turnIndex = -1; // Reiniciamos turnos
-        room.spoken = {};    // Reiniciamos quien habló
-        room.votes = {};
-        
-        // 5 segundos de drama y arranca el siguiente turno
-        setTimeout(() => {
-            if (rooms[room.code]) nextTurn(room);
-        }, 5000);
+        room.turnIndex = -1; room.spoken = {}; room.votes = {};
+        setTimeout(() => { if (rooms[room.code]) nextTurn(room); }, 5000);
     }
 }
 
-// --- SOCKET.IO EVENTOS ---
+// --- 7. EVENTOS SOCKET.IO ---
 io.on('connection', (socket) => {
     
     socket.on('createRoom', async (data, cb) => {
         const code = generateCode();
-        
+        let maxP = parseInt(data.maxPlayers) || 10;
+        if (maxP > 15) maxP = 15; // Límite duro de 15
+
         let discordData = { voiceId: null, inviteLink: null };
         if (DISCORD_TOKEN) {
-            const result = await crearCanalDiscord(code); 
+            const result = await crearCanalDiscord(code, maxP); 
             if (result) discordData = result;
         }
 
         const room = {
-            code, 
-            hostId: socket.id, 
-            maxPlayers: 10, 
-            impostors: 2,
-            players: [{ id: socket.id, name: data.name || 'Host' }],
-            phase: 'lobby', 
-            turnIndex: -1, 
-            roles: {}, 
-            spoken: {}, 
-            votes: {},
-            discordVoiceChannel: discordData.voiceId,
-            discordLink: discordData.inviteLink 
+            code, hostId: socket.id, maxPlayers: maxP, impostors: parseInt(data.impostors)||2,
+            players: [{ id: socket.id, name: data.name || 'Host', color: PLAYER_COLORS[0] }],
+            phase: 'lobby', turnIndex: -1, roles: {}, spoken: {}, votes: {},
+            discordVoiceChannel: discordData.voiceId, discordLink: discordData.inviteLink 
         };
 
         rooms[code] = room;
         socketRoom[socket.id] = code;
         socket.join(code);
 
-        cb({ 
-            ok: true, 
-            roomCode: code, 
-            me: { id: socket.id }, 
-            isHost: true,
-            discordLink: discordData.inviteLink 
-        });
+        cb({ ok: true, roomCode: code, me: { id: socket.id }, isHost: true, discordLink: discordData.inviteLink });
         emitRoomState(room);
     });
 
@@ -319,18 +310,20 @@ io.on('connection', (socket) => {
         const code = (data.roomCode || '').toUpperCase();
         const room = rooms[code];
         if (room) {
+            // Validaciones
+            if (room.players.length >= room.maxPlayers) return cb({ ok: false, error: 'Sala llena.' });
+            if (room.players.some(p => p.name.toUpperCase() === data.name.toUpperCase())) {
+                return cb({ ok: false, error: 'Nombre en uso.' });
+            }
+
             socket.join(code);
             socketRoom[socket.id] = code;
-            room.players.push({ id: socket.id, name: data.name });
+            
+            // Asignar color y agregar
+            room.players.push({ id: socket.id, name: data.name, color: assignColor(room) });
             room.spoken[socket.id] = false;
             
-            cb({ 
-                ok: true, 
-                roomCode: code, 
-                me: { id: socket.id }, 
-                isHost: false,
-                discordLink: room.discordLink 
-            });
+            cb({ ok: true, roomCode: code, me: { id: socket.id }, isHost: false, discordLink: room.discordLink });
             emitRoomState(room);
         } else {
             cb({ ok: false, error: 'Sala no existe' });
@@ -340,7 +333,6 @@ io.on('connection', (socket) => {
     socket.on('startRound', () => {
         const room = getRoomOfSocket(socket.id);
         if (room && room.hostId === socket.id) {
-            // 1. Asignar Roles
             const shuffled = [...room.players].sort(() => 0.5 - Math.random());
             const impostorIds = shuffled.slice(0, room.impostors || 1).map(p => p.id);
             const word = randomWord();
@@ -353,11 +345,11 @@ io.on('connection', (socket) => {
                 room.spoken[p.id] = false;
             });
 
-            // 2. FASE LECTURA (7 Segundos de espera)
+            // Fase Lectura
             room.phase = 'lectura';
             emitRoomState(room);
 
-            // 3. Iniciar juego real después de la pausa
+            // Iniciar tras 7s
             setTimeout(() => {
                 if (rooms[room.code]) {
                     room.phase = 'palabras';
@@ -368,26 +360,16 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('endTurn', () => {
-        const room = getRoomOfSocket(socket.id);
-        if(room && room.phase === 'palabras') {
-            const currentPlayer = room.players[room.turnIndex];
-            if(currentPlayer && currentPlayer.id === socket.id) {
-                room.spoken[socket.id] = true;
-                nextTurn(room);
-            }
-        }
-    });
-
     socket.on('submitVote', (data) => {
         const room = getRoomOfSocket(socket.id);
         if(room && room.phase === 'votacion') {
             room.votes[socket.id] = data.targetId;
+            // Emitimos estado para que el front vea quién ya votó
+            emitRoomState(room);
+
             const activePlayers = room.players.length;
             const votesCast = Object.keys(room.votes).length;
-            if(votesCast >= activePlayers) {
-                finishVoting(room, 'Todos votaron');
-            }
+            if(votesCast >= activePlayers) finishVoting(room, 'Todos votaron');
         }
     });
 
@@ -399,11 +381,7 @@ io.on('connection', (socket) => {
             
             if (room.players.length === 0) {
                 if(room.timer) clearTimeout(room.timer);
-                
-                if (room.discordVoiceChannel) {
-                    borrarCanalDiscord(room.discordVoiceChannel);
-                }
-                
+                if (room.discordVoiceChannel) borrarCanalDiscord(room.discordVoiceChannel);
                 delete rooms[room.code];
             } else {
                 if (room.hostId === socket.id) room.hostId = room.players[0].id;
