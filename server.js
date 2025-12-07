@@ -4,7 +4,6 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-// AGREGADO: PermissionFlagsBits para poder configurar los permisos
 const { Client, GatewayIntentBits, ChannelType, PermissionFlagsBits } = require('discord.js');
 
 // --- 1. CONFIGURACIÓN DE DISCORD ---
@@ -107,27 +106,18 @@ const TIEMPO_VOTACION = 120 * 1000;
 
 // --- LISTA DE PALABRAS COMPLETA ---
 const WORDS = [
-    // 📍 Lugares
     'SAUNA', 'CEMENTERIO', 'SUBMARINO', 'ASCENSOR', 'IGLÚ', 
     'CASINO', 'PELUQUERÍA', 'CIRCO', 'ESTACIÓN ESPACIAL', 'HORMIGUERO', 
     'CINE', 'BODA', 'VESTUARIO DE GIMNASIO', 'BARCO PIRATA', 'ZOOLÓGICO',
-    
-    // 🍕 Comidas
     'SUSHI', 'PAELLA', 'TACOS', 'HELADO', 'HUEVO FRITO', 
     'CEVICHE', 'PARRILLADA', 'FONDUE', 'MEDIALUNA', 'SOPA', 
-    'COCO', 'CHICLE',
-
-    // 🛠️ Objetos
-    'PARAGUAS', 'CEPILLO DE DIENTES', 'MICROONDAS', 'GUITARRA', 'INODORO', 
-    'LAVADORA', 'ESPEJO', 'DRON', 'TARJETA DE CRÉDITO', 'VELA', 'ZAPATO',
-
-    // 🦁 Animales
-    'PINGÜINO', 'CANGURO', 'MOSQUITO', 'PULPO', 'PEREZOSO', 
-    'CAMALEÓN', 'MURCIÉLAGO', 'JIRAFA', 'ABEJA',
-
-    // 👮 Profesiones
-    'ASTRONAUTA', 'MIMO', 'CIRUJANO', 'JARDINERO', 'DETECTIVE', 
-    'BUZO', 'ÁRBITRO', 'CAJERO', 'PRESIDENTE', 'FANTASMA'
+    'COCO', 'CHICLE', 'PARAGUAS', 'CEPILLO DE DIENTES', 'MICROONDAS', 
+    'GUITARRA', 'INODORO', 'LAVADORA', 'ESPEJO', 'DRON', 
+    'TARJETA DE CRÉDITO', 'VELA', 'ZAPATO', 'PINGÜINO', 'CANGURO', 
+    'MOSQUITO', 'PULPO', 'PEREZOSO', 'CAMALEÓN', 'MURCIÉLAGO', 
+    'JIRAFA', 'ABEJA', 'ASTRONAUTA', 'MIMO', 'CIRUJANO', 
+    'JARDINERO', 'DETECTIVE', 'BUZO', 'ÁRBITRO', 'CAJERO', 
+    'PRESIDENTE', 'FANTASMA'
 ];
 
 // DATOS EN MEMORIA
@@ -218,9 +208,11 @@ function startVoting(room) {
     }, TIEMPO_VOTACION);
 }
 
+// --- FUNCIÓN CLAVE: DECIDIR EL RESULTADO ---
 function finishVoting(room, reason) {
     if (room.timer) clearTimeout(room.timer);
     
+    // Contar votos
     const tally = {};
     Object.values(room.votes).forEach(v => { if(v) tally[v] = (tally[v]||0)+1; });
 
@@ -230,24 +222,56 @@ function finishVoting(room, reason) {
     }
 
     let isImpostor = false;
+    let gameResult = null; // null = sigue jugando, 'citizensWin', 'impostorsWin'
+
     if (kicked) {
         isImpostor = (room.roles[kicked.id] === 'impostor');
+        
+        // Eliminar jugador y sus datos
         room.players = room.players.filter(p => p.id !== kicked.id);
         delete room.roles[kicked.id];
         delete socketRoom[kicked.id];
         delete room.spoken[kicked.id];
+
+        // --- VERIFICAR CONDICIÓN DE VICTORIA ---
+        const impostorsAlive = room.players.filter(p => room.roles[p.id] === 'impostor').length;
+        const citizensAlive = room.players.filter(p => room.roles[p.id] === 'ciudadano').length;
+
+        if (impostorsAlive === 0) {
+            gameResult = 'citizensWin'; // Ganaron Ciudadanos
+        } else if (impostorsAlive >= citizensAlive) {
+            gameResult = 'impostorsWin'; // Ganaron Impostores (empate o mayoría)
+        }
     }
 
     io.to(room.code).emit('votingResults', {
         reason,
         kickedPlayer: kicked ? { name: kicked.name } : null,
-        isImpostor
+        isImpostor,
+        gameResult // Enviamos al cliente si el juego terminó
     });
 
-    room.phase = 'lobby';
-    room.spoken = {};
-    room.votes = {};
-    emitRoomState(room);
+    // --- DECISIÓN DE FLUJO ---
+    if (gameResult) {
+        // CASO A: Juego Terminado -> Volver a Lobby
+        room.phase = 'lobby';
+        room.spoken = {};
+        room.votes = {};
+        // 5 segundos para ver el resultado y reseteamos
+        setTimeout(() => emitRoomState(room), 5000);
+
+    } else {
+        // CASO B: Juego Sigue -> Nueva Ronda de Palabras
+        room.phase = 'palabras';
+        room.turnIndex = -1; // Reiniciamos turnos
+        room.spoken = {};    // Reiniciamos quien habló
+        room.votes = {};
+        
+        // 5 segundos de drama y arranca el siguiente turno
+        setTimeout(() => {
+            if (rooms[room.code]) nextTurn(room);
+        }, 5000);
+    }
 }
 
 // --- SOCKET.IO EVENTOS ---
@@ -316,6 +340,7 @@ io.on('connection', (socket) => {
     socket.on('startRound', () => {
         const room = getRoomOfSocket(socket.id);
         if (room && room.hostId === socket.id) {
+            // 1. Asignar Roles
             const shuffled = [...room.players].sort(() => 0.5 - Math.random());
             const impostorIds = shuffled.slice(0, room.impostors || 1).map(p => p.id);
             const word = randomWord();
@@ -328,9 +353,18 @@ io.on('connection', (socket) => {
                 room.spoken[p.id] = false;
             });
 
-            room.phase = 'palabras';
-            room.turnIndex = -1; 
-            nextTurn(room); 
+            // 2. FASE LECTURA (7 Segundos de espera)
+            room.phase = 'lectura';
+            emitRoomState(room);
+
+            // 3. Iniciar juego real después de la pausa
+            setTimeout(() => {
+                if (rooms[room.code]) {
+                    room.phase = 'palabras';
+                    room.turnIndex = -1; 
+                    nextTurn(room); 
+                }
+            }, 7000);
         }
     });
 
