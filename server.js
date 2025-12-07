@@ -8,9 +8,10 @@ const path = require('path');
 const { Client, GatewayIntentBits, ChannelType, PermissionFlagsBits } = require('discord.js');
 
 // --- 1. CONFIGURACIÓN DE DISCORD ---
+// CAMBIO IMPORTANTE: Agregamos "DISCORD_" al principio para que coincida con Render
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
-const GUILD_ID = process.env.GUILD_ID;
-const CATEGORIA_ID = process.env.CATEGORIA_ID; 
+const GUILD_ID = process.env.DISCORD_GUILD_ID;        // Antes era process.env.GUILD_ID
+const CATEGORIA_ID = process.env.DISCORD_CATEGORY_ID; // Antes era process.env.CATEGORIA_ID
 
 const discordClient = new Client({
     intents: [
