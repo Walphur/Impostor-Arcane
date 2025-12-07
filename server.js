@@ -4,11 +4,11 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-const { Client, GatewayIntentBits, ChannelType } = require('discord.js');
+// AGREGADO: PermissionFlagsBits para poder configurar los permisos
+const { Client, GatewayIntentBits, ChannelType, PermissionFlagsBits } = require('discord.js');
 
 // --- 1. CONFIGURACIÓN DE DISCORD ---
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
-// Nota: Usamos los nombres que configuraste en Render
 const GUILD_ID = process.env.DISCORD_GUILD_ID;        
 const CATEGORIA_ID = process.env.DISCORD_CATEGORY_ID; 
 
@@ -27,7 +27,7 @@ if (DISCORD_TOKEN) {
     console.log('⚠️ No hay DISCORD_TOKEN configurado.');
 }
 
-// --- FUNCIÓN PARA CREAR CANALES ---
+// --- FUNCIÓN PARA CREAR CANALES (MODO FANTASMA) ---
 async function crearCanalDiscord(nombreSala) {
     try {
         const guild = discordClient.guilds.cache.get(GUILD_ID);
@@ -36,12 +36,25 @@ async function crearCanalDiscord(nombreSala) {
             return null;
         }
 
-        // Crear Canal de VOZ
+        // Crear Canal de VOZ Invisible pero accesible por link
         const canalVoz = await guild.channels.create({
             name: `Sala ${nombreSala}`,
             type: ChannelType.GuildVoice,
             parent: CATEGORIA_ID,
-            userLimit: 10
+            userLimit: 10,
+            permissionOverwrites: [
+                {
+                    // Configuración para @everyone (todos los usuarios)
+                    id: guild.roles.everyone.id,
+                    deny: [
+                        PermissionFlagsBits.ViewChannel // 🚫 NO se ve en la lista
+                    ],
+                    allow: [
+                        PermissionFlagsBits.Connect,    // ✅ SÍ pueden entrar con link
+                        PermissionFlagsBits.Speak       // ✅ SÍ pueden hablar
+                    ]
+                }
+            ]
         });
 
         // Crear una INVITACIÓN
@@ -50,7 +63,7 @@ async function crearCanalDiscord(nombreSala) {
             maxUses: 0 
         });
 
-        console.log(`✅ Canal creado: ${canalVoz.name} | Link: ${invite.url}`);
+        console.log(`✅ Canal Fantasma creado: ${canalVoz.name} | Link: ${invite.url}`);
 
         return {
             voiceId: canalVoz.id,
@@ -156,7 +169,7 @@ function emitRoomState(room) {
         phase: room.phase,
         turnIndex: room.turnIndex,
         timeLeft: timeLeft,
-        discordLink: room.discordLink, // IMPORTANTE: Enviamos el link
+        discordLink: room.discordLink, 
         players: room.players.map(p => ({ id: p.id, name: p.name }))
     });
 }
@@ -240,11 +253,9 @@ function finishVoting(room, reason) {
 // --- SOCKET.IO EVENTOS ---
 io.on('connection', (socket) => {
     
-    // --- CREAR SALA ---
     socket.on('createRoom', async (data, cb) => {
         const code = generateCode();
         
-        // 1. Crear canal Discord y obtener INVITACIÓN
         let discordData = { voiceId: null, inviteLink: null };
         if (DISCORD_TOKEN) {
             const result = await crearCanalDiscord(code); 
@@ -263,14 +274,13 @@ io.on('connection', (socket) => {
             spoken: {}, 
             votes: {},
             discordVoiceChannel: discordData.voiceId,
-            discordLink: discordData.inviteLink // Guardamos el link
+            discordLink: discordData.inviteLink 
         };
 
         rooms[code] = room;
         socketRoom[socket.id] = code;
         socket.join(code);
 
-        // Devolvemos el link al cliente para que él lo abra
         cb({ 
             ok: true, 
             roomCode: code, 
@@ -281,7 +291,6 @@ io.on('connection', (socket) => {
         emitRoomState(room);
     });
 
-    // ... (El resto de joinRoom, startRound, etc. sigue igual) ...
     socket.on('joinRoom', (data, cb) => {
         const code = (data.roomCode || '').toUpperCase();
         const room = rooms[code];
@@ -296,7 +305,7 @@ io.on('connection', (socket) => {
                 roomCode: code, 
                 me: { id: socket.id }, 
                 isHost: false,
-                discordLink: room.discordLink // Enviamos link al que se une también
+                discordLink: room.discordLink 
             });
             emitRoomState(room);
         } else {
@@ -315,7 +324,6 @@ io.on('connection', (socket) => {
             room.players.forEach(p => {
                 const role = impostorIds.includes(p.id) ? 'impostor' : 'ciudadano';
                 room.roles[p.id] = role;
-                // Enviamos rol y palabra
                 io.to(p.id).emit('yourRole', { role, word: role === 'ciudadano' ? word : null });
                 room.spoken[p.id] = false;
             });
@@ -358,7 +366,6 @@ io.on('connection', (socket) => {
             if (room.players.length === 0) {
                 if(room.timer) clearTimeout(room.timer);
                 
-                // Borrar canal al vaciarse la sala
                 if (room.discordVoiceChannel) {
                     borrarCanalDiscord(room.discordVoiceChannel);
                 }
