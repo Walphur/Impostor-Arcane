@@ -1,4 +1,6 @@
 const socket = io();
+
+// DOM
 const lobbyOverlay=document.getElementById('lobbyOverlay'), mainContent=document.getElementById('mainContent'), phasePill=document.getElementById('phasePill'), roomCodeDisplay=document.getElementById('roomCodeDisplay'), playersListEl=document.getElementById('playersList'), votingGrid=document.getElementById('votingGrid');
 const viewCard=document.getElementById('viewCard'), viewTurn=document.getElementById('viewTurn'), viewVoting=document.getElementById('viewVoting');
 const turnPlayerName=document.getElementById('turnPlayerName'), turnTimerDisplay=document.getElementById('turnTimerDisplay'), turnAvatar=document.querySelector('.turn-avatar-circle'), roleDisplay=document.getElementById('roleDisplay'), wordDisplay=document.getElementById('wordDisplay'), teammateDisplay=document.getElementById('teammateDisplay'), ejectionOverlay=document.getElementById('ejectionOverlay');
@@ -9,9 +11,16 @@ document.getElementById('tabCreate').onclick=(e)=>switchTab(e,'panelCreate'); do
 function switchTab(e,pid){ document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); e.target.classList.add('active'); document.getElementById('panelCreate').style.display=pid==='panelCreate'?'block':'none'; document.getElementById('panelJoin').style.display=pid==='panelJoin'?'block':'none'; }
 
 document.getElementById('btnCreateRoom').onclick=()=>{
+    // Recoger checkboxes
     const checkboxes = document.querySelectorAll('.cat-grid input[type="checkbox"]:checked');
     const categories = Array.from(checkboxes).map(cb => cb.value);
-    socket.emit('createRoom', { name:document.getElementById('hostName').value||'Host', maxPlayers:document.getElementById('maxPlayers').value, impostors:document.getElementById('impostors').value, categories:categories }, handleConnection);
+    
+    socket.emit('createRoom', { 
+        name:document.getElementById('hostName').value||'Host', 
+        maxPlayers:document.getElementById('maxPlayers').value, 
+        impostors:document.getElementById('impostors').value, 
+        categories:categories 
+    }, handleConnection);
 };
 document.getElementById('btnJoinRoom').onclick=()=>{ socket.emit('joinRoom', { name:document.getElementById('joinName').value||'Player', roomCode:document.getElementById('joinCode').value }, handleConnection); };
 
@@ -23,8 +32,14 @@ btnSkip.onclick=()=>{ socket.emit('submitVote', {targetId:null}); btnSkip.innerT
 socket.on('roomState', (room)=>{ updateHeader(room); renderSidebar(room); updateGameView(room); });
 socket.on('yourRole', (data)=>{
     const card=document.querySelector('.secret-card'); teammateDisplay.style.display='none';
-    if(data.role==='impostor'){ roleDisplay.innerText='ERES EL IMPOSTOR'; wordDisplay.innerText='???'; card.style.background='linear-gradient(135deg, #020617, #7f1d1d)'; if(data.teammates&&data.teammates.length>0){teammateDisplay.style.display='block';teammateDisplay.innerText=`ALIADO: ${data.teammates.join(', ')}`;} }
-    else{ roleDisplay.innerText='CIUDADANO'; wordDisplay.innerText=data.word; card.style.background='linear-gradient(135deg, #f97316, #9f1239)'; }
+    if(data.role==='impostor'){ 
+        roleDisplay.innerText='ERES EL IMPOSTOR'; wordDisplay.innerText='???'; 
+        card.style.background='linear-gradient(135deg, #020617, #7f1d1d)'; 
+        if(data.teammates&&data.teammates.length>0){teammateDisplay.style.display='block';teammateDisplay.innerText=`ALIADO: ${data.teammates.join(', ')}`;} 
+    } else { 
+        roleDisplay.innerText='CIUDADANO'; wordDisplay.innerText=data.word; 
+        card.style.background='linear-gradient(135deg, #f97316, #9f1239)'; 
+    }
 });
 socket.on('votingResults', (data)=>{
     ejectionOverlay.style.display='flex';
