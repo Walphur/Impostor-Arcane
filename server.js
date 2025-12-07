@@ -1,4 +1,3 @@
-// Carga variables de entorno si estás en local (.env), en Render no hace falta pero no molesta.
 require('dotenv').config();
 
 const express = require('express');
@@ -6,103 +5,113 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 // Importamos la librería de Discord
-const { Client, GatewayIntentBits, ChannelType } = require('discord.js');
+const { Client, GatewayIntentBits, ChannelType, PermissionFlagsBits } = require('discord.js');
 
 // --- 1. CONFIGURACIÓN DE DISCORD ---
-// Leemos las claves secretas desde Render (Environment Variables)
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const GUILD_ID = process.env.GUILD_ID;
-const CATEGORIA_ID = process.env.CATEGORIA_ID; // Opcional
+const CATEGORIA_ID = process.env.CATEGORIA_ID; 
 
-// Iniciamos el cliente de Discord con permisos para ver canales y gestionar voz
 const discordClient = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates]
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildVoiceStates
+    ]
 });
 
-// Función para conectar el Bot
+// Conexión del Bot
 if (DISCORD_TOKEN) {
     discordClient.login(DISCORD_TOKEN)
         .then(() => console.log('✅ Bot de Discord CONECTADO y listo.'))
-        .catch(err => console.error('❌ Error conectando Bot (Revisa el Token en Render):', err.message));
+        .catch(err => console.error('❌ Error conectando Bot:', err.message));
 } else {
-    console.log('⚠️ No hay DISCORD_TOKEN configurado. El juego funcionará sin voz automática.');
+    console.log('⚠️ No hay DISCORD_TOKEN configurado.');
 }
 
-// Función auxiliar para crear el canal de voz
-async function crearCanalDiscord(roomCode) {
+// --- FUNCIÓN PARA CREAR CANALES ---
+async function crearCanalDiscord(nombreSala) {
     try {
-        // Si el bot no está listo o no hay ID de servidor, salimos
-        if (!discordClient.isReady() || !GUILD_ID) return null;
+        const guild = discordClient.guilds.cache.get(GUILD_ID);
+        if (!guild) {
+            console.error("No se encontró el servidor (Guild) de Discord.");
+            return null;
+        }
 
-        const guild = await discordClient.guilds.fetch(GUILD_ID);
-        if (!guild) return null;
-
-        // Crear canal de voz
-        const channel = await guild.channels.create({
-            name: `Sala ${roomCode}`,
+        // Crear Canal de VOZ
+        // Nota: Quitamos los permisos por SocketID porque Discord no los entiende.
+        // Creamos un canal donde todos pueden entrar o lo restringimos a la categoría.
+        const canalVoz = await guild.channels.create({
+            name: `Sala ${nombreSala}`,
             type: ChannelType.GuildVoice,
-            parent: CATEGORIA_ID || null,
-            userLimit: 10,
-            permissionOverwrites: [
-                { id: guild.id, allow: ['Connect', 'Speak', 'ViewChannel'] },
-            ],
+            parent: CATEGORIA_ID,
+            // Opcional: Limitar usuarios a 10 (igual que el juego)
+            userLimit: 10
         });
 
-        // Crear invitación
-        const invite = await channel.createInvite({
-            maxAge: 3600, // 1 hora
-            maxUses: 20,
-            unique: true
+        // Crear una INVITACIÓN única para este canal
+        const invite = await canalVoz.createInvite({
+            maxAge: 0, // No expira
+            maxUses: 0 // Usos infinitos mientras dure la sala
         });
 
-        // Programar auto-destrucción del canal en 1 hora para limpiar
-        setTimeout(async () => {
-            try { await channel.delete(); } catch(e) {}
-        }, 3600 * 1000);
+        return {
+            voiceId: canalVoz.id,
+            inviteLink: invite.url // Devolvemos el link para que el frontend lo use
+        };
 
-        return invite.url;
-
-    } catch (error) {
-        console.error('Error creando canal Discord:', error.message);
-        return null; // Si falla, el juego sigue sin link
+    } catch (err) {
+        console.error("Error creando canales Discord:", err);
+        return null;
     }
 }
+
+// --- FUNCIÓN PARA BORRAR CANALES ---
+async function borrarCanalDiscord(canalId) {
+    if (!canalId) return;
+    try {
+        const guild = discordClient.guilds.cache.get(GUILD_ID);
+        if (!guild) return;
+
+        const canal = guild.channels.cache.get(canalId);
+        if (canal) {
+            await canal.delete();
+            console.log(`🗑️ Canal Discord ${canalId} eliminado.`);
+        }
+    } catch (err) {
+        console.error("Error borrando canal:", err);
+    }
+}
+
 
 // --- 2. SERVIDOR WEB Y JUEGO ---
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
-// Servimos la carpeta 'public' (IMPORTANTE: Asegúrate que tu carpeta se llame así)
 const CLIENT_DIR = path.join(__dirname, 'public');
 app.use(express.static(CLIENT_DIR));
 
-// CONSTANTES DE TIEMPO
-const TIEMPO_TURNO = 15 * 1000;   // 15 Segundos
-const TIEMPO_VOTACION = 120 * 1000; // 2 Minutos
+// CONSTANTES
+const TIEMPO_TURNO = 15 * 1000;
+const TIEMPO_VOTACION = 120 * 1000;
 
-// BASE DE DATOS EN MEMORIA
+// DATOS
 const rooms = {};
 const socketRoom = {};
-
-const WORDS = [
-  'GALAXIA','MISTERIO','AVENTURA','DESIERTO','OCÉANO','LABERINTO','TRAVESÍA',
-  'MONTAÑA','ISLA','INVESTIGACIÓN','SECRETO','FESTIVAL','HOSPITAL','CIUDAD',
-  'MUSEO','TORMENTA','PLANETA','CASTILLO','RECUERDO','NOCHE','VERANO'
-];
+const WORDS = ['GALAXIA','MISTERIO','AVENTURA','DESIERTO','OCÉANO','LABERINTO','TRAVESÍA','MONTAÑA','ISLA','PLANETA','CASTILLO','NOCHE'];
 
 function randomWord() { return WORDS[Math.floor(Math.random() * WORDS.length)]; }
 
 function generateCode() {
-  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-  let code, attempts = 0;
-  do {
-    let part = '';
-    for (let i = 0; i < 4; i++) part += chars[Math.floor(Math.random() * chars.length)];
-    code = 'ARC-' + part;
-    attempts++;
-  } while (rooms[code] && attempts < 100);
-  return code;
+    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    let code, attempts = 0;
+    do {
+        let part = '';
+        for (let i = 0; i < 4; i++) part += chars[Math.floor(Math.random() * chars.length)];
+        code = 'ARC-' + part;
+        attempts++;
+    } while (rooms[code] && attempts < 100);
+    return code;
 }
 
 function getRoomOfSocket(socketId) {
@@ -110,11 +119,8 @@ function getRoomOfSocket(socketId) {
     return code ? rooms[code] : null;
 }
 
-// Enviar estado de la sala a todos los jugadores
 function emitRoomState(room) {
     if (!room) return;
-    
-    // Calculamos tiempo restante para mostrar en pantalla
     const now = Date.now();
     let timeLeft = 0;
     if (room.phase === 'palabras' && room.turnDeadline) {
@@ -129,23 +135,20 @@ function emitRoomState(room) {
         phase: room.phase,
         turnIndex: room.turnIndex,
         timeLeft: timeLeft,
-        discordLink: room.discordLink,
+        discordLink: room.discordLink, // Enviamos el Link al juego
         players: room.players.map(p => ({ id: p.id, name: p.name }))
     });
 }
 
-// Lógica de turnos (15s)
 function nextTurn(room) {
     if (room.timer) clearTimeout(room.timer);
 
-    // Si todos hablaron, pasar a votación
     const allSpoken = room.players.every(p => room.spoken[p.id]);
     if (allSpoken) {
         startVoting(room);
         return;
     }
 
-    // Avanzar al siguiente jugador
     let nextIndex = room.turnIndex;
     let loops = 0;
     do {
@@ -156,9 +159,7 @@ function nextTurn(room) {
     room.turnIndex = nextIndex;
     room.turnDeadline = Date.now() + TIEMPO_TURNO;
 
-    // Timer automático: si no termina turno, se le corta
     room.timer = setTimeout(() => {
-        // Marcamos como que "habló" a la fuerza
         if(room.players[room.turnIndex]) {
             room.spoken[room.players[room.turnIndex].id] = true;
         }
@@ -168,13 +169,12 @@ function nextTurn(room) {
     emitRoomState(room);
 }
 
-// Lógica de votación (2 min)
 function startVoting(room) {
     if (room.timer) clearTimeout(room.timer);
     
     room.phase = 'votacion';
     room.voteDeadline = Date.now() + TIEMPO_VOTACION;
-    room.votes = {}; // Reset votos
+    room.votes = {}; 
     
     io.to(room.code).emit('votingStarted');
     emitRoomState(room);
@@ -187,7 +187,6 @@ function startVoting(room) {
 function finishVoting(room, reason) {
     if (room.timer) clearTimeout(room.timer);
     
-    // Contar votos
     const tally = {};
     Object.values(room.votes).forEach(v => { if(v) tally[v] = (tally[v]||0)+1; });
 
@@ -196,7 +195,6 @@ function finishVoting(room, reason) {
         if (count > max) { max = count; kicked = room.players.find(p => p.id === id); }
     }
 
-    // Eliminar jugador si hubo mayoría (simple)
     let isImpostor = false;
     if (kicked) {
         isImpostor = (room.roles[kicked.id] === 'impostor');
@@ -212,7 +210,6 @@ function finishVoting(room, reason) {
         isImpostor
     });
 
-    // Resetear sala para nueva ronda
     room.phase = 'lobby';
     room.spoken = {};
     room.votes = {};
@@ -221,18 +218,36 @@ function finishVoting(room, reason) {
 
 // --- SOCKET.IO EVENTOS ---
 io.on('connection', (socket) => {
+    
+    // --- CREAR SALA ---
     socket.on('createRoom', async (data, cb) => {
         const code = generateCode();
-        // Crear canal de discord
-        const link = await crearCanalDiscord(code);
+        
+        // 1. Crear canal Discord
+        let discordData = { voiceId: null, inviteLink: null };
+        if (DISCORD_TOKEN) {
+            // Pasamos el código de la sala para el nombre del canal
+            const result = await crearCanalDiscord(code); 
+            if (result) discordData = result;
+        }
 
+        // 2. Crear Objeto Sala
         const room = {
-            code, hostId: socket.id, maxPlayers: 10, impostors: 2,
+            code, 
+            hostId: socket.id, 
+            maxPlayers: 10, 
+            impostors: 2,
             players: [{ id: socket.id, name: data.name || 'Host' }],
-            phase: 'lobby', turnIndex: -1, 
-            roles: {}, spoken: {}, votes: {},
-            discordLink: link
+            phase: 'lobby', 
+            turnIndex: -1, 
+            roles: {}, 
+            spoken: {}, 
+            votes: {},
+            // Guardamos datos de Discord
+            discordVoiceChannel: discordData.voiceId,
+            discordLink: discordData.inviteLink
         };
+
         rooms[code] = room;
         socketRoom[socket.id] = code;
         socket.join(code);
@@ -260,7 +275,6 @@ io.on('connection', (socket) => {
     socket.on('startRound', () => {
         const room = getRoomOfSocket(socket.id);
         if (room && room.hostId === socket.id) {
-            // Asignar roles
             const shuffled = [...room.players].sort(() => 0.5 - Math.random());
             const impostorIds = shuffled.slice(0, room.impostors || 1).map(p => p.id);
             const word = randomWord();
@@ -275,7 +289,7 @@ io.on('connection', (socket) => {
 
             room.phase = 'palabras';
             room.turnIndex = -1; 
-            nextTurn(room); // Inicia el primer turno
+            nextTurn(room); 
         }
     });
 
@@ -294,7 +308,6 @@ io.on('connection', (socket) => {
         const room = getRoomOfSocket(socket.id);
         if(room && room.phase === 'votacion') {
             room.votes[socket.id] = data.targetId;
-            // Chequear si todos votaron
             const activePlayers = room.players.length;
             const votesCast = Object.keys(room.votes).length;
             if(votesCast >= activePlayers) {
@@ -311,6 +324,12 @@ io.on('connection', (socket) => {
             
             if (room.players.length === 0) {
                 if(room.timer) clearTimeout(room.timer);
+                
+                // --- BORRAR CANALES DE DISCORD AQUÍ ---
+                if (room.discordVoiceChannel) {
+                    borrarCanalDiscord(room.discordVoiceChannel);
+                }
+                
                 delete rooms[room.code];
             } else {
                 if (room.hostId === socket.id) room.hostId = room.players[0].id;
