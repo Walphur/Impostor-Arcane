@@ -3,101 +3,90 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Impostor Arcane - Online</title>
+  <title>Impostor Arcane</title>
   <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
 </head>
 <body>
 
+  <div id="ejectionOverlay" class="ejection-overlay" style="display: none;">
+    <div class="ejection-content">
+      <div id="ejectedName" class="eject-title">Juan fue expulsado.</div>
+      <div id="ejectedRole" class="eject-subtitle">Era el Impostor</div>
+    </div>
+  </div>
+
   <div class="app-container">
     
     <div id="lobbyOverlay" class="lobby-overlay">
       <div class="brand-title">Impostor<span>.</span></div>
-      
       <div class="menu-card">
         <div class="avatar-preview">🕵️</div>
-
         <div class="tabs">
-          <button id="tabCreate" class="tab-btn active">Crear Sala</button>
+          <button id="tabCreate" class="tab-btn active">Crear</button>
           <button id="tabJoin" class="tab-btn">Unirse</button>
         </div>
 
         <div id="panelCreate">
-          <div class="input-group">
-            <label>Tu Nombre</label>
-            <input type="text" id="hostName" placeholder="Ej: Juan" maxlength="10">
+          <div class="input-group"><label>Nombre</label><input type="text" id="hostName" maxlength="10"></div>
+          <div class="input-group flex-group">
+            <div><label>Jugadores</label><input type="number" id="maxPlayers" value="10" min="4" max="15"></div>
+            <div><label>Impostores</label><input type="number" id="impostors" value="2" min="1" max="3"></div>
           </div>
-          <div class="input-group" style="display: flex; gap: 10px;">
-            <div style="flex:1">
-              <label>Jugadores</label>
-              <input type="number" id="maxPlayers" value="10" min="4" max="15">
-            </div>
-            <div style="flex:1">
-              <label>Impostores</label>
-              <input type="number" id="impostors" value="2" min="1" max="3">
-            </div>
-          </div>
-          <button id="btnCreateRoom" class="btn-main btn-primary">CREAR PARTIDA</button>
+          <button id="btnCreateRoom" class="btn-main btn-primary">CREAR</button>
         </div>
 
         <div id="panelJoin" style="display: none;">
-          <div class="input-group">
-            <label>Tu Nombre</label>
-            <input type="text" id="joinName" placeholder="Ej: Pedro" maxlength="10">
-          </div>
-          <div class="input-group">
-            <label>CÓDIGO DE SALA</label>
-            <input type="text" id="joinCode" placeholder="Ej: ARC-X92Z" style="text-transform: uppercase; letter-spacing: 2px; text-align: center; font-weight: bold;">
-          </div>
-          <button id="btnJoinRoom" class="btn-main btn-secondary">UNIRSE AHORA</button>
+          <div class="input-group"><label>Nombre</label><input type="text" id="joinName" maxlength="10"></div>
+          <div class="input-group"><label>CÓDIGO</label><input type="text" id="joinCode" class="code-input"></div>
+          <button id="btnJoinRoom" class="btn-main btn-secondary">UNIRSE</button>
         </div>
-
       </div>
-      <p style="margin-top: 20px; color: #64748b; font-size: 0.8rem;">v1.1.2 Online • Powered by Render</p>
     </div>
 
     <main id="mainContent" class="blurred">
       
-      <section class="game-area">
-        <div class="header-bar">
-          <div>
-            <span class="room-badge" id="roomCodeDisplay">----</span>
-            <div id="headerSubtitle" style="color: #94a3b8; font-size: 0.8rem; margin-top: 5px;">Esperando...</div>
-          </div>
-          <div id="phasePill" style="background: #334155; padding: 5px 10px; border-radius: 8px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase;">LOBBY</div>
+      <div class="top-bar">
+        <div class="room-pill">SALA: <span id="roomCodeDisplay">---</span></div>
+        <div id="phasePill" class="phase-pill">LOBBY</div>
+      </div>
+
+      <section class="game-center">
+        
+        <div id="viewCard" class="center-view">
+           <div class="secret-card">
+              <div class="secret-label">TU ROL</div>
+              <div class="secret-word" id="wordDisplay">? ? ?</div>
+              <div class="secret-role" id="roleDisplay">Esperando...</div>
+           </div>
         </div>
 
-        <div class="card-reveal">
-          <div class="secret-card">
-            <div class="secret-label">TU CARTA SECRETA</div>
-            <div class="secret-word" id="wordDisplay">? ? ?</div>
-            <div class="secret-role" id="roleDisplay">Esperando al Host...</div>
-          </div>
+        <div id="viewTurn" class="center-view" style="display:none;">
+           <div class="turn-container">
+              <div class="turn-avatar-circle">
+                 <span id="turnAvatar">👤</span>
+              </div>
+              <h2 id="turnPlayerName">Nombre Jugador</h2>
+              <div class="turn-timer-big" id="turnTimerDisplay">15</div>
+              <p class="turn-hint">TURNO DE HABLAR</p>
+           </div>
         </div>
 
-        <div style="text-align: center; margin-top: 20px; color: #94a3b8;">
-           <span id="myInfo">Sin Rol</span>
+        <div id="viewVoting" class="center-view" style="display:none;">
+           <h2 class="vote-title">¿QUIÉN ES EL IMPOSTOR?</h2>
+           <div class="voting-grid" id="votingGrid">
+              </div>
+           <button id="btnSkipVote" class="btn-action btn-skip">SALTAR VOTO 💨</button>
         </div>
 
-        <div class="action-bar">
-          <button id="btnStartRound" class="btn-action btn-start" disabled>INICIAR PARTIDA</button>
-          <button id="btnSkipVote" class="btn-action btn-skip" disabled>SALTAR VOTO</button>
-        </div>
       </section>
 
-      <aside class="sidebar">
-        <h3>JUGADORES EN SALA</h3>
-        <div id="playersList" class="player-list">
-          </div>
-
-        <h3 style="margin-top: 20px;">REGISTRO</h3>
-        <div id="log" class="game-log">
-          <div class="log-msg">Bienvenido a Impostor Arcane.</div>
-        </div>
-      </aside>
+      <div class="bottom-bar">
+         <div class="my-status" id="myInfo">Esperando inicio...</div>
+         <button id="btnStartRound" class="btn-action btn-start" disabled>INICIAR PARTIDA</button>
+      </div>
 
     </main>
-
   </div>
 
   <script src="/socket.io/socket.io.js"></script>

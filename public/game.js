@@ -1,183 +1,234 @@
 const socket = io();
 
-// Referencias DOM
+// REFERENCIAS AL DOM
 const lobbyOverlay = document.getElementById('lobbyOverlay');
 const mainContent = document.getElementById('mainContent');
-const headerSubtitle = document.getElementById('headerSubtitle');
-const myInfo = document.getElementById('myInfo');
-const logEl = document.getElementById('log');
-const playersListEl = document.getElementById('playersList');
+const phasePill = document.getElementById('phasePill');
+const roomCodeDisplay = document.getElementById('roomCodeDisplay');
+const myInfoDisplay = document.getElementById('myInfo');
+const btnStart = document.getElementById('btnStartRound');
 
-// Variables de Estado
+// VISTAS CENTRALES
+const viewCard = document.getElementById('viewCard');
+const viewTurn = document.getElementById('viewTurn');
+const viewVoting = document.getElementById('viewVoting');
+
+// ELEMENTOS DINÁMICOS
+const turnPlayerName = document.getElementById('turnPlayerName');
+const turnTimerDisplay = document.getElementById('turnTimerDisplay');
+const wordDisplay = document.getElementById('wordDisplay');
+const roleDisplay = document.getElementById('roleDisplay');
+const votingGrid = document.getElementById('votingGrid');
+const ejectionOverlay = document.getElementById('ejectionOverlay');
+
+// VARIABLES DE ESTADO
 let myId = null;
 let isHost = false;
-let currentPhase = 'lobby';
+let localTimer = null;
+let selectedVoteId = null;
 
-// --- UTILIDADES ---
-function log(tag, msg) {
-  const line = document.createElement('div');
-  line.className = 'log-line';
-  line.innerHTML = `<span class="log-tag">${tag}</span> ${msg}`;
-  logEl.appendChild(line);
-  logEl.scrollTop = logEl.scrollHeight;
+// --- GESTIÓN DE PESTAÑAS LOBBY ---
+document.getElementById('tabCreate').onclick = (e) => switchTab(e, 'panelCreate');
+document.getElementById('tabJoin').onclick = (e) => switchTab(e, 'panelJoin');
+
+function switchTab(e, panelId) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    document.getElementById('panelCreate').style.display = panelId === 'panelCreate' ? 'block' : 'none';
+    document.getElementById('panelJoin').style.display = panelId === 'panelJoin' ? 'block' : 'none';
 }
 
-// --- LOGICA DE TABS (Lobby) ---
-const tabCreate = document.getElementById('tabCreate');
-const tabJoin = document.getElementById('tabJoin');
-const panelCreate = document.getElementById('panelCreate');
-const panelJoin = document.getElementById('panelJoin');
-
-tabCreate.onclick = () => {
-  tabCreate.classList.add('active');
-  tabJoin.classList.remove('active');
-  panelCreate.style.display = 'block';
-  panelJoin.style.display = 'none';
-};
-tabJoin.onclick = () => {
-  tabJoin.classList.add('active');
-  tabCreate.classList.remove('active');
-  panelCreate.style.display = 'none';
-  panelJoin.style.display = 'block';
-};
-
-// --- BOTONES ---
-
-// 1. CREAR SALA (Modificado para Discord)
+// --- BOTONES DE CONEXIÓN ---
 document.getElementById('btnCreateRoom').onclick = () => {
-  const name = document.getElementById('hostName').value;
-  const maxPlayers = document.getElementById('maxPlayers').value;
-  const impostors = document.getElementById('impostors').value;
-  
-  socket.emit('createRoom', { name, maxPlayers, impostors }, (res) => {
-    if(res.ok) {
-        setupGame(res);
-        // --- LOGICA DISCORD ---
-        if (res.discordLink) {
-            log('DISCORD', 'Abriendo canal de voz...');
-            window.open(res.discordLink, '_blank');
-        }
-    } else {
-        alert(res.error);
-    }
-  });
+    const name = document.getElementById('hostName').value || 'Host';
+    const maxPlayers = document.getElementById('maxPlayers').value;
+    const impostors = document.getElementById('impostors').value;
+    socket.emit('createRoom', { name, maxPlayers, impostors }, handleConnection);
 };
 
-// 2. UNIRSE A SALA (Modificado para Discord)
 document.getElementById('btnJoinRoom').onclick = () => {
-  const name = document.getElementById('joinName').value;
-  const code = document.getElementById('joinCode').value;
-  
-  socket.emit('joinRoom', { name, roomCode: code }, (res) => {
-    if(res.ok) {
-        setupGame(res);
-        // --- LOGICA DISCORD ---
+    const name = document.getElementById('joinName').value || 'Player';
+    const code = document.getElementById('joinCode').value;
+    socket.emit('joinRoom', { name, roomCode: code }, handleConnection);
+};
+
+function handleConnection(res) {
+    if (res.ok) {
+        lobbyOverlay.style.display = 'none';
+        mainContent.classList.remove('blurred');
+        myId = res.me.id;
+        isHost = res.isHost;
+        roomCodeDisplay.innerText = res.roomCode;
+        
+        // ABRIR DISCORD AUTOMÁTICAMENTE
         if (res.discordLink) {
-            log('DISCORD', 'Abriendo canal de voz...');
+            console.log("Abriendo Discord:", res.discordLink);
             window.open(res.discordLink, '_blank');
         }
     } else {
         alert(res.error);
     }
-  });
-};
-
-document.getElementById('btnStartRound').onclick = () => {
-  socket.emit('startRound');
-};
-
-document.getElementById('btnSkipVote').onclick = () => {
-  socket.emit('submitVote', { targetId: null });
-};
-
-function setupGame(res) {
-  lobbyOverlay.style.display = 'none';
-  mainContent.classList.remove('blurred');
-  myId = res.me.id;
-  isHost = res.isHost;
-  document.getElementById('roomCodeDisplay').innerText = res.roomCode;
-  log('SISTEMA', `Te has unido a la sala ${res.roomCode}`);
 }
 
-// --- SOCKET EVENTOS ---
+// --- CONTROL DE PARTIDA ---
+btnStart.onclick = () => socket.emit('startRound');
+document.getElementById('btnSkipVote').onclick = () => {
+    socket.emit('submitVote', { targetId: null });
+    showView(viewCard); // Volver a vista neutra mientras esperan
+};
+
+// --- EVENTOS DEL SOCKET ---
 socket.on('roomState', (room) => {
-  headerSubtitle.innerText = `Sala: ${room.roomCode}`;
-  myInfo.innerText = isHost ? 'Eres el Anfitrión' : 'Eres Jugador';
-  currentPhase = room.phase;
-  
-  // Actualizar lista jugadores
-  playersListEl.innerHTML = '';
-  room.players.forEach(p => {
-    const div = document.createElement('div');
-    div.className = 'player-item';
-    if(p.id === myId) div.classList.add('me');
-    
-    let actionBtn = '';
-    if(currentPhase === 'votacion' && p.id !== myId) {
-      actionBtn = `<button onclick="votar('${p.id}')" class="vote-btn">VOTAR</button>`;
-    }
-
-    div.innerHTML = `
-      <div class="player-info">
-        <span class="name">${p.name}</span>
-      </div>
-      ${actionBtn}
-    `;
-    playersListEl.appendChild(div);
-  });
-
-  // UI Botones
-  const btnStart = document.getElementById('btnStartRound');
-  const btnSkip = document.getElementById('btnSkipVote');
-  
-  // Lógica de botones
-  if (isHost && room.phase === 'lobby' && room.players.length >= 3) {
-      btnStart.disabled = false;
-      btnStart.style.opacity = "1";
-  } else {
-      btnStart.disabled = true;
-      btnStart.style.opacity = "0.5";
-  }
-
-  if (room.phase === 'votacion') {
-      btnSkip.disabled = false;
-      btnSkip.style.opacity = "1";
-  } else {
-      btnSkip.disabled = true;
-      btnSkip.style.opacity = "0.5";
-  }
-
-  document.getElementById('phasePill').innerText = room.phase.toUpperCase();
+    updateHeader(room);
+    updateGameView(room);
 });
 
-// Función global para votar desde el HTML generado
-window.votar = (id) => {
-  socket.emit('submitVote', { targetId: id });
-  log('TU', 'Has enviado tu voto.');
-};
-
 socket.on('yourRole', (data) => {
-  const roleEl = document.getElementById('roleDisplay');
-  const wordEl = document.getElementById('wordDisplay');
-  
-  if (data.role === 'impostor') {
-    roleEl.innerText = 'ERES EL IMPOSTOR';
-    roleEl.style.color = '#ef4444'; // Rojo
-    wordEl.innerText = '???';
-    log('ROL', '¡Eres el IMPOSTOR! Disimula.');
-  } else {
-    roleEl.innerText = 'CIUDADANO';
-    roleEl.style.color = '#22c55e'; // Verde
-    wordEl.innerText = data.word;
-    log('ROL', `Eres Ciudadano. La palabra es: ${data.word}`);
-  }
+    if (data.role === 'impostor') {
+        roleDisplay.innerText = 'ERES EL IMPOSTOR';
+        roleDisplay.style.color = 'white'; 
+        wordDisplay.innerText = '???';
+        document.querySelector('.secret-card').style.background = 'linear-gradient(135deg, #000, #b91c1c)';
+    } else {
+        roleDisplay.innerText = 'CIUDADANO';
+        wordDisplay.innerText = data.word;
+        document.querySelector('.secret-card').style.background = 'linear-gradient(135deg, #f97316, #be123c)';
+    }
 });
 
 socket.on('votingResults', (data) => {
+    // PANTALLA DE EXPULSIÓN
+    const title = document.getElementById('ejectedName');
+    const subtitle = document.getElementById('ejectedRole');
+    
+    ejectionOverlay.style.display = 'flex';
+    
     if (data.kickedPlayer) {
-        log('VOTACIÓN', `${data.kickedPlayer.name} fue expulsado.`);
-        log('VOTACIÓN', data.isImpostor ? '¡ERA EL IMPOSTOR!' : 'Era inocente...');
+        title.innerText = `${data.kickedPlayer.name} fue expulsado.`;
+        if (data.isImpostor) {
+            subtitle.innerText = "ERA EL IMPOSTOR";
+            subtitle.className = "eject-subtitle impostor-text";
+        } else {
+            subtitle.innerText = "NO ERA EL IMPOSTOR";
+            subtitle.className = "eject-subtitle innocent-text";
+        }
     } else {
-        log('VOTACIÓN', 'Nadie fue expulsado (Empate o Skip).');
+        title.innerText = "Nadie fue expulsado.";
+        subtitle.innerText = "EMPATE / SKIP";
+        subtitle.className = "eject-subtitle";
     }
+
+    // Ocultar overlay después de 4 segundos
+    setTimeout(() => {
+        ejectionOverlay.style.display = 'none';
+    }, 4000);
 });
+
+
+// --- FUNCIONES DE LÓGICA VISUAL ---
+
+function updateHeader(room) {
+    phasePill.innerText = room.phase.toUpperCase();
+    
+    // Botón Iniciar solo para Host en Lobby
+    if (isHost && room.phase === 'lobby' && room.players.length >= 3) {
+        btnStart.disabled = false;
+        btnStart.style.opacity = "1";
+        btnStart.innerText = "INICIAR PARTIDA";
+    } else {
+        btnStart.disabled = true;
+        btnStart.style.opacity = "0.3";
+        if (room.phase !== 'lobby') btnStart.innerText = "PARTIDA EN CURSO";
+    }
+    
+    myInfoDisplay.innerText = isHost ? '👑 Eres el Anfitrión' : '👤 Eres Jugador';
+}
+
+function updateGameView(room) {
+    // 1. FASE VOTACIÓN
+    if (room.phase === 'votacion') {
+        showView(viewVoting);
+        renderVotingGrid(room.players);
+        return;
+    }
+
+    // 2. FASE PALABRAS (TURNOS)
+    if (room.phase === 'palabras') {
+        const activePlayer = room.players[room.turnIndex];
+        
+        if (activePlayer) {
+            // Mostrar vista de Turno
+            showView(viewTurn);
+            turnPlayerName.innerText = activePlayer.name;
+            
+            // Iniciar temporizador visual suave
+            startLocalTimer(room.timeLeft);
+            
+            // Si soy yo, avisar visualmente extra
+            if (activePlayer.id === myId) {
+                turnPlayerName.style.color = '#f59e0b'; // Amarillo
+                turnPlayerName.innerText = "¡ES TU TURNO!";
+            } else {
+                turnPlayerName.style.color = 'white';
+            }
+        }
+        return;
+    }
+
+    // 3. FASE LOBBY (DEFAULT)
+    showView(viewCard);
+    stopLocalTimer();
+}
+
+function showView(element) {
+    [viewCard, viewTurn, viewVoting].forEach(el => el.style.display = 'none');
+    element.style.display = 'block';
+}
+
+// --- TEMPORIZADOR SUAVE ---
+function startLocalTimer(seconds) {
+    stopLocalTimer();
+    turnTimerDisplay.innerText = seconds;
+    
+    localTimer = setInterval(() => {
+        seconds--;
+        if (seconds < 0) seconds = 0;
+        turnTimerDisplay.innerText = seconds;
+        if (seconds === 0) stopLocalTimer();
+    }, 1000);
+}
+
+function stopLocalTimer() {
+    if (localTimer) clearInterval(localTimer);
+}
+
+// --- RENDERIZAR GRILLA DE VOTACIÓN ---
+function renderVotingGrid(players) {
+    votingGrid.innerHTML = '';
+    
+    players.forEach(p => {
+        // No te puedes votar a ti mismo (opcional, pero común)
+        if (p.id === myId) return;
+
+        const card = document.createElement('div');
+        card.className = 'vote-card';
+        if (selectedVoteId === p.id) card.classList.add('selected');
+        
+        card.innerHTML = `
+            <div class="vote-avatar">👤</div>
+            <div class="vote-name">${p.name}</div>
+        `;
+        
+        card.onclick = () => {
+            // Deseleccionar anteriores
+            document.querySelectorAll('.vote-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            selectedVoteId = p.id;
+            
+            // Enviar voto
+            socket.emit('submitVote', { targetId: p.id });
+        };
+        
+        votingGrid.appendChild(card);
+    });
+}
