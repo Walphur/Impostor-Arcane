@@ -42,24 +42,43 @@ tabJoin.onclick = () => {
 };
 
 // --- BOTONES ---
+
+// 1. CREAR SALA (Modificado para Discord)
 document.getElementById('btnCreateRoom').onclick = () => {
   const name = document.getElementById('hostName').value;
   const maxPlayers = document.getElementById('maxPlayers').value;
   const impostors = document.getElementById('impostors').value;
   
   socket.emit('createRoom', { name, maxPlayers, impostors }, (res) => {
-    if(res.ok) setupGame(res);
-    else alert(res.error);
+    if(res.ok) {
+        setupGame(res);
+        // --- LOGICA DISCORD ---
+        if (res.discordLink) {
+            log('DISCORD', 'Abriendo canal de voz...');
+            window.open(res.discordLink, '_blank');
+        }
+    } else {
+        alert(res.error);
+    }
   });
 };
 
+// 2. UNIRSE A SALA (Modificado para Discord)
 document.getElementById('btnJoinRoom').onclick = () => {
   const name = document.getElementById('joinName').value;
   const code = document.getElementById('joinCode').value;
   
   socket.emit('joinRoom', { name, roomCode: code }, (res) => {
-    if(res.ok) setupGame(res);
-    else alert(res.error);
+    if(res.ok) {
+        setupGame(res);
+        // --- LOGICA DISCORD ---
+        if (res.discordLink) {
+            log('DISCORD', 'Abriendo canal de voz...');
+            window.open(res.discordLink, '_blank');
+        }
+    } else {
+        alert(res.error);
+    }
   });
 };
 
