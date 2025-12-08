@@ -67,7 +67,21 @@ async function crearCanalDiscord(nombre, limite) {
 }
 
 async function borrarCanalDiscord(id) { try{const g=discordClient.guilds.cache.get(GUILD_ID); if(g) await g.channels.cache.get(id)?.delete();}catch(e){} }
-function generateCode() { const c='ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let r='',i=0; do{r='ARC-';for(let j=0;j<4;j++)r+=c[Math.floor(Math.random()*c.length)];i++}while(rooms[r]&&i<100); return r;}
+function generateCode() {
+    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    let code, attempts = 0;
+    do {
+        let part = '';
+        for (let i = 0; i < 4; i++) part += chars[Math.floor(Math.random() * chars.length)];
+        
+        // ANTES: code = 'ARC-' + part;
+        // AHORA: Solo la parte aleatoria
+        code = part; 
+        
+        attempts++;
+    } while (rooms[code] && attempts < 100);
+    return code;
+}
 function assignColor(r) { const u=r.players.map(p=>p.color); return PLAYER_COLORS.find(c=>!u.includes(c))||'#fff'; }
 function getRoomOfSocket(socketId) { const code = socketRoom[socketId]; return code ? rooms[code] : null; }
 
