@@ -24,7 +24,13 @@ function playSound(name) {
 // ==========================================
 // 2. REFERENCIAS DOM
 // ==========================================
-const lobbyOverlay=document.getElementById('lobbyOverlay'), mainContent=document.getElementById('mainContent'), roomCodeDisplay=document.getElementById('roomCodeDisplay'), playersListEl=document.getElementById('playersList'), votingGrid=document.getElementById('votingGrid');
+// PANTALLAS NUEVAS
+const screenHome = document.getElementById('screenHome');
+const screenCreate = document.getElementById('screenCreate');
+const screenJoin = document.getElementById('screenJoin');
+const lobbyOverlay=document.getElementById('lobbyOverlay');
+
+const mainContent=document.getElementById('mainContent'), roomCodeDisplay=document.getElementById('roomCodeDisplay'), playersListEl=document.getElementById('playersList'), votingGrid=document.getElementById('votingGrid');
 const viewCard=document.getElementById('viewCard'), viewTurn=document.getElementById('viewTurn'), viewVoting=document.getElementById('viewVoting');
 const turnPlayerName=document.getElementById('turnPlayerName'), turnTimerDisplay=document.getElementById('turnTimerDisplay'), turnAvatar=document.querySelector('.turn-avatar-circle'), roleDisplay=document.getElementById('roleDisplay'), wordDisplay=document.getElementById('wordDisplay'), teammateDisplay=document.getElementById('teammateDisplay'), ejectionOverlay=document.getElementById('ejectionOverlay');
 const btnStart=document.getElementById('btnStartRound'), btnSkip=document.getElementById('btnSkipVote'), btnFinishTurn=document.getElementById('btnFinishTurn'), btnDiscordManual=document.getElementById('btnDiscordManual'), btnExit=document.getElementById('btnExit');
@@ -34,16 +40,31 @@ const votingTimer = document.getElementById('votingTimer');
 
 let myId=null, isHost=false, localTimer=null, selectedVoteId=null, isMyPlayerDead=false, currentDiscordLink=null;
 
-// Ocultar juego al inicio y asegurar que empiece desenfocado
+// Ocultar juego al inicio
 mainContent.style.display = 'none';
 
-// --- TABS ---
-document.getElementById('tabCreate').onclick=(e)=>{ playSound('click'); switchTab(e,'panelCreate'); };
-document.getElementById('tabJoin').onclick=(e)=>{ playSound('click'); switchTab(e,'panelJoin'); };
+// --- NAVEGACIÓN MENU (CONCEPT 2) ---
+function showScreen(screenName) {
+    playSound('click');
+    // Ocultar todas
+    screenHome.style.display = 'none';
+    screenCreate.style.display = 'none';
+    screenJoin.style.display = 'none';
 
-function switchTab(e,pid){ document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); e.target.classList.add('active'); document.getElementById('panelCreate').style.display=pid==='panelCreate'?'block':'none'; document.getElementById('panelJoin').style.display=pid==='panelJoin'?'block':'none'; }
+    // Mostrar la deseada
+    if(screenName === 'home') screenHome.style.display = 'flex';
+    if(screenName === 'create') screenCreate.style.display = 'flex';
+    if(screenName === 'join') screenJoin.style.display = 'flex';
+}
 
-// --- BOTONES CREAR / UNIRSE ---
+// Eventos de botones
+document.getElementById('btnGoCreate').onclick = () => showScreen('create');
+document.getElementById('btnGoJoin').onclick = () => showScreen('join');
+document.getElementById('backFromCreate').onclick = () => showScreen('home');
+document.getElementById('backFromJoin').onclick = () => showScreen('home');
+
+
+// --- BOTONES CREAR / UNIRSE (LÓGICA SOCKET) ---
 document.getElementById('btnCreateRoom').onclick = () => {
     playSound('click');
     const checkboxes = document.querySelectorAll('.category-card input[type="checkbox"]:checked');
@@ -79,7 +100,7 @@ document.getElementById('btnJoinRoom').onclick=()=>{
     }, handleConnection); 
 };
 
-// === FIX IMPORTANTE AQUÍ: QUITAR CLASS 'BLURRED' ===
+// === MANEJO DE CONEXIÓN ===
 function handleConnection(res){ 
     if(res.ok){ 
         playSound('join'); 
@@ -89,7 +110,7 @@ function handleConnection(res){
         mainContent.style.display='block'; 
         setTimeout(() => {
             mainContent.classList.remove('blurred');
-        }, 50); // Pequeño delay para que el navegador procese la transición CSS
+        }, 50); 
         
         myId=res.me.id; isHost=res.isHost; roomCodeDisplay.innerText=res.roomCode; 
         

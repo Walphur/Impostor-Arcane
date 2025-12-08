@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Impostor Arcane</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Incognito</title> <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -19,18 +18,33 @@
   </div>
 
   <div id="lobbyOverlay" class="lobby-overlay">
-    <div class="menu-card">
-      <div class="avatar-preview">🕵️</div>
+    
+    <div id="screenHome" class="menu-card fade-in">
+      <div class="brand-header">
+        <div class="logo-glitch">🕵️‍♂️</div>
+        <h1 class="brand-title">INCOGNITO</h1>
+      </div>
       
-      <div class="tabs">
-        <button id="tabCreate" class="tab-btn active">Crear</button>
-        <button id="tabJoin" class="tab-btn">Unirse</button>
+      <div class="home-actions">
+        <button id="btnGoCreate" class="btn-main btn-neon-blue">CREAR SALA</button>
+        <button id="btnGoJoin" class="btn-main btn-outline">UNIRSE A SALA</button>
       </div>
 
-      <div id="panelCreate">
+      <div class="footer-links">
+        <span>v7.0 Incognito Update</span>
+      </div>
+    </div>
+
+    <div id="screenCreate" class="menu-card fade-in" style="display: none;">
+      <div class="screen-header">
+        <button id="backFromCreate" class="btn-back">← Volver</button>
+        <h2>CONFIGURAR PARTIDA</h2>
+      </div>
+
+      <div class="scrollable-content">
         <div class="input-group">
           <label>Tu Nombre</label>
-          <input type="text" id="hostName" maxlength="10" placeholder="Ej: Juan">
+          <input type="text" id="hostName" maxlength="10" placeholder="Ej: Agente 1">
         </div>
 
         <div class="input-group">
@@ -80,19 +94,36 @@
           <div><label>Jugadores</label><input type="number" id="maxPlayers" value="10" min="4" max="15"></div>
           <div><label>Impostores</label><input type="number" id="impostors" value="2" min="1" max="4"></div>
         </div>
-        <button id="btnCreateRoom" class="btn-main btn-primary">CREAR SALA</button>
       </div>
-
-      <div id="panelJoin" style="display: none;">
-        <div class="input-group"><label>Tu Nombre</label><input type="text" id="joinName" maxlength="10" placeholder="Nombre"></div>
-        <div class="input-group"><label>CÓDIGO DE SALA</label><input type="text" id="joinCode" class="code-input" placeholder="XXXX"></div>
-        <button id="btnJoinRoom" class="btn-main btn-secondary">UNIRSE</button>
-      </div>
+      
+      <button id="btnCreateRoom" class="btn-main btn-primary">INICIAR JUEGO</button>
     </div>
-    <p class="version-text">v6.1 Visual Fix</p>
+
+    <div id="screenJoin" class="menu-card fade-in" style="display: none;">
+      <div class="screen-header">
+        <button id="backFromJoin" class="btn-back">← Volver</button>
+        <h2>UNIRSE A PARTIDA</h2>
+      </div>
+      
+      <div class="spacer"></div>
+
+      <div class="input-group">
+        <label>Tu Nombre</label>
+        <input type="text" id="joinName" maxlength="10" placeholder="Ej: Espía">
+      </div>
+      <div class="input-group">
+        <label>CÓDIGO DE SALA</label>
+        <input type="text" id="joinCode" class="code-input" placeholder="ABCD">
+      </div>
+      
+      <div class="spacer"></div>
+      
+      <button id="btnJoinRoom" class="btn-main btn-secondary">ENTRAR</button>
+    </div>
+
   </div>
 
-  <main id="mainContent" class="blurred">
+  <main id="mainContent" class="blurred" style="display:none;">
     <div class="game-board">
         <section class="game-area">
             <div class="top-bar">
