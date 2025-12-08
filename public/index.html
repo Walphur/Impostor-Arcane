@@ -23,7 +23,6 @@
     
     <div class="menu-card">
       <div class="avatar-preview">🕵️</div>
-      
       <div class="tabs">
         <button id="tabCreate" class="tab-btn active">Crear</button>
         <button id="tabJoin" class="tab-btn">Unirse</button>
@@ -35,41 +34,26 @@
           <input type="text" id="hostName" maxlength="10" placeholder="Ej: Juan">
         </div>
 
-        <div class="input-group" style="margin-bottom: 15px;">
+        <div class="input-group">
             <label class="local-mode-btn">
                 <input type="checkbox" id="localMode">
                 <span>🏠 Modo Presencial (Sin Discord)</span>
             </label>
         </div>
 
+        <div class="input-group flex-group">
+            <div><label>Turno (seg)</label><input type="number" id="timeTurn" value="15" min="5" max="60"></div>
+            <div><label>Votación (seg)</label><input type="number" id="timeVote" value="120" min="30" max="300"></div>
+        </div>
+
         <div class="input-group">
             <label>Categorías</label>
             <div class="category-cards-grid">
-                <label class="category-card">
-                    <input type="checkbox" value="lugares" checked>
-                    <span class="cat-icon">📍</span>
-                    <span class="cat-name">Lugares</span>
-                </label>
-                <label class="category-card">
-                    <input type="checkbox" value="comidas" checked>
-                    <span class="cat-icon">🍔</span>
-                    <span class="cat-name">Comidas</span>
-                </label>
-                <label class="category-card">
-                    <input type="checkbox" value="objetos">
-                    <span class="cat-icon">🛠️</span>
-                    <span class="cat-name">Objetos</span>
-                </label>
-                <label class="category-card">
-                    <input type="checkbox" value="animales">
-                    <span class="cat-icon">🦁</span>
-                    <span class="cat-name">Animales</span>
-                </label>
-                <label class="category-card" style="grid-column: span 2;">
-                    <input type="checkbox" value="profesiones">
-                    <span class="cat-icon">👮</span>
-                    <span class="cat-name">Profesiones</span>
-                </label>
+                <label class="category-card"><input type="checkbox" value="lugares" checked><span class="cat-icon">📍</span><span class="cat-name">Lugares</span></label>
+                <label class="category-card"><input type="checkbox" value="comidas" checked><span class="cat-icon">🍔</span><span class="cat-name">Comidas</span></label>
+                <label class="category-card"><input type="checkbox" value="objetos"><span class="cat-icon">🛠️</span><span class="cat-name">Objetos</span></label>
+                <label class="category-card"><input type="checkbox" value="animales"><span class="cat-icon">🦁</span><span class="cat-name">Animales</span></label>
+                <label class="category-card" style="grid-column: span 2;"><input type="checkbox" value="profesiones"><span class="cat-icon">👮</span><span class="cat-name">Profesiones</span></label>
             </div>
         </div>
 
@@ -86,7 +70,7 @@
         <button id="btnJoinRoom" class="btn-main btn-secondary">UNIRSE</button>
       </div>
     </div>
-    <p class="version-text">v5.1 UI Update</p>
+    <p class="version-text">v5.5 Final</p>
   </div>
 
   <main id="mainContent" class="blurred">
@@ -96,14 +80,16 @@
                 <div class="room-info">
                     <span class="room-label">SALA <span id="roomCodeDisplay" class="room-code">---</span></span>
                 </div>
-                <button id="btnDiscordManual" class="btn-discord-small" style="display:none;">🎧 UNIRSE AL VOZ</button>
-                <div id="phasePill" class="phase-pill">LOBBY</div>
+                <div class="top-right-actions" style="display: flex; gap: 10px;">
+                    <button id="btnDiscordManual" class="btn-discord-small" style="display:none;">🎧 VOZ</button>
+                    <button id="btnExit" class="btn-exit">❌</button>
+                </div>
             </div>
 
             <div class="game-center">
                 <div id="viewCard" class="center-view">
                     <div class="secret-card">
-                        <div class="secret-label">TU CARTA SECRETA</div>
+                        <div class="secret-label">TU ROL</div>
                         <div class="secret-word" id="wordDisplay">? ? ?</div>
                         <div class="secret-role" id="roleDisplay">Esperando inicio...</div>
                         <div class="teammate-hint" id="teammateDisplay" style="display:none;"></div>
@@ -121,7 +107,10 @@
 
                 <div id="viewVoting" class="center-view" style="display:none;">
                     <h2 class="vote-title">¿QUIÉN ES EL IMPOSTOR?</h2>
-                    <div id="voteCounter" class="vote-counter">Votos: 0/10</div>
+                    <div class="vote-hud">
+                        <div id="votingTimer" class="vote-timer">02:00</div>
+                        <div id="voteCounter" class="vote-counter">Votos: 0/10</div>
+                    </div>
                     <div class="voting-grid" id="votingGrid"></div>
                 </div>
             </div>

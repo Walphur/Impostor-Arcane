@@ -24,7 +24,7 @@ const PLAYER_COLORS = [
     '#f43f5e', '#6366f1', '#14b8a6', '#d946ef', '#64748b'
 ];
 
-// --- BASE DE DATOS PALABRAS ---
+// --- PALABRAS ---
 const WORD_DB = {
     lugares: ['SAUNA', 'CEMENTERIO', 'SUBMARINO', 'ASCENSOR', 'IGLÚ', 'CASINO', 'CIRCO', 'ESTACIÓN ESPACIAL', 'HORMIGUERO', 'CINE', 'BARCO PIRATA', 'ZOOLÓGICO', 'HOSPITAL', 'AEROPUERTO', 'PLAYA', 'BIBLIOTECA'],
     comidas: ['SUSHI', 'PAELLA', 'TACOS', 'HELADO', 'HUEVO FRITO', 'CEVICHE', 'ASADO', 'FONDUE', 'MEDIALUNA', 'SOPA', 'COCO', 'CHICLE', 'PIZZA', 'HAMBURGUESA', 'POCHOCLOS', 'CHOCOLATE'],
@@ -33,21 +33,17 @@ const WORD_DB = {
     profesiones: ['ASTRONAUTA', 'MIMO', 'CIRUJANO', 'JARDINERO', 'DETECTIVE', 'BUZO', 'ÁRBITRO', 'CAJERO', 'PRESIDENTE', 'FANTASMA', 'BOMBERO', 'PROFESOR', 'POLICÍA', 'CHEF']
 };
 
-// --- HELPERS ---
 function getRandomWord(selectedCategories) {
     let pool = [];
     if (!selectedCategories || selectedCategories.length === 0) {
         Object.values(WORD_DB).forEach(arr => pool.push(...arr));
     } else {
-        selectedCategories.forEach(cat => {
-            if (WORD_DB[cat]) pool.push(...WORD_DB[cat]);
-        });
+        selectedCategories.forEach(cat => { if (WORD_DB[cat]) pool.push(...WORD_DB[cat]); });
     }
     if (pool.length === 0) Object.values(WORD_DB).forEach(arr => pool.push(...arr));
     return pool[Math.floor(Math.random() * pool.length)];
 }
 
-// Mezcla Fisher-Yates (Aleatoriedad Real)
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -82,8 +78,6 @@ const io = new Server(server, { cors: { origin: '*' } });
 const CLIENT_DIR = path.join(__dirname, 'public');
 app.use(express.static(CLIENT_DIR));
 
-const TIEMPO_TURNO = 15 * 1000;
-const TIEMPO_VOTACION = 120 * 1000;
 const rooms = {};
 const socketRoom = {};
 
@@ -94,14 +88,13 @@ function emitRoomState(room) {
     if (room.phase === 'palabras' && room.turnDeadline) timeLeft = Math.max(0, Math.ceil((room.turnDeadline - now) / 1000));
     else if (room.phase === 'votacion' && room.voteDeadline) timeLeft = Math.max(0, Math.ceil((room.voteDeadline - now) / 1000));
 
-    // Calcular votos actuales
     const votesCount = Object.keys(room.votes).length;
     const livingPlayers = room.players.filter(p => !p.isDead).length;
 
     io.to(room.code).emit('roomState', {
         roomCode: room.code, hostId: room.hostId, phase: room.phase, turnIndex: room.turnIndex,
         timeLeft: timeLeft, discordLink: room.discordLink,
-        votesInfo: { current: votesCount, total: livingPlayers }, // INFO PARA EL CONTADOR
+        votesInfo: { current: votesCount, total: livingPlayers },
         players: room.players.map(p => ({ 
             id: p.id, name: p.name, color: p.color, hasVoted: !!room.votes[p.id], isDead: p.isDead || false 
         }))
@@ -123,21 +116,25 @@ function nextTurn(room) {
     } while((room.spoken[room.players[next].id] || room.players[next].isDead) && loops < room.players.length * 2);
 
     room.turnIndex = next; 
-    room.turnDeadline = Date.now() + TIEMPO_TURNO;
+    // Usamos el tiempo configurado por el host
+    room.turnDeadline = Date.now() + room.config.turnTime; 
     
     room.timer = setTimeout(()=>{ 
         if(room.players[room.turnIndex]) room.spoken[room.players[room.turnIndex].id]=true; 
         nextTurn(room); 
-    }, TIEMPO_TURNO);
+    }, room.config.turnTime);
     
     emitRoomState(room);
 }
 
 function startVoting(room) { 
     if(room.timer) clearTimeout(room.timer);
-    room.phase='votacion'; room.voteDeadline=Date.now()+TIEMPO_VOTACION; room.votes={};
+    room.phase='votacion'; 
+    // Usamos el tiempo de votación configurado
+    room.voteDeadline = Date.now() + room.config.voteTime; 
+    room.votes={};
     io.to(room.code).emit('votingStarted'); emitRoomState(room);
-    room.timer = setTimeout(()=>finishVoting(room, 'Tiempo agotado'), TIEMPO_VOTACION);
+    room.timer = setTimeout(()=>finishVoting(room, 'Tiempo agotado'), room.config.voteTime);
 }
 
 function finishVoting(room, reason) {
@@ -161,25 +158,32 @@ function finishVoting(room, reason) {
 
     io.to(room.code).emit('votingResults', {reason, kickedPlayer: kicked?{name:kicked.name}:null, isImpostor, gameResult});
     
-    if(gameResult) { room.phase='lobby'; room.spoken={}; room.votes={}; setTimeout(()=>emitRoomState(room), 5000); }
-    else { room.phase='palabras'; room.turnIndex=-1; room.spoken={}; room.votes={}; setTimeout(()=>{if(rooms[room.code]) nextTurn(room)}, 5000); }
+    if(gameResult) { 
+        room.phase='lobby'; 
+        room.spoken={}; room.votes={}; 
+        // No reseteamos muertos aun para que se vea quien gano, se resetea al dar StartRound
+        setTimeout(()=>emitRoomState(room), 5000); 
+    } else { 
+        room.phase='palabras'; room.turnIndex=-1; room.spoken={}; room.votes={}; 
+        setTimeout(()=>{if(rooms[room.code]) nextTurn(room)}, 5000); 
+    }
 }
 
-// --- SOCKETS ---
 io.on('connection', (socket) => {
     socket.on('createRoom', async (data, cb) => {
         const code = generateCode();
         let maxP = Math.min(parseInt(data.maxPlayers)||10, 15);
         let discordData = {voiceId:null, inviteLink:null};
-        
-        // MODO LOCAL: Si no es local, creamos Discord
-        if(DISCORD_TOKEN && !data.isLocal) { 
-            const r = await crearCanalDiscord(code, maxP); if(r) discordData=r; 
-        }
+        if(DISCORD_TOKEN && !data.isLocal) { const r = await crearCanalDiscord(code, maxP); if(r) discordData=r; }
 
         const room = {
             code, hostId: socket.id, maxPlayers: maxP, impostors: parseInt(data.impostors)||2,
             categories: data.categories || [],
+            // Guardamos la configuración de tiempo (en ms)
+            config: {
+                turnTime: (parseInt(data.turnTime) || 15) * 1000,
+                voteTime: (parseInt(data.voteTime) || 120) * 1000
+            },
             players: [{ id: socket.id, name: data.name || 'Host', color: PLAYER_COLORS[0], isDead: false }],
             phase: 'lobby', turnIndex: -1, roles: {}, spoken: {}, votes: {},
             discordVoiceChannel: discordData.voiceId, discordLink: discordData.inviteLink
@@ -194,7 +198,6 @@ io.on('connection', (socket) => {
         if(room) {
             if(room.players.length >= room.maxPlayers) return cb({ok:false, error:'Sala llena'});
             if(room.players.some(p=>p.name.toUpperCase()===data.name.toUpperCase())) return cb({ok:false, error:'Nombre en uso'});
-            
             socket.join(code); socketRoom[socket.id] = code;
             room.players.push({id:socket.id, name:data.name, color:assignColor(room), isDead: false});
             room.spoken[socket.id]=false;
@@ -206,11 +209,16 @@ io.on('connection', (socket) => {
     socket.on('startRound', () => {
         const room = getRoomOfSocket(socket.id);
         if(room && room.hostId === socket.id) {
-            room.players.forEach(p => p.isDead = false);
-            // USAR MEZCLA REAL
+            // --- REINICIO TOTAL PARA NUEVA PARTIDA ---
+            room.players.forEach(p => p.isDead = false); // Revivir a todos
+            room.votes = {}; // Borrar votos viejos
+            room.spoken = {}; // Borrar historial de habla
+            room.turnIndex = -1;
+
+            // Barajar y Asignar
             const shuffledPlayers = shuffleArray([...room.players]);
             const impIds = shuffledPlayers.slice(0, room.impostors).map(p=>p.id);
-            const word = getRandomWord(room.categories);
+            const word = getRandomWord(room.categories); // Palabra nueva
             const impNames = room.players.filter(p => impIds.includes(p.id)).map(p => p.name);
 
             room.roles = {};
@@ -221,17 +229,18 @@ io.on('connection', (socket) => {
                 io.to(p.id).emit('yourRole', { role, word: role==='ciudadano'?word:null, teammates });
                 room.spoken[p.id] = false;
             });
+            
+            // FASE LECTURA NUEVA
             room.phase = 'lectura'; emitRoomState(room);
-            setTimeout(()=>{ if(rooms[room.code]){ room.phase='palabras'; room.turnIndex=-1; nextTurn(room); }}, 7000);
+            setTimeout(()=>{ if(rooms[room.code]){ room.phase='palabras'; nextTurn(room); }}, 7000);
         }
     });
 
-    // NUEVO: SALTAR TURNO
     socket.on('finishTurn', () => {
         const room = getRoomOfSocket(socket.id);
         if(room && room.phase === 'palabras' && room.players[room.turnIndex]?.id === socket.id) {
             room.spoken[socket.id] = true;
-            nextTurn(room); // Forzar siguiente turno inmediatamente
+            nextTurn(room); 
         }
     });
 
@@ -246,12 +255,12 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('disconnect', () => {
-        const room=getRoomOfSocket(socket.id); if(room){
-            room.players=room.players.filter(p=>p.id!==socket.id); delete socketRoom[socket.id];
-            if(room.players.length===0){
-                if(room.timer)clearTimeout(room.timer); if(room.discordVoiceChannel)borrarCanalDiscord(room.discordVoiceChannel); delete rooms[room.code];
-            } else { if(room.hostId===socket.id)room.hostId=room.players[0].id; emitRoomState(room); }
+    socket.on('disconnect', () => { /* ... Logica de desconexion igual ... */ 
+        const r=getRoomOfSocket(socket.id); if(r){
+            r.players=r.players.filter(p=>p.id!==socket.id); delete socketRoom[socket.id];
+            if(r.players.length===0){
+                if(r.timer)clearTimeout(r.timer); if(r.discordVoiceChannel)borrarCanalDiscord(r.discordVoiceChannel); delete rooms[r.code];
+            } else { if(r.hostId===socket.id)r.hostId=r.players[0].id; emitRoomState(r); }
         }
     });
 });
