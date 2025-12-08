@@ -1,15 +1,18 @@
 const socket = io();
 
-// REFERENCIAS DOM
+// DOM
 const lobbyOverlay=document.getElementById('lobbyOverlay'), mainContent=document.getElementById('mainContent'), phasePill=document.getElementById('phasePill'), roomCodeDisplay=document.getElementById('roomCodeDisplay'), playersListEl=document.getElementById('playersList'), votingGrid=document.getElementById('votingGrid');
 const viewCard=document.getElementById('viewCard'), viewTurn=document.getElementById('viewTurn'), viewVoting=document.getElementById('viewVoting');
 const turnPlayerName=document.getElementById('turnPlayerName'), turnTimerDisplay=document.getElementById('turnTimerDisplay'), turnAvatar=document.querySelector('.turn-avatar-circle'), roleDisplay=document.getElementById('roleDisplay'), wordDisplay=document.getElementById('wordDisplay'), teammateDisplay=document.getElementById('teammateDisplay'), ejectionOverlay=document.getElementById('ejectionOverlay');
 const btnStart=document.getElementById('btnStartRound'), btnSkip=document.getElementById('btnSkipVote'), btnFinishTurn=document.getElementById('btnFinishTurn'), btnDiscordManual=document.getElementById('btnDiscordManual'), btnExit=document.getElementById('btnExit');
 const gameBoard = document.querySelector('.game-board');
 const voteCounter = document.getElementById('voteCounter');
-const votingTimer = document.getElementById('votingTimer'); // NUEVO
+const votingTimer = document.getElementById('votingTimer');
 
 let myId=null, isHost=false, localTimer=null, selectedVoteId=null, isMyPlayerDead=false, currentDiscordLink=null;
+
+// AL INICIO: OCULTAR JUEGO (CORRECCIÓN VISUAL)
+mainContent.style.display = 'none';
 
 document.getElementById('tabCreate').onclick=(e)=>switchTab(e,'panelCreate'); document.getElementById('tabJoin').onclick=(e)=>switchTab(e,'panelJoin');
 function switchTab(e,pid){ document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); e.target.classList.add('active'); document.getElementById('panelCreate').style.display=pid==='panelCreate'?'block':'none'; document.getElementById('panelJoin').style.display=pid==='panelJoin'?'block':'none'; }
@@ -20,15 +23,12 @@ document.getElementById('btnCreateRoom').onclick=()=>{
     const hostName = document.getElementById('hostName').value || 'Host';
     const isLocal = document.getElementById('localMode').checked;
     
-    // Capturar tiempos
-    const turnTime = document.getElementById('timeTurn').value;
-    const voteTime = document.getElementById('timeVote').value;
-
     socket.emit('createRoom', { 
         name: hostName, maxPlayers: document.getElementById('maxPlayers').value, 
         impostors: document.getElementById('impostors').value, 
         categories: categories, isLocal: isLocal,
-        turnTime: turnTime, voteTime: voteTime
+        turnTime: document.getElementById('timeTurn').value, 
+        voteTime: document.getElementById('timeVote').value
     }, handleConnection);
 };
 
@@ -38,14 +38,18 @@ document.getElementById('btnJoinRoom').onclick=()=>{
 
 function handleConnection(res){ 
     if(res.ok){ 
-        lobbyOverlay.style.display='none'; mainContent.classList.remove('blurred'); myId=res.me.id; isHost=res.isHost; roomCodeDisplay.innerText=res.roomCode; 
+        // CAMBIO: Ocultar lobby, Mostrar Juego
+        lobbyOverlay.style.display='none'; 
+        mainContent.style.display='block'; // YA NO USAMOS BLURRED
+        
+        myId=res.me.id; isHost=res.isHost; roomCodeDisplay.innerText=res.roomCode; 
         if(res.discordLink) { currentDiscordLink = res.discordLink; btnDiscordManual.style.display = 'flex'; window.open(res.discordLink, '_blank'); } 
         else { btnDiscordManual.style.display = 'none'; }
     } else { alert(res.error); } 
 }
 
 btnDiscordManual.onclick = () => { if(currentDiscordLink) window.open(currentDiscordLink, '_blank'); };
-btnExit.onclick = () => location.reload(); // Recargar página para salir
+btnExit.onclick = () => location.reload();
 
 btnStart.onclick=()=>socket.emit('startRound');
 btnFinishTurn.onclick=()=>socket.emit('finishTurn');
@@ -53,25 +57,19 @@ btnSkip.onclick=()=>{ if(isMyPlayerDead) return; socket.emit('submitVote', {targ
 
 socket.on('roomState', (room)=>{ 
     const me = room.players.find(p => p.id === myId);
-    if(me) isMyPlayerDead = me.isDead || false; // Actualizar estado muerto
-    
+    if(me) isMyPlayerDead = me.isDead || false;
     if(room.votesInfo) voteCounter.innerText = `VOTOS: ${room.votesInfo.current} / ${room.votesInfo.total}`;
-    
     updateHeader(room); renderSidebar(room); updateGameView(room); 
 });
 
 socket.on('yourRole', (data)=>{
     const card=document.querySelector('.secret-card'); teammateDisplay.style.display='none';
     if(data.role==='impostor'){ 
-        roleDisplay.innerText='ERES EL IMPOSTOR'; 
-        wordDisplay.innerText='ERES EL IMPOSTOR'; // CAMBIO CLAVE: Texto claro
-        wordDisplay.classList.add('impostor-word'); // Clase CSS especial
+        roleDisplay.innerText='ERES EL IMPOSTOR'; wordDisplay.innerText='ERES EL IMPOSTOR'; wordDisplay.classList.add('impostor-word');
         card.style.background='linear-gradient(135deg, #020617, #7f1d1d)'; 
         if(data.teammates&&data.teammates.length>0){teammateDisplay.style.display='block';teammateDisplay.innerText=`ALIADO: ${data.teammates.join(', ')}`;} 
     } else { 
-        roleDisplay.innerText='CIUDADANO'; 
-        wordDisplay.innerText=data.word; 
-        wordDisplay.classList.remove('impostor-word');
+        roleDisplay.innerText='CIUDADANO'; wordDisplay.innerText=data.word; wordDisplay.classList.remove('impostor-word');
         card.style.background='linear-gradient(135deg, #f97316, #9f1239)'; 
     }
 });
@@ -85,13 +83,7 @@ socket.on('votingResults', (data)=>{
         s.className=data.isImpostor?"eject-subtitle impostor-text":"eject-subtitle innocent-text"; 
     } else { t.innerText="Nadie fue expulsado."; s.innerText="SKIP / EMPATE"; s.className="eject-subtitle"; }
     
-    if(data.gameResult){ 
-        setTimeout(()=>{ 
-            t.innerText="JUEGO TERMINADO"; 
-            s.innerText=data.gameResult==='citizensWin'?"¡VICTORIA CIUDADANA!":"¡VICTORIA IMPOSTORA!"; 
-            s.className=data.gameResult==='citizensWin'?"eject-subtitle innocent-text":"eject-subtitle impostor-text"; 
-        },2000); 
-    }
+    if(data.gameResult){ setTimeout(()=>{ t.innerText="JUEGO TERMINADO"; s.innerText=data.gameResult==='citizensWin'?"¡VICTORIA CIUDADANA!":"¡VICTORIA IMPOSTORA!"; s.className=data.gameResult==='citizensWin'?"eject-subtitle innocent-text":"eject-subtitle impostor-text"; },2000); }
     setTimeout(()=>{ ejectionOverlay.style.display='none'; btnSkip.innerText="SALTAR VOTO"; btnSkip.disabled=false; },5000);
 });
 
@@ -109,25 +101,9 @@ function renderSidebar(room){
 
 function updateGameView(room){
     if(room.phase==='votacion') gameBoard.classList.add('voting-mode'); else gameBoard.classList.remove('voting-mode');
-
     if(room.phase==='lectura'){ showView(viewCard); document.querySelector('.secret-card').style.transform="scale(1.1)"; roleDisplay.innerText="¡MIRA TU ROL!"; stopLocalTimer(); return; }
-    
-    if(room.phase==='votacion'){ 
-        document.querySelector('.secret-card').style.transform="scale(1)"; showView(viewVoting); 
-        renderVotingGrid(room.players); 
-        // Timer de votacion
-        startLocalTimer(room.timeLeft, 'vote');
-        return; 
-    }
-    
-    if(room.phase==='palabras'){ 
-        document.querySelector('.secret-card').style.transform="scale(1)"; const ap=room.players[room.turnIndex]; 
-        if(ap){ 
-            showView(viewTurn); turnPlayerName.innerText=ap.name; turnPlayerName.style.color=ap.color; turnAvatar.style.borderColor=ap.color; 
-            startLocalTimer(room.timeLeft, 'turn'); 
-            btnFinishTurn.style.display = (ap.id === myId) ? 'block' : 'none'; 
-        } return; 
-    }
+    if(room.phase==='votacion'){ document.querySelector('.secret-card').style.transform="scale(1)"; showView(viewVoting); renderVotingGrid(room.players); startLocalTimer(room.timeLeft, 'vote'); return; }
+    if(room.phase==='palabras'){ document.querySelector('.secret-card').style.transform="scale(1)"; const ap=room.players[room.turnIndex]; if(ap){ showView(viewTurn); turnPlayerName.innerText=ap.name; turnPlayerName.style.color=ap.color; turnAvatar.style.borderColor=ap.color; startLocalTimer(room.timeLeft, 'turn'); btnFinishTurn.style.display = (ap.id === myId) ? 'block' : 'none'; } return; }
     document.querySelector('.secret-card').style.transform="scale(1)"; showView(viewCard); stopLocalTimer();
 }
 
@@ -151,26 +127,6 @@ function updateHeader(room){
 }
 
 function showView(el){ [viewCard, viewTurn, viewVoting].forEach(v=>v.style.display='none'); el.style.display='block'; }
-
-// Timer Polivalente (Turno y Votación)
-function startLocalTimer(s, type){ 
-    stopLocalTimer(); 
-    updateTimerDisplay(s, type);
-    localTimer=setInterval(()=>{ 
-        s--; 
-        if(s<0)s=0; 
-        updateTimerDisplay(s, type);
-        if(s===0)stopLocalTimer(); 
-    },1000); 
-}
-
-function updateTimerDisplay(s, type) {
-    if(type === 'vote') {
-        votingTimer.innerText = s + "s";
-        if(s <= 10) votingTimer.classList.add('danger'); else votingTimer.classList.remove('danger');
-    } else {
-        turnTimerDisplay.innerText = s;
-    }
-}
-
+function startLocalTimer(s, type){ stopLocalTimer(); updateTimerDisplay(s, type); localTimer=setInterval(()=>{ s--; if(s<0)s=0; updateTimerDisplay(s, type); if(s===0)stopLocalTimer(); },1000); }
+function updateTimerDisplay(s, type) { if(type === 'vote') { votingTimer.innerText = s + "s"; if(s <= 10) votingTimer.classList.add('danger'); else votingTimer.classList.remove('danger'); } else { turnTimerDisplay.innerText = s; } }
 function stopLocalTimer(){ if(localTimer)clearInterval(localTimer); }
