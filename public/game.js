@@ -1,10 +1,9 @@
 const socket = io();
 
 // ==========================================
-// 1. SISTEMA DE SONIDOS (NOMBRES EXACTOS DE TU FOTO)
+// 1. SISTEMA DE SONIDOS
 // ==========================================
 const audioFiles = {
-    // Nombre exacto según tu captura de pantalla
     click: new Audio('sounds/click-345983.mp3'),
     join: new Audio('sounds/new-notification-019-363747.mp3'), 
     start: new Audio('sounds/game-start-317318.mp3'),
@@ -35,7 +34,7 @@ const votingTimer = document.getElementById('votingTimer');
 
 let myId=null, isHost=false, localTimer=null, selectedVoteId=null, isMyPlayerDead=false, currentDiscordLink=null;
 
-// Ocultar juego al inicio
+// Ocultar juego al inicio y asegurar que empiece desenfocado
 mainContent.style.display = 'none';
 
 // --- TABS ---
@@ -80,11 +79,17 @@ document.getElementById('btnJoinRoom').onclick=()=>{
     }, handleConnection); 
 };
 
+// === FIX IMPORTANTE AQUÍ: QUITAR CLASS 'BLURRED' ===
 function handleConnection(res){ 
     if(res.ok){ 
         playSound('join'); 
         lobbyOverlay.style.display='none'; 
+        
+        // MOSTRAR JUEGO Y ACTIVAR TRANSICIÓN SUAVE
         mainContent.style.display='block'; 
+        setTimeout(() => {
+            mainContent.classList.remove('blurred');
+        }, 50); // Pequeño delay para que el navegador procese la transición CSS
         
         myId=res.me.id; isHost=res.isHost; roomCodeDisplay.innerText=res.roomCode; 
         
