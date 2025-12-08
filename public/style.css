@@ -33,9 +33,17 @@ main.blurred { filter: blur(20px); opacity: 0; pointer-events: none; transform: 
 .btn-copy:active { transform: scale(0.9); color: var(--secondary); }
 
 .top-right-actions { display: flex; align-items: center; gap: 10px; }
-.btn-exit-red { background: rgba(239, 68, 68, 0.15); border: 1px solid var(--primary); color: var(--primary); padding: 8px 16px; border-radius: 10px; cursor: pointer; font-weight: 800; font-size: 0.8rem; text-transform: uppercase; transition: all 0.2s; display: flex; align-items: center; gap: 6px; height: 40px; }
+
+/* ESTILOS BOTÓN VOLVER SALA (ROJO) */
+.btn-exit-red { background: rgba(239, 68, 68, 0.15); border: 1px solid var(--primary); color: var(--primary); padding: 8px 16px; border-radius: 10px; cursor: pointer; font-weight: 800; font-size: 0.8rem; text-transform: uppercase; transition: all 0.2s; display: flex; align-items: center; gap: 8px; height: 40px; }
 .btn-exit-red:hover { background: var(--primary); color: white; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
-.btn-discord-small { height: 40px; margin: 0; background: var(--discord); color: white; border: none; padding: 8px 12px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; gap: 5px; }
+.icon-arrow-back-small { width: 18px; height: 18px; stroke-width: 3; }
+
+/* ESTILOS BOTÓN DISCORD SVG */
+.btn-discord-small { height: 40px; margin: 0; background: var(--discord); color: white; border: none; padding: 8px 16px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
+.btn-discord-small:hover { background: #4752c4; box-shadow: 0 0 15px rgba(88, 101, 242, 0.4); }
+.discord-icon-svg { width: 20px; height: 20px; }
+
 
 /* CENTRO & VISTAS */
 .game-area { padding: 20px; display: flex; flex-direction: column; position: relative; flex: 1; }
@@ -93,12 +101,12 @@ main.blurred { filter: blur(20px); opacity: 0; pointer-events: none; transform: 
 
 /* Contenedor del nuevo logo SVG */
 .logo-svg-container {
-    width: 150px; /* Tamaño del logo */
+    width: 140px; /* Tamaño del logo */
     height: auto;
-    margin-bottom: 25px;
+    margin-bottom: 20px;
     color: var(--neon-blue); /* Color principal del neón */
     /* Efecto de brillo neón */
-    filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.8)) drop-shadow(0 0 30px rgba(59, 130, 246, 0.4));
+    filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.8)) drop-shadow(0 0 20px rgba(59, 130, 246, 0.4));
     animation: float 4s ease-in-out infinite;
 }
 
@@ -110,15 +118,29 @@ main.blurred { filter: blur(20px); opacity: 0; pointer-events: none; transform: 
     color: white; 
     text-transform: uppercase; 
     text-shadow: 3px 3px 0px rgba(59, 130, 246, 0.3);
+    margin-bottom: 5px;
 }
+.system-ready-text {
+    color: var(--neon-blue);
+    font-family: var(--font-mono);
+    letter-spacing: 3px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    opacity: 0.8;
+}
+
 .home-actions { display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 400px; margin: 0 auto; }
 .footer-links { margin-top: 40px; text-align: center; font-size: 0.8rem; color: #64748b; }
 
-/* HEADER SCREENS */
+/* HEADER SCREENS Y NUEVAS FLECHAS */
 .screen-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
 .screen-header h2 { font-size: 1.2rem; font-weight: 900; color: #94a3b8; text-transform: uppercase; margin: 0; flex: 1; text-align: right; }
-.btn-back { background: transparent; border: none; color: #cbd5e1; font-weight: bold; font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 8px; transition: 0.2s; }
+
+/* Estilo mejorado para botones de volver con flecha SVG */
+.btn-back { background: transparent; border: none; color: #cbd5e1; font-weight: bold; font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; transition: 0.2s; }
 .btn-back:hover { background: rgba(255,255,255,0.1); color: white; }
+.icon-arrow-back { width: 24px; height: 24px; stroke-width: 3; }
+
 
 /* FORMULARIOS */
 .form-container { display: flex; flex-direction: column; gap: 10px; }
