@@ -57,7 +57,6 @@ function getRoomOfSocket(id) { const c = socketRoom[id]; return c ? rooms[c] : n
 // SERVIDOR
 const app = express();
 const server = http.createServer(app);
-// FIX DESCONEXIÓN CELULAR: Aumentamos timeout a 60s
 const io = new Server(server, { 
     cors: { origin: '*' },
     pingTimeout: 60000, 
@@ -114,7 +113,7 @@ function startVoting(room) {
     if(room.timer) clearTimeout(room.timer);
     room.phase='votacion'; 
     room.voteDeadline = Date.now() + room.config.voteTime; 
-    room.votes = {}; // LIMPIEZA DE VOTOS CRÍTICA
+    room.votes = {}; 
     io.to(room.code).emit('votingStarted'); 
     emitRoomState(room);
     room.timer = setTimeout(()=>finishVoting(room, 'Tiempo agotado'), room.config.voteTime);
@@ -132,11 +131,10 @@ function finishVoting(room, reason) {
     
     for (const [id, count] of Object.entries(tally)) {
         if (count > max) { max = count; candidates = [id]; }
-        else if (count === max) { candidates.push(id); } // Empate
+        else if (count === max) { candidates.push(id); } 
     }
 
     let kicked = null;
-    // Solo expulsamos si hay 1 solo candidato máximo
     if (candidates.length === 1) {
         kicked = room.players.find(p => p.id === candidates[0]);
     }
@@ -189,7 +187,6 @@ io.on('connection', (socket) => {
     });
 
     socket.on('joinRoom', (data, cb) => {
-        // NORMALIZAR CÓDIGO (Quitar espacios y mayúsculas)
         const code = (data.roomCode || '').trim().toUpperCase(); 
         const room = rooms[code];
         if(room) {
@@ -207,7 +204,6 @@ io.on('connection', (socket) => {
     socket.on('startRound', () => {
         const room = getRoomOfSocket(socket.id);
         if(room && room.hostId === socket.id) {
-            // REINICIO TOTAL
             room.players.forEach(p => p.isDead = false);
             room.votes = {}; room.spoken = {}; room.turnIndex = -1;
 
@@ -229,7 +225,6 @@ io.on('connection', (socket) => {
             setTimeout(()=>{ 
                 if(rooms[room.code]){ 
                     room.phase='palabras'; 
-                    // INICIO ALEATORIO
                     room.turnIndex = Math.floor(Math.random() * room.players.length); 
                     nextTurn(room); 
                 }
@@ -248,7 +243,6 @@ io.on('connection', (socket) => {
     socket.on('submitVote', (data) => {
         const room = getRoomOfSocket(socket.id);
         const p = room.players.find(x => x.id === socket.id);
-        // MUERTOS NO VOTAN
         if(room && room.phase === 'votacion' && p && !p.isDead) {
             room.votes[socket.id] = data.targetId;
             emitRoomState(room);
@@ -260,16 +254,18 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         const room = getRoomOfSocket(socket.id);
         if (room) {
-            // No borramos inmediatamente para dar tiempo a reconectar si es celular
-            // Pero si la partida no ha empezado (Lobby), borramos ya
-            if (room.phase === 'lobby') {
-                room.players = room.players.filter(p => p.id !== socket.id);
-                delete socketRoom[socket.id];
-                if (room.players.length === 0) delete rooms[room.code];
-                else { if (room.hostId === socket.id) room.hostId = room.players[0].id; emitRoomState(room); }
+            room.players = room.players.filter(p => p.id !== socket.id);
+            delete socketRoom[socket.id];
+
+            if (room.players.length === 0) {
+                // AQUÍ EL FIX PARA BORRAR CANAL DISCORD
+                if (room.discordVoiceChannel) {
+                    borrarCanalDiscord(room.discordVoiceChannel);
+                }
+                delete rooms[room.code];
             } else {
-                // Si está en partida, lo marcamos desconectado (opcional) o esperamos timeout
-                // Por ahora el comportamiento estándar de Socket.io con el pingTimeout aumentado manejará la espera
+                if (room.hostId === socket.id) room.hostId = room.players[0].id; 
+                emitRoomState(room);
             }
         }
     });

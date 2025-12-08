@@ -30,6 +30,12 @@ const screenCreate = document.getElementById('screenCreate');
 const screenJoin = document.getElementById('screenJoin');
 const lobbyOverlay=document.getElementById('lobbyOverlay');
 
+// MODAL CATEGORIAS
+const modalCats = document.getElementById('modalCategories');
+const btnOpenCats = document.getElementById('btnOpenCategories');
+const btnCloseCats = document.getElementById('btnCloseCategories');
+const catCountLabel = document.getElementById('catCount');
+
 const mainContent=document.getElementById('mainContent'), roomCodeDisplay=document.getElementById('roomCodeDisplay'), playersListEl=document.getElementById('playersList'), votingGrid=document.getElementById('votingGrid');
 const viewCard=document.getElementById('viewCard'), viewTurn=document.getElementById('viewTurn'), viewVoting=document.getElementById('viewVoting');
 const turnPlayerName=document.getElementById('turnPlayerName'), turnTimerDisplay=document.getElementById('turnTimerDisplay'), turnAvatar=document.querySelector('.turn-avatar-circle'), roleDisplay=document.getElementById('roleDisplay'), wordDisplay=document.getElementById('wordDisplay'), teammateDisplay=document.getElementById('teammateDisplay'), ejectionOverlay=document.getElementById('ejectionOverlay');
@@ -46,30 +52,38 @@ mainContent.style.display = 'none';
 // --- NAVEGACIÓN MENU (CONCEPT 2) ---
 function showScreen(screenName) {
     playSound('click');
-    // Ocultar todas
     screenHome.style.display = 'none';
     screenCreate.style.display = 'none';
     screenJoin.style.display = 'none';
 
-    // Mostrar la deseada
     if(screenName === 'home') screenHome.style.display = 'flex';
     if(screenName === 'create') screenCreate.style.display = 'flex';
     if(screenName === 'join') screenJoin.style.display = 'flex';
 }
 
-// Eventos de botones
 document.getElementById('btnGoCreate').onclick = () => showScreen('create');
 document.getElementById('btnGoJoin').onclick = () => showScreen('join');
 document.getElementById('backFromCreate').onclick = () => showScreen('home');
 document.getElementById('backFromJoin').onclick = () => showScreen('home');
 
+// --- LÓGICA MODAL CATEGORÍAS ---
+btnOpenCats.onclick = () => { playSound('click'); modalCats.style.display = 'flex'; };
+btnCloseCats.onclick = () => { 
+    playSound('click'); 
+    modalCats.style.display = 'none'; 
+    const count = document.querySelectorAll('.cat-chip input:checked').length;
+    catCountLabel.innerText = count;
+};
 
-// --- BOTONES CREAR / UNIRSE (LÓGICA SOCKET) ---
+
+// --- BOTONES CREAR / UNIRSE ---
 document.getElementById('btnCreateRoom').onclick = () => {
     playSound('click');
-    const checkboxes = document.querySelectorAll('.category-card input[type="checkbox"]:checked');
+    const checkboxes = document.querySelectorAll('.cat-chip input[type="checkbox"]:checked');
     const categories = Array.from(checkboxes).map(cb => cb.value);
     
+    if(categories.length === 0) return alert("¡Elige al menos una categoría!");
+
     const hostNameEl = document.getElementById('hostName');
     const maxPlayersEl = document.getElementById('maxPlayers');
     const impostorsEl = document.getElementById('impostors');
@@ -165,11 +179,10 @@ socket.on('yourRole', (data)=>{
     const card=document.querySelector('.secret-card'); teammateDisplay.style.display='none';
     if(data.role==='impostor'){ 
         roleDisplay.innerText='ERES EL IMPOSTOR'; wordDisplay.innerText='ERES EL IMPOSTOR'; wordDisplay.classList.add('impostor-word');
-        card.style.background='linear-gradient(135deg, #020617, #7f1d1d)'; 
+        // El color ahora se maneja por CSS para ser más sutil, pero dejamos esto por si acaso
         if(data.teammates&&data.teammates.length>0){teammateDisplay.style.display='block';teammateDisplay.innerText=`ALIADO: ${data.teammates.join(', ')}`;} 
     } else { 
         roleDisplay.innerText='CIUDADANO'; wordDisplay.innerText=data.word; wordDisplay.classList.remove('impostor-word');
-        card.style.background='linear-gradient(135deg, #f97316, #9f1239)'; 
     }
 });
 
