@@ -45,10 +45,30 @@ function shuffleArray(array) {
 async function crearCanalDiscord(nombre, limite) { 
     try { 
         const guild = discordClient.guilds.cache.get(GUILD_ID); if(!guild) return null;
-        const canal = await guild.channels.create({ name: `Sala ${nombre}`, type: ChannelType.GuildVoice, parent: CATEGORIA_ID, userLimit: limite || 15, permissionOverwrites: [{id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel], allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak]}] });
-        const invite = await canal.createInvite({maxAge:0, maxUses:0}); return {voiceId: canal.id, inviteLink: invite.url}; 
-    } catch(e){ return null; }
+        
+        // FIX: Allow ViewChannel para que la invitación funcione sin roles específicos
+        const canal = await guild.channels.create({ 
+            name: `Sala ${nombre}`, 
+            type: ChannelType.GuildVoice, 
+            parent: CATEGORIA_ID, 
+            userLimit: limite || 15, 
+            permissionOverwrites: [
+                {
+                    id: guild.roles.everyone.id, 
+                    // IMPORTANTE: Permitir ver para que el link funcione, pero podemos denegar hablar si quieres
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.Speak]
+                }
+            ] 
+        });
+        
+        const invite = await canal.createInvite({maxAge:0, maxUses:0, unique: true}); 
+        return {voiceId: canal.id, inviteLink: invite.url}; 
+    } catch(e){ 
+        console.error("Error creando canal:", e);
+        return null; 
+    }
 }
+
 async function borrarCanalDiscord(id) { try{const g=discordClient.guilds.cache.get(GUILD_ID); if(g) await g.channels.cache.get(id)?.delete();}catch(e){} }
 function generateCode() { const c='ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let r='',i=0; do{r='';for(let j=0;j<4;j++)r+=c[Math.floor(Math.random()*c.length)];i++}while(rooms[r]&&i<100); return r;}
 function assignColor(r) { const u=r.players.map(p=>p.color); return PLAYER_COLORS.find(c=>!u.includes(c))||'#fff'; }
@@ -125,7 +145,6 @@ function finishVoting(room, reason) {
     const tally = {};
     Object.values(room.votes).forEach(v => { if(v) tally[v] = (tally[v]||0)+1; });
 
-    // LÓGICA DE EMPATE (SKIP)
     let max = 0;
     let candidates = [];
     
@@ -258,7 +277,6 @@ io.on('connection', (socket) => {
             delete socketRoom[socket.id];
 
             if (room.players.length === 0) {
-                // AQUÍ EL FIX PARA BORRAR CANAL DISCORD
                 if (room.discordVoiceChannel) {
                     borrarCanalDiscord(room.discordVoiceChannel);
                 }

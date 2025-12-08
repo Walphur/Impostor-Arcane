@@ -32,7 +32,7 @@
       </div>
 
       <div class="footer-links">
-        <span>v7.2 UI Update</span>
+        <span>v7.5 Final UI & Fixes</span>
       </div>
     </div>
 
@@ -51,7 +51,8 @@
         <div class="input-group">
             <label class="local-mode-btn">
                 <input type="checkbox" id="localMode">
-                <span class="mode-text">🏠 Modo Presencial <small>(Sin Discord)</small></span>
+                <span class="checkmark-box"></span>
+                <span class="mode-text">🏠 MODO PRESENCIAL (SIN DISCORD)</span>
             </label>
         </div>
 
@@ -116,10 +117,21 @@
     <div class="game-board">
         <section class="game-area">
             <div class="top-bar">
-                <div class="room-info"><span class="room-label">SALA <span id="roomCodeDisplay" class="room-code">---</span></span></div>
+                <div class="room-info-group">
+                    <span class="room-label">SALA</span>
+                    <span id="roomCodeDisplay" class="room-code">---</span>
+                    <button id="btnCopyCode" class="btn-copy" title="Copiar código">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                </div>
+
                 <div class="top-right-actions">
-                    <button id="btnDiscordManual" class="btn-discord-small" style="display:none;">🎧 VOZ</button>
-                    <button id="btnExit" class="btn-exit">❌</button>
+                    <button id="btnDiscordManual" class="btn-discord-small" style="display:none;">
+                        🎧 VOZ
+                    </button>
+                    <button id="btnExit" class="btn-exit-red">
+                        ← VOLVER
+                    </button>
                 </div>
             </div>
 
