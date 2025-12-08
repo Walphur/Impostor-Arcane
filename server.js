@@ -24,6 +24,7 @@ const PLAYER_COLORS = [
     '#f43f5e', '#6366f1', '#14b8a6', '#d946ef', '#64748b'
 ];
 
+// --- BASE DE DATOS PALABRAS ---
 const WORD_DB = {
     lugares: ['SAUNA', 'CEMENTERIO', 'SUBMARINO', 'ASCENSOR', 'IGLÚ', 'CASINO', 'CIRCO', 'ESTACIÓN ESPACIAL', 'HORMIGUERO', 'CINE', 'BARCO PIRATA', 'ZOOLÓGICO', 'HOSPITAL', 'AEROPUERTO', 'PLAYA', 'BIBLIOTECA'],
     comidas: ['SUSHI', 'PAELLA', 'TACOS', 'HELADO', 'HUEVO FRITO', 'CEVICHE', 'ASADO', 'FONDUE', 'MEDIALUNA', 'SOPA', 'COCO', 'CHICLE', 'PIZZA', 'HAMBURGUESA', 'POCHOCLOS', 'CHOCOLATE'],
@@ -46,7 +47,7 @@ function getRandomWord(selectedCategories) {
     return pool[Math.floor(Math.random() * pool.length)];
 }
 
-// Algoritmo Fisher-Yates para mezcla real (evita que siempre te toque a ti)
+// Mezcla Fisher-Yates (Aleatoriedad Real)
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -93,13 +94,16 @@ function emitRoomState(room) {
     if (room.phase === 'palabras' && room.turnDeadline) timeLeft = Math.max(0, Math.ceil((room.turnDeadline - now) / 1000));
     else if (room.phase === 'votacion' && room.voteDeadline) timeLeft = Math.max(0, Math.ceil((room.voteDeadline - now) / 1000));
 
+    // Calcular votos actuales
+    const votesCount = Object.keys(room.votes).length;
+    const livingPlayers = room.players.filter(p => !p.isDead).length;
+
     io.to(room.code).emit('roomState', {
         roomCode: room.code, hostId: room.hostId, phase: room.phase, turnIndex: room.turnIndex,
         timeLeft: timeLeft, discordLink: room.discordLink,
+        votesInfo: { current: votesCount, total: livingPlayers }, // INFO PARA EL CONTADOR
         players: room.players.map(p => ({ 
-            id: p.id, name: p.name, color: p.color, 
-            hasVoted: !!room.votes[p.id],
-            isDead: p.isDead || false // Enviamos si está muerto
+            id: p.id, name: p.name, color: p.color, hasVoted: !!room.votes[p.id], isDead: p.isDead || false 
         }))
     });
 }
@@ -107,14 +111,12 @@ function emitRoomState(room) {
 function nextTurn(room) {
     if(room.timer) clearTimeout(room.timer);
     
-    // Filtramos solo jugadores vivos para ver si todos hablaron
     const livingPlayers = room.players.filter(p => !p.isDead);
     const allSpoken = livingPlayers.every(p => room.spoken[p.id]);
     
     if(allSpoken){ startVoting(room); return; }
 
     let next = room.turnIndex, loops=0;
-    // Buscar siguiente jugador VIVO que no haya hablado
     do { 
         next = (next+1) % room.players.length; 
         loops++; 
@@ -142,24 +144,14 @@ function finishVoting(room, reason) {
     if(room.timer) clearTimeout(room.timer);
     const tally={}; Object.values(room.votes).forEach(v=>{if(v)tally[v]=(tally[v]||0)+1});
     let kicked=null, max=0; 
-    
-    // Buscar al más votado
-    for(const[id,c] of Object.entries(tally)){
-        if(c>max){ max=c; kicked=room.players.find(p=>p.id===id); }
-    }
+    for(const[id,c] of Object.entries(tally)){ if(c>max){ max=c; kicked=room.players.find(p=>p.id===id); } }
     
     let isImpostor=false, gameResult=null;
-    
     if(kicked){
         isImpostor=(room.roles[kicked.id]==='impostor');
-        
-        // NO BORRAMOS AL JUGADOR, LO MARCAMOS COMO MUERTO
         const playerIndex = room.players.findIndex(p => p.id === kicked.id);
-        if (playerIndex !== -1) {
-            room.players[playerIndex].isDead = true; // Marcar muerto
-        }
+        if (playerIndex !== -1) room.players[playerIndex].isDead = true; 
         
-        // Contar vivos para ver si termina el juego
         const livingImpostors = room.players.filter(p => !p.isDead && room.roles[p.id]==='impostor').length;
         const livingCitizens = room.players.filter(p => !p.isDead && room.roles[p.id]==='ciudadano').length;
 
@@ -170,11 +162,7 @@ function finishVoting(room, reason) {
     io.to(room.code).emit('votingResults', {reason, kickedPlayer: kicked?{name:kicked.name}:null, isImpostor, gameResult});
     
     if(gameResult) { room.phase='lobby'; room.spoken={}; room.votes={}; setTimeout(()=>emitRoomState(room), 5000); }
-    else { 
-        room.phase='palabras'; room.turnIndex=-1; room.spoken={}; room.votes={}; 
-        // Resetear timer para que arranque el siguiente turno
-        setTimeout(()=>{ if(rooms[room.code]) nextTurn(room) }, 5000); 
-    }
+    else { room.phase='palabras'; room.turnIndex=-1; room.spoken={}; room.votes={}; setTimeout(()=>{if(rooms[room.code]) nextTurn(room)}, 5000); }
 }
 
 // --- SOCKETS ---
@@ -183,12 +171,15 @@ io.on('connection', (socket) => {
         const code = generateCode();
         let maxP = Math.min(parseInt(data.maxPlayers)||10, 15);
         let discordData = {voiceId:null, inviteLink:null};
-        if(DISCORD_TOKEN) { const r = await crearCanalDiscord(code, maxP); if(r) discordData=r; }
+        
+        // MODO LOCAL: Si no es local, creamos Discord
+        if(DISCORD_TOKEN && !data.isLocal) { 
+            const r = await crearCanalDiscord(code, maxP); if(r) discordData=r; 
+        }
 
         const room = {
             code, hostId: socket.id, maxPlayers: maxP, impostors: parseInt(data.impostors)||2,
             categories: data.categories || [],
-            // IMPORTANTE: Usamos data.name que viene del cliente
             players: [{ id: socket.id, name: data.name || 'Host', color: PLAYER_COLORS[0], isDead: false }],
             phase: 'lobby', turnIndex: -1, roles: {}, spoken: {}, votes: {},
             discordVoiceChannel: discordData.voiceId, discordLink: discordData.inviteLink
@@ -215,14 +206,11 @@ io.on('connection', (socket) => {
     socket.on('startRound', () => {
         const room = getRoomOfSocket(socket.id);
         if(room && room.hostId === socket.id) {
-            // Reiniciar muertos si es nueva partida
             room.players.forEach(p => p.isDead = false);
-
-            // MEZCLA MEJORADA (Shuffle real)
+            // USAR MEZCLA REAL
             const shuffledPlayers = shuffleArray([...room.players]);
             const impIds = shuffledPlayers.slice(0, room.impostors).map(p=>p.id);
             const word = getRandomWord(room.categories);
-
             const impNames = room.players.filter(p => impIds.includes(p.id)).map(p => p.name);
 
             room.roles = {};
@@ -238,15 +226,21 @@ io.on('connection', (socket) => {
         }
     });
 
+    // NUEVO: SALTAR TURNO
+    socket.on('finishTurn', () => {
+        const room = getRoomOfSocket(socket.id);
+        if(room && room.phase === 'palabras' && room.players[room.turnIndex]?.id === socket.id) {
+            room.spoken[socket.id] = true;
+            nextTurn(room); // Forzar siguiente turno inmediatamente
+        }
+    });
+
     socket.on('submitVote', (data) => {
         const room = getRoomOfSocket(socket.id);
-        // Solo contar voto si es fase votación Y el jugador NO está muerto
         const player = room.players.find(p => p.id === socket.id);
         if(room && room.phase === 'votacion' && player && !player.isDead) {
             room.votes[socket.id] = data.targetId;
             emitRoomState(room);
-            
-            // Contar cuántos VIVOS hay para saber si todos votaron
             const livingCount = room.players.filter(p => !p.isDead).length;
             if(Object.keys(room.votes).length >= livingCount) finishVoting(room, 'Todos votaron');
         }
