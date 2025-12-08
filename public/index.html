@@ -19,10 +19,9 @@
   </div>
 
   <div id="lobbyOverlay" class="lobby-overlay">
-    <div class="brand-title">Impostor<span>.</span></div>
-    
     <div class="menu-card">
       <div class="avatar-preview">🕵️</div>
+      
       <div class="tabs">
         <button id="tabCreate" class="tab-btn active">Crear</button>
         <button id="tabJoin" class="tab-btn">Unirse</button>
@@ -47,13 +46,33 @@
         </div>
 
         <div class="input-group">
-            <label>Categorías</label>
+            <label style="margin-bottom: 10px; display:block;">Categorías</label>
             <div class="category-cards-grid">
-                <label class="category-card"><input type="checkbox" value="lugares" checked><span class="cat-icon">📍</span><span class="cat-name">Lugares</span></label>
-                <label class="category-card"><input type="checkbox" value="comidas" checked><span class="cat-icon">🍔</span><span class="cat-name">Comidas</span></label>
-                <label class="category-card"><input type="checkbox" value="objetos"><span class="cat-icon">🛠️</span><span class="cat-name">Objetos</span></label>
-                <label class="category-card"><input type="checkbox" value="animales"><span class="cat-icon">🦁</span><span class="cat-name">Animales</span></label>
-                <label class="category-card" style="grid-column: span 2;"><input type="checkbox" value="profesiones"><span class="cat-icon">👮</span><span class="cat-name">Profesiones</span></label>
+                <label class="category-card">
+                    <input type="checkbox" value="lugares" checked>
+                    <span class="cat-icon">📍</span>
+                    <span class="cat-label">Lugares</span>
+                </label>
+                <label class="category-card">
+                    <input type="checkbox" value="comidas" checked>
+                    <span class="cat-icon">🍔</span>
+                    <span class="cat-label">Comidas</span>
+                </label>
+                <label class="category-card">
+                    <input type="checkbox" value="objetos">
+                    <span class="cat-icon">🛠️</span>
+                    <span class="cat-label">Objetos</span>
+                </label>
+                <label class="category-card">
+                    <input type="checkbox" value="animales">
+                    <span class="cat-icon">🦁</span>
+                    <span class="cat-label">Animales</span>
+                </label>
+                <label class="category-card full-width">
+                    <input type="checkbox" value="profesiones">
+                    <span class="cat-icon">👮</span>
+                    <span class="cat-label">Profesiones</span>
+                </label>
             </div>
         </div>
 
@@ -65,27 +84,20 @@
       </div>
 
       <div id="panelJoin" style="display: none;">
-  <div class="input-group">
-    <label>Tu Nombre</label>
-    <input type="text" id="joinName" maxlength="10" placeholder="Nombre">
-  </div>
-  <div class="input-group">
-    <label>CÓDIGO DE SALA</label>
-    <input type="text" id="joinCode" class="code-input" placeholder="XXXX">
-  </div>
-  <button id="btnJoinRoom" class="btn-main btn-secondary">UNIRSE</button>
-</div>
-    <p class="version-text">v5.5 Final</p>
+        <div class="input-group"><label>Tu Nombre</label><input type="text" id="joinName" maxlength="10" placeholder="Nombre"></div>
+        <div class="input-group"><label>CÓDIGO DE SALA</label><input type="text" id="joinCode" class="code-input" placeholder="XXXX"></div>
+        <button id="btnJoinRoom" class="btn-main btn-secondary">UNIRSE</button>
+      </div>
+    </div>
+    <p class="version-text">v6.0 Final Fix</p>
   </div>
 
   <main id="mainContent" class="blurred">
     <div class="game-board">
         <section class="game-area">
             <div class="top-bar">
-                <div class="room-info">
-                    <span class="room-label">SALA <span id="roomCodeDisplay" class="room-code">---</span></span>
-                </div>
-                <div class="top-right-actions" style="display: flex; gap: 10px;">
+                <div class="room-info"><span class="room-label">SALA <span id="roomCodeDisplay" class="room-code">---</span></span></div>
+                <div class="top-right-actions">
                     <button id="btnDiscordManual" class="btn-discord-small" style="display:none;">🎧 VOZ</button>
                     <button id="btnExit" class="btn-exit">❌</button>
                 </div>
@@ -106,15 +118,15 @@
                         <div class="turn-avatar-circle"><span id="turnTimerDisplay">15</span></div>
                         <h2 id="turnPlayerName">Jugador</h2>
                         <p class="turn-hint">TURNO DE HABLAR</p>
-                        <button id="btnFinishTurn" class="btn-finish-turn" style="display:none;">✅ Terminé de hablar</button>
+                        <button id="btnFinishTurn" class="btn-finish-turn" style="display:none;">✅ Terminé</button>
                     </div>
                 </div>
 
                 <div id="viewVoting" class="center-view" style="display:none;">
                     <h2 class="vote-title">¿QUIÉN ES EL IMPOSTOR?</h2>
                     <div class="vote-hud">
-                        <div id="votingTimer" class="vote-timer">02:00</div>
-                        <div id="voteCounter" class="vote-counter">Votos: 0/10</div>
+                        <div id="votingTimer" class="vote-timer">00:00</div>
+                        <div id="voteCounter" class="vote-counter">Votos: 0</div>
                     </div>
                     <div class="voting-grid" id="votingGrid"></div>
                 </div>

@@ -104,21 +104,85 @@ input:focus { border-color: var(--primary); }
 .code-input { text-transform: uppercase; text-align: center; letter-spacing: 3px; font-weight: 900; font-family: monospace; }
 .flex-group { display: flex; gap: 15px; } .flex-group > div { flex: 1; }
 
-/* CATEGORÍAS */
+/* ... (Toda la parte superior del CSS igual que antes: variables, body, game-board, etc) ... */
+/* COPIA TODO LO DE ANTES, PERO REEMPLAZA LA SECCIÓN DE "CATEGORÍAS" CON ESTO: */
+
+/* =========================================
+   NUEVAS TARJETAS DE CATEGORÍA (ESTILO APP)
+   ========================================= */
 .category-cards-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: 1fr 1fr; /* Dos columnas */
+  gap: 12px;
 }
+
 .category-card {
-  background: #1e293b; border: 2px solid var(--border); padding: 15px; border-radius: 16px;
-  display: flex; align-items: center; gap: 10px; cursor: pointer; transition: 0.2s;
-  user-select: none;
+  background: #1e293b;
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column; /* Icono arriba, texto abajo */
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  min-height: 90px; /* Altura fija para que se vean cuadradas */
 }
+
+/* Ocultar el input real */
 .category-card input { display: none; }
-.cat-icon { font-size: 1.5rem; } .cat-name { font-weight: 700; color: #cbd5e1; font-size: 0.9rem; }
-.category-card:has(input:checked) { border-color: var(--primary); background: rgba(239, 68, 68, 0.15); }
-.category-card:has(input:checked) .cat-name { color: white; }
+
+.cat-icon {
+  font-size: 2rem;
+  margin-bottom: 5px;
+  filter: grayscale(1); /* Apagado si no está seleccionado */
+  transition: 0.2s;
+}
+
+.cat-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+
+/* --- ESTADO SELECCIONADO --- */
+.category-card:has(input:checked) {
+  border-color: var(--primary); /* Borde Rojo */
+  background: rgba(239, 68, 68, 0.1);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+  transform: translateY(-2px);
+}
+
+.category-card:has(input:checked) .cat-icon {
+  filter: grayscale(0); /* Color vivo */
+  transform: scale(1.1);
+}
+
+.category-card:has(input:checked) .cat-label {
+  color: white;
+}
+
+/* Check bonito en la esquina (opcional) */
+.category-card:has(input:checked)::after {
+  content: '✔';
+  position: absolute;
+  top: 5px;
+  right: 8px;
+  font-size: 0.8rem;
+  color: var(--primary);
+  font-weight: bold;
+}
+
+/* Tarjeta ancha para la última opción */
+.category-card.full-width {
+  grid-column: span 2;
+  flex-direction: row; /* Icono al lado */
+  min-height: 60px;
+}
+
+/* ... (El resto del CSS de juego, overlays, sidebar, etc. sigue igual) ... */
 
 /* MODO LOCAL */
 .local-mode-btn {

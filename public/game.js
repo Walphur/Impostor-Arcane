@@ -1,7 +1,7 @@
 const socket = io();
 
-// DOM
-const lobbyOverlay=document.getElementById('lobbyOverlay'), mainContent=document.getElementById('mainContent'), phasePill=document.getElementById('phasePill'), roomCodeDisplay=document.getElementById('roomCodeDisplay'), playersListEl=document.getElementById('playersList'), votingGrid=document.getElementById('votingGrid');
+// REFERENCIAS DOM
+const lobbyOverlay=document.getElementById('lobbyOverlay'), mainContent=document.getElementById('mainContent'), roomCodeDisplay=document.getElementById('roomCodeDisplay'), playersListEl=document.getElementById('playersList'), votingGrid=document.getElementById('votingGrid');
 const viewCard=document.getElementById('viewCard'), viewTurn=document.getElementById('viewTurn'), viewVoting=document.getElementById('viewVoting');
 const turnPlayerName=document.getElementById('turnPlayerName'), turnTimerDisplay=document.getElementById('turnTimerDisplay'), turnAvatar=document.querySelector('.turn-avatar-circle'), roleDisplay=document.getElementById('roleDisplay'), wordDisplay=document.getElementById('wordDisplay'), teammateDisplay=document.getElementById('teammateDisplay'), ejectionOverlay=document.getElementById('ejectionOverlay');
 const btnStart=document.getElementById('btnStartRound'), btnSkip=document.getElementById('btnSkipVote'), btnFinishTurn=document.getElementById('btnFinishTurn'), btnDiscordManual=document.getElementById('btnDiscordManual'), btnExit=document.getElementById('btnExit');
@@ -11,41 +11,78 @@ const votingTimer = document.getElementById('votingTimer');
 
 let myId=null, isHost=false, localTimer=null, selectedVoteId=null, isMyPlayerDead=false, currentDiscordLink=null;
 
-// AL INICIO: OCULTAR JUEGO (CORRECCIÓN VISUAL)
+// OCULTAR JUEGO AL INICIO
 mainContent.style.display = 'none';
 
+// TABS
 document.getElementById('tabCreate').onclick=(e)=>switchTab(e,'panelCreate'); document.getElementById('tabJoin').onclick=(e)=>switchTab(e,'panelJoin');
 function switchTab(e,pid){ document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); e.target.classList.add('active'); document.getElementById('panelCreate').style.display=pid==='panelCreate'?'block':'none'; document.getElementById('panelJoin').style.display=pid==='panelJoin'?'block':'none'; }
 
-document.getElementById('btnCreateRoom').onclick=()=>{
+// --- CREAR SALA (DEBUGGED) ---
+document.getElementById('btnCreateRoom').onclick = () => {
+    // 1. Obtener categorías (Selector robusto)
     const checkboxes = document.querySelectorAll('.category-card input[type="checkbox"]:checked');
     const categories = Array.from(checkboxes).map(cb => cb.value);
-    const hostName = document.getElementById('hostName').value || 'Host';
-    const isLocal = document.getElementById('localMode').checked;
     
+    // 2. Obtener valores con fallback para evitar errores
+    const hostNameEl = document.getElementById('hostName');
+    const maxPlayersEl = document.getElementById('maxPlayers');
+    const impostorsEl = document.getElementById('impostors');
+    const turnTimeEl = document.getElementById('timeTurn');
+    const voteTimeEl = document.getElementById('timeVote');
+    const localModeEl = document.getElementById('localMode');
+
+    if(!hostNameEl || !maxPlayersEl || !impostorsEl) {
+        alert("Error interno: Faltan campos en el HTML. Recarga la página.");
+        return;
+    }
+
+    const hostName = hostNameEl.value || 'Host';
+    const maxP = maxPlayersEl.value;
+    const imps = impostorsEl.value;
+    const turnT = turnTimeEl ? turnTimeEl.value : 15; // Fallback 15s
+    const voteT = voteTimeEl ? voteTimeEl.value : 120; // Fallback 120s
+    const isLocal = localModeEl ? localModeEl.checked : false;
+
+    console.log("Enviando crear sala:", { hostName, maxP, imps, categories, isLocal, turnT, voteT });
+
     socket.emit('createRoom', { 
-        name: hostName, maxPlayers: document.getElementById('maxPlayers').value, 
-        impostors: document.getElementById('impostors').value, 
-        categories: categories, isLocal: isLocal,
-        turnTime: document.getElementById('timeTurn').value, 
-        voteTime: document.getElementById('timeVote').value
+        name: hostName, 
+        maxPlayers: maxP, 
+        impostors: imps, 
+        categories: categories,
+        isLocal: isLocal,
+        turnTime: turnT, 
+        voteTime: voteT
     }, handleConnection);
 };
 
 document.getElementById('btnJoinRoom').onclick=()=>{ 
-    socket.emit('joinRoom', { name: document.getElementById('joinName').value || 'Player', roomCode: document.getElementById('joinCode').value }, handleConnection); 
+    const nameEl = document.getElementById('joinName');
+    const codeEl = document.getElementById('joinCode');
+    socket.emit('joinRoom', { 
+        name: nameEl.value || 'Player', 
+        roomCode: codeEl.value 
+    }, handleConnection); 
 };
 
 function handleConnection(res){ 
     if(res.ok){ 
-        // CAMBIO: Ocultar lobby, Mostrar Juego
         lobbyOverlay.style.display='none'; 
-        mainContent.style.display='block'; // YA NO USAMOS BLURRED
+        mainContent.style.display='block'; // MOSTRAR JUEGO
         
         myId=res.me.id; isHost=res.isHost; roomCodeDisplay.innerText=res.roomCode; 
-        if(res.discordLink) { currentDiscordLink = res.discordLink; btnDiscordManual.style.display = 'flex'; window.open(res.discordLink, '_blank'); } 
-        else { btnDiscordManual.style.display = 'none'; }
-    } else { alert(res.error); } 
+        
+        if(res.discordLink) { 
+            currentDiscordLink = res.discordLink; 
+            btnDiscordManual.style.display = 'flex'; 
+            window.open(res.discordLink, '_blank'); 
+        } else { 
+            btnDiscordManual.style.display = 'none'; 
+        }
+    } else { 
+        alert(res.error); 
+    } 
 }
 
 btnDiscordManual.onclick = () => { if(currentDiscordLink) window.open(currentDiscordLink, '_blank'); };
@@ -58,7 +95,11 @@ btnSkip.onclick=()=>{ if(isMyPlayerDead) return; socket.emit('submitVote', {targ
 socket.on('roomState', (room)=>{ 
     const me = room.players.find(p => p.id === myId);
     if(me) isMyPlayerDead = me.isDead || false;
-    if(room.votesInfo) voteCounter.innerText = `VOTOS: ${room.votesInfo.current} / ${room.votesInfo.total}`;
+    
+    if(room.votesInfo) {
+        if(voteCounter) voteCounter.innerText = `VOTOS: ${room.votesInfo.current} / ${room.votesInfo.total}`;
+    }
+    
     updateHeader(room); renderSidebar(room); updateGameView(room); 
 });
 
@@ -120,7 +161,9 @@ function renderVotingGrid(players){
 }
 
 function updateHeader(room){ 
-    phasePill.innerText=room.phase.toUpperCase(); 
+    const phaseLabel = document.getElementById('phasePill');
+    if(phaseLabel) phaseLabel.innerText=room.phase.toUpperCase(); 
+    
     if(room.phase==='lobby'){ btnStart.style.display='block'; btnSkip.style.display='none'; if(isHost&&room.players.length>=3){btnStart.disabled=false; btnStart.style.opacity='1';}else{btnStart.disabled=true; btnStart.style.opacity='0.5';} }
     else if(room.phase==='votacion'){ btnStart.style.display='none'; btnSkip.style.display='block'; if(isMyPlayerDead){btnSkip.innerText="ESTÁS MUERTO"; btnSkip.disabled=true;} }
     else{ btnStart.style.display='block'; btnStart.disabled=true; btnSkip.style.display='none'; } 
@@ -128,5 +171,5 @@ function updateHeader(room){
 
 function showView(el){ [viewCard, viewTurn, viewVoting].forEach(v=>v.style.display='none'); el.style.display='block'; }
 function startLocalTimer(s, type){ stopLocalTimer(); updateTimerDisplay(s, type); localTimer=setInterval(()=>{ s--; if(s<0)s=0; updateTimerDisplay(s, type); if(s===0)stopLocalTimer(); },1000); }
-function updateTimerDisplay(s, type) { if(type === 'vote') { votingTimer.innerText = s + "s"; if(s <= 10) votingTimer.classList.add('danger'); else votingTimer.classList.remove('danger'); } else { turnTimerDisplay.innerText = s; } }
+function updateTimerDisplay(s, type) { if(type === 'vote' && votingTimer) { votingTimer.innerText = s + "s"; if(s <= 10) votingTimer.classList.add('danger'); else votingTimer.classList.remove('danger'); } else if(turnTimerDisplay) { turnTimerDisplay.innerText = s; } }
 function stopLocalTimer(){ if(localTimer)clearInterval(localTimer); }
