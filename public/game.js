@@ -1,11 +1,12 @@
 const socket = io();
 
 // ==========================================
-// 1. SISTEMA DE SONIDOS (TUS ARCHIVOS)
+// 1. SISTEMA DE SONIDOS (NOMBRES EXACTOS DE TU FOTO)
 // ==========================================
 const audioFiles = {
+    // Nombre exacto según tu captura de pantalla
     click: new Audio('sounds/click-345983.mp3'),
-    join: new Audio('sounds/new-notification-019-363747.mp3'),
+    join: new Audio('sounds/new-notification-019-363747.mp3'), 
     start: new Audio('sounds/game-start-317318.mp3'),
     eject: new Audio('sounds/fatal-body-fall-thud-352716.mp3'),
     win: new Audio('sounds/level-up-04-243762.mp3')

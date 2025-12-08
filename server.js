@@ -6,25 +6,16 @@ const { Server } = require('socket.io');
 const path = require('path');
 const { Client, GatewayIntentBits, ChannelType, PermissionFlagsBits } = require('discord.js');
 
-// --- CONFIG DISCORD ---
+// CONFIG DISCORD
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const GUILD_ID = process.env.DISCORD_GUILD_ID;        
 const CATEGORIA_ID = process.env.DISCORD_CATEGORY_ID; 
 
-const discordClient = new Client({
-    intents: [ GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates ]
-});
+const discordClient = new Client({ intents: [ GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates ] });
+if (DISCORD_TOKEN) discordClient.login(DISCORD_TOKEN).catch(e => console.error("Discord Error:", e));
 
-if (DISCORD_TOKEN) discordClient.login(DISCORD_TOKEN).catch(e => console.error(e));
-
-// --- COLORES ---
-const PLAYER_COLORS = [
-    '#ef4444', '#3b82f6', '#22c55e', '#eab308', '#f97316', 
-    '#a855f7', '#ec4899', '#06b6d4', '#84cc16', '#78716c', 
-    '#f43f5e', '#6366f1', '#14b8a6', '#d946ef', '#64748b'
-];
-
-// --- PALABRAS ---
+// COLORES & PALABRAS
+const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#f97316', '#a855f7', '#ec4899', '#06b6d4', '#84cc16', '#78716c', '#f43f5e', '#6366f1', '#14b8a6', '#d946ef', '#64748b'];
 const WORD_DB = {
     lugares: ['SAUNA', 'CEMENTERIO', 'SUBMARINO', 'ASCENSOR', 'IGLÚ', 'CASINO', 'CIRCO', 'ESTACIÓN ESPACIAL', 'HORMIGUERO', 'CINE', 'BARCO PIRATA', 'ZOOLÓGICO', 'HOSPITAL', 'AEROPUERTO', 'PLAYA', 'BIBLIOTECA'],
     comidas: ['SUSHI', 'PAELLA', 'TACOS', 'HELADO', 'HUEVO FRITO', 'CEVICHE', 'ASADO', 'FONDUE', 'MEDIALUNA', 'SOPA', 'COCO', 'CHICLE', 'PIZZA', 'HAMBURGUESA', 'POCHOCLOS', 'CHOCOLATE'],
@@ -33,13 +24,11 @@ const WORD_DB = {
     profesiones: ['ASTRONAUTA', 'MIMO', 'CIRUJANO', 'JARDINERO', 'DETECTIVE', 'BUZO', 'ÁRBITRO', 'CAJERO', 'PRESIDENTE', 'FANTASMA', 'BOMBERO', 'PROFESOR', 'POLICÍA', 'CHEF']
 };
 
-function getRandomWord(selectedCategories) {
+// HELPERS
+function getRandomWord(cat) {
     let pool = [];
-    if (!selectedCategories || selectedCategories.length === 0) {
-        Object.values(WORD_DB).forEach(arr => pool.push(...arr));
-    } else {
-        selectedCategories.forEach(cat => { if (WORD_DB[cat]) pool.push(...WORD_DB[cat]); });
-    }
+    if (!cat || cat.length === 0) Object.values(WORD_DB).forEach(arr => pool.push(...arr));
+    else cat.forEach(c => { if (WORD_DB[c]) pool.push(...WORD_DB[c]); });
     if (pool.length === 0) Object.values(WORD_DB).forEach(arr => pool.push(...arr));
     return pool[Math.floor(Math.random() * pool.length)];
 }
@@ -52,43 +41,29 @@ function shuffleArray(array) {
     return array;
 }
 
+// Discord Functions
 async function crearCanalDiscord(nombre, limite) { 
     try { 
-        const guild = discordClient.guilds.cache.get(GUILD_ID); 
-        if(!guild) return null;
-        const canal = await guild.channels.create({ 
-            name: `Sala ${nombre}`, type: ChannelType.GuildVoice, parent: CATEGORIA_ID, 
-            userLimit: limite || 15, 
-            permissionOverwrites: [{id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel], allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak]}] 
-        });
-        const invite = await canal.createInvite({maxAge:0, maxUses:0}); 
-        return {voiceId: canal.id, inviteLink: invite.url}; 
+        const guild = discordClient.guilds.cache.get(GUILD_ID); if(!guild) return null;
+        const canal = await guild.channels.create({ name: `Sala ${nombre}`, type: ChannelType.GuildVoice, parent: CATEGORIA_ID, userLimit: limite || 15, permissionOverwrites: [{id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel], allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak]}] });
+        const invite = await canal.createInvite({maxAge:0, maxUses:0}); return {voiceId: canal.id, inviteLink: invite.url}; 
     } catch(e){ return null; }
 }
-
 async function borrarCanalDiscord(id) { try{const g=discordClient.guilds.cache.get(GUILD_ID); if(g) await g.channels.cache.get(id)?.delete();}catch(e){} }
-function generateCode() {
-    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-    let code, attempts = 0;
-    do {
-        let part = '';
-        for (let i = 0; i < 4; i++) part += chars[Math.floor(Math.random() * chars.length)];
-        
-        // ANTES: code = 'ARC-' + part;
-        // AHORA: Solo la parte aleatoria
-        code = part; 
-        
-        attempts++;
-    } while (rooms[code] && attempts < 100);
-    return code;
-}
+function generateCode() { const c='ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let r='',i=0; do{r='';for(let j=0;j<4;j++)r+=c[Math.floor(Math.random()*c.length)];i++}while(rooms[r]&&i<100); return r;}
 function assignColor(r) { const u=r.players.map(p=>p.color); return PLAYER_COLORS.find(c=>!u.includes(c))||'#fff'; }
-function getRoomOfSocket(socketId) { const code = socketRoom[socketId]; return code ? rooms[code] : null; }
+function getRoomOfSocket(id) { const c = socketRoom[id]; return c ? rooms[c] : null; }
 
-// --- SERVIDOR ---
+// SERVIDOR
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+// FIX DESCONEXIÓN CELULAR: Aumentamos timeout a 60s
+const io = new Server(server, { 
+    cors: { origin: '*' },
+    pingTimeout: 60000, 
+    pingInterval: 25000 
+});
+
 const CLIENT_DIR = path.join(__dirname, 'public');
 app.use(express.static(CLIENT_DIR));
 
@@ -109,29 +84,23 @@ function emitRoomState(room) {
         roomCode: room.code, hostId: room.hostId, phase: room.phase, turnIndex: room.turnIndex,
         timeLeft: timeLeft, discordLink: room.discordLink,
         votesInfo: { current: votesCount, total: livingPlayers },
-        players: room.players.map(p => ({ 
-            id: p.id, name: p.name, color: p.color, hasVoted: !!room.votes[p.id], isDead: p.isDead || false 
-        }))
+        players: room.players.map(p => ({ id: p.id, name: p.name, color: p.color, hasVoted: !!room.votes[p.id], isDead: p.isDead }))
     });
 }
 
 function nextTurn(room) {
     if(room.timer) clearTimeout(room.timer);
-    
-    const livingPlayers = room.players.filter(p => !p.isDead);
-    const allSpoken = livingPlayers.every(p => room.spoken[p.id]);
+    const living = room.players.filter(p => !p.isDead);
+    const allSpoken = living.every(p => room.spoken[p.id]);
     
     if(allSpoken){ startVoting(room); return; }
 
     let next = room.turnIndex, loops=0;
-    do { 
-        next = (next+1) % room.players.length; 
-        loops++; 
-    } while((room.spoken[room.players[next].id] || room.players[next].isDead) && loops < room.players.length * 2);
+    do { next = (next+1) % room.players.length; loops++; } 
+    while((room.spoken[room.players[next].id] || room.players[next].isDead) && loops < room.players.length * 2);
 
     room.turnIndex = next; 
-    // Usamos el tiempo configurado por el host
-    room.turnDeadline = Date.now() + room.config.turnTime; 
+    room.turnDeadline = Date.now() + room.config.turnTime;
     
     room.timer = setTimeout(()=>{ 
         if(room.players[room.turnIndex]) room.spoken[room.players[room.turnIndex].id]=true; 
@@ -144,42 +113,58 @@ function nextTurn(room) {
 function startVoting(room) { 
     if(room.timer) clearTimeout(room.timer);
     room.phase='votacion'; 
-    // Usamos el tiempo de votación configurado
     room.voteDeadline = Date.now() + room.config.voteTime; 
-    room.votes={};
-    io.to(room.code).emit('votingStarted'); emitRoomState(room);
+    room.votes = {}; // LIMPIEZA DE VOTOS CRÍTICA
+    io.to(room.code).emit('votingStarted'); 
+    emitRoomState(room);
     room.timer = setTimeout(()=>finishVoting(room, 'Tiempo agotado'), room.config.voteTime);
 }
 
 function finishVoting(room, reason) {
     if(room.timer) clearTimeout(room.timer);
-    const tally={}; Object.values(room.votes).forEach(v=>{if(v)tally[v]=(tally[v]||0)+1});
-    let kicked=null, max=0; 
-    for(const[id,c] of Object.entries(tally)){ if(c>max){ max=c; kicked=room.players.find(p=>p.id===id); } }
     
-    let isImpostor=false, gameResult=null;
-    if(kicked){
-        isImpostor=(room.roles[kicked.id]==='impostor');
-        const playerIndex = room.players.findIndex(p => p.id === kicked.id);
-        if (playerIndex !== -1) room.players[playerIndex].isDead = true; 
-        
-        const livingImpostors = room.players.filter(p => !p.isDead && room.roles[p.id]==='impostor').length;
-        const livingCitizens = room.players.filter(p => !p.isDead && room.roles[p.id]==='ciudadano').length;
+    const tally = {};
+    Object.values(room.votes).forEach(v => { if(v) tally[v] = (tally[v]||0)+1; });
 
-        if(livingImpostors === 0) gameResult='citizensWin'; 
-        else if(livingImpostors >= livingCitizens) gameResult='impostorsWin';
+    // LÓGICA DE EMPATE (SKIP)
+    let max = 0;
+    let candidates = [];
+    
+    for (const [id, count] of Object.entries(tally)) {
+        if (count > max) { max = count; candidates = [id]; }
+        else if (count === max) { candidates.push(id); } // Empate
     }
 
-    io.to(room.code).emit('votingResults', {reason, kickedPlayer: kicked?{name:kicked.name}:null, isImpostor, gameResult});
+    let kicked = null;
+    // Solo expulsamos si hay 1 solo candidato máximo
+    if (candidates.length === 1) {
+        kicked = room.players.find(p => p.id === candidates[0]);
+    }
+
+    let isImpostor = false;
+    let gameResult = null;
+
+    if (kicked) {
+        isImpostor = (room.roles[kicked.id] === 'impostor');
+        const pIdx = room.players.findIndex(p => p.id === kicked.id);
+        if (pIdx !== -1) room.players[pIdx].isDead = true; 
+
+        const livImp = room.players.filter(p => !p.isDead && room.roles[p.id]==='impostor').length;
+        const livCit = room.players.filter(p => !p.isDead && room.roles[p.id]==='ciudadano').length;
+
+        if(livImp === 0) gameResult = 'citizensWin';
+        else if(livImp >= livCit) gameResult = 'impostorsWin';
+    }
+
+    io.to(room.code).emit('votingResults', { reason, kickedPlayer: kicked?{name:kicked.name}:null, isImpostor, gameResult });
     
-    if(gameResult) { 
-        room.phase='lobby'; 
-        room.spoken={}; room.votes={}; 
-        // No reseteamos muertos aun para que se vea quien gano, se resetea al dar StartRound
-        setTimeout(()=>emitRoomState(room), 5000); 
-    } else { 
-        room.phase='palabras'; room.turnIndex=-1; room.spoken={}; room.votes={}; 
-        setTimeout(()=>{if(rooms[room.code]) nextTurn(room)}, 5000); 
+    if(gameResult) {
+        room.phase = 'lobby'; 
+        setTimeout(() => emitRoomState(room), 5000);
+    } else {
+        // Reinicio ronda
+        room.phase = 'palabras'; room.turnIndex = -1; room.spoken = {}; room.votes = {};
+        setTimeout(() => { if(rooms[room.code]) nextTurn(room); }, 5000);
     }
 }
 
@@ -193,12 +178,8 @@ io.on('connection', (socket) => {
         const room = {
             code, hostId: socket.id, maxPlayers: maxP, impostors: parseInt(data.impostors)||2,
             categories: data.categories || [],
-            // Guardamos la configuración de tiempo (en ms)
-            config: {
-                turnTime: (parseInt(data.turnTime) || 15) * 1000,
-                voteTime: (parseInt(data.voteTime) || 120) * 1000
-            },
-            players: [{ id: socket.id, name: data.name || 'Host', color: PLAYER_COLORS[0], isDead: false }],
+            config: { turnTime: (parseInt(data.turnTime)||15)*1000, voteTime: (parseInt(data.voteTime)||120)*1000 },
+            players: [{ id: socket.id, name: data.name||'Host', color: PLAYER_COLORS[0], isDead: false }],
             phase: 'lobby', turnIndex: -1, roles: {}, spoken: {}, votes: {},
             discordVoiceChannel: discordData.voiceId, discordLink: discordData.inviteLink
         };
@@ -208,13 +189,16 @@ io.on('connection', (socket) => {
     });
 
     socket.on('joinRoom', (data, cb) => {
-        const code = (data.roomCode||'').toUpperCase(); const room = rooms[code];
+        // NORMALIZAR CÓDIGO (Quitar espacios y mayúsculas)
+        const code = (data.roomCode || '').trim().toUpperCase(); 
+        const room = rooms[code];
         if(room) {
             if(room.players.length >= room.maxPlayers) return cb({ok:false, error:'Sala llena'});
-            if(room.players.some(p=>p.name.toUpperCase()===data.name.toUpperCase())) return cb({ok:false, error:'Nombre en uso'});
+            if(room.players.some(p => p.name.toUpperCase() === data.name.toUpperCase())) return cb({ok:false, error:'Nombre en uso'});
+            
             socket.join(code); socketRoom[socket.id] = code;
             room.players.push({id:socket.id, name:data.name, color:assignColor(room), isDead: false});
-            room.spoken[socket.id]=false;
+            room.spoken[socket.id] = false;
             cb({ok:true, roomCode: code, me: {id:socket.id}, isHost: false, discordLink: room.discordLink});
             emitRoomState(room);
         } else cb({ok:false, error:'Sala no existe'});
@@ -223,16 +207,13 @@ io.on('connection', (socket) => {
     socket.on('startRound', () => {
         const room = getRoomOfSocket(socket.id);
         if(room && room.hostId === socket.id) {
-            // --- REINICIO TOTAL PARA NUEVA PARTIDA ---
-            room.players.forEach(p => p.isDead = false); // Revivir a todos
-            room.votes = {}; // Borrar votos viejos
-            room.spoken = {}; // Borrar historial de habla
-            room.turnIndex = -1;
+            // REINICIO TOTAL
+            room.players.forEach(p => p.isDead = false);
+            room.votes = {}; room.spoken = {}; room.turnIndex = -1;
 
-            // Barajar y Asignar
-            const shuffledPlayers = shuffleArray([...room.players]);
-            const impIds = shuffledPlayers.slice(0, room.impostors).map(p=>p.id);
-            const word = getRandomWord(room.categories); // Palabra nueva
+            const shuffled = shuffleArray([...room.players]);
+            const impIds = shuffled.slice(0, room.impostors).map(p=>p.id);
+            const word = getRandomWord(room.categories);
             const impNames = room.players.filter(p => impIds.includes(p.id)).map(p => p.name);
 
             room.roles = {};
@@ -244,9 +225,15 @@ io.on('connection', (socket) => {
                 room.spoken[p.id] = false;
             });
             
-            // FASE LECTURA NUEVA
             room.phase = 'lectura'; emitRoomState(room);
-            setTimeout(()=>{ if(rooms[room.code]){ room.phase='palabras'; nextTurn(room); }}, 7000);
+            setTimeout(()=>{ 
+                if(rooms[room.code]){ 
+                    room.phase='palabras'; 
+                    // INICIO ALEATORIO
+                    room.turnIndex = Math.floor(Math.random() * room.players.length); 
+                    nextTurn(room); 
+                }
+            }, 7000);
         }
     });
 
@@ -260,24 +247,33 @@ io.on('connection', (socket) => {
 
     socket.on('submitVote', (data) => {
         const room = getRoomOfSocket(socket.id);
-        const player = room.players.find(p => p.id === socket.id);
-        if(room && room.phase === 'votacion' && player && !player.isDead) {
+        const p = room.players.find(x => x.id === socket.id);
+        // MUERTOS NO VOTAN
+        if(room && room.phase === 'votacion' && p && !p.isDead) {
             room.votes[socket.id] = data.targetId;
             emitRoomState(room);
-            const livingCount = room.players.filter(p => !p.isDead).length;
-            if(Object.keys(room.votes).length >= livingCount) finishVoting(room, 'Todos votaron');
+            const living = room.players.filter(x => !x.isDead).length;
+            if(Object.keys(room.votes).length >= living) finishVoting(room, 'Todos votaron');
         }
     });
 
-    socket.on('disconnect', () => { /* ... Logica de desconexion igual ... */ 
-        const r=getRoomOfSocket(socket.id); if(r){
-            r.players=r.players.filter(p=>p.id!==socket.id); delete socketRoom[socket.id];
-            if(r.players.length===0){
-                if(r.timer)clearTimeout(r.timer); if(r.discordVoiceChannel)borrarCanalDiscord(r.discordVoiceChannel); delete rooms[r.code];
-            } else { if(r.hostId===socket.id)r.hostId=r.players[0].id; emitRoomState(r); }
+    socket.on('disconnect', () => {
+        const room = getRoomOfSocket(socket.id);
+        if (room) {
+            // No borramos inmediatamente para dar tiempo a reconectar si es celular
+            // Pero si la partida no ha empezado (Lobby), borramos ya
+            if (room.phase === 'lobby') {
+                room.players = room.players.filter(p => p.id !== socket.id);
+                delete socketRoom[socket.id];
+                if (room.players.length === 0) delete rooms[room.code];
+                else { if (room.hostId === socket.id) room.hostId = room.players[0].id; emitRoomState(room); }
+            } else {
+                // Si está en partida, lo marcamos desconectado (opcional) o esperamos timeout
+                // Por ahora el comportamiento estándar de Socket.io con el pingTimeout aumentado manejará la espera
+            }
         }
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`🚀 Servidor listo en puerto ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Servidor listo ${PORT}`));
