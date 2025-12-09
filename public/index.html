@@ -6,227 +6,271 @@
   <title>Incognito.</title>
   <link rel="icon" type="image/png" href="images/favicon.png">
   <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
 </head>
 <body>
 
-  <div id="ejectionOverlay" class="ejection-overlay" style="display: none;">
-    <div class="ejection-card">
-      <div id="ejectedName" class="eject-title">...</div>
-      <div id="ejectedRole" class="eject-subtitle">...</div>
+  <div class="bg-grid"></div>
+
+  <div id="ejectionOverlay" class="overlay-full" style="display: none;">
+    <div class="result-container">
+      <div id="resultIcon" class="result-icon">⚖️</div>
+      <h1 id="resultTitle" class="result-title">RESULTADO</h1>
+      <p id="resultSubtitle" class="result-subtitle">Detalles de la misión...</p>
+      
+      <div class="result-details-card">
+        <div class="detail-row">
+            <span>Palabra Clave:</span>
+            <span id="resultWord" class="highlight-text">---</span>
+        </div>
+        <div class="detail-row">
+            <span>Impostor:</span>
+            <span id="resultImpostorName" class="highlight-red">---</span>
+        </div>
+      </div>
+
+      <button id="btnBackToLobby" class="btn-main btn-primary">NUEVA MISIÓN</button>
     </div>
   </div>
 
   <div id="lobbyOverlay" class="lobby-overlay">
     
-    <div id="screenHome" class="menu-card fade-in">
+    <div id="screenHome" class="screen fade-in">
       <div class="brand-header">
-        <img src="images/logo.png" alt="Logo" class="logo-img">
+        <div class="logo-container">
+            <img src="images/logo.png" alt="Incognito" class="logo-img">
+        </div>
         <h1 class="brand-title">INCOGNITO<span class="dot-red">.</span></h1>
+        <p class="brand-subtitle">JUEGO DE ESPIONAJE SOCIAL</p>
       </div>
       
       <div class="home-actions">
-        <button id="btnGoCreate" class="btn-main btn-primary">CREAR SALA</button>
-        <button id="btnGoJoin" class="btn-main btn-secondary">UNIRSE A SALA</button>
-        <button id="btnHowToPlay" class="btn-text">¿CÓMO JUGAR?</button>
+        <button id="btnGoCreate" class="btn-big btn-primary">
+            <span class="btn-icon">🚀</span>
+            <span class="btn-text">CREAR SALA</span>
+        </button>
+        <button id="btnGoJoin" class="btn-big btn-secondary">
+            <span class="btn-icon">🔗</span>
+            <span class="btn-text">UNIRSE A SALA</span>
+        </button>
+        <button id="btnHowToPlay" class="btn-link">¿CÓMO JUGAR?</button>
       </div>
 
-      <div class="footer-links">
-        <span>v9.5 Final UI</span>
-      </div>
+      <div class="version-tag">v10.0 SpySystem</div>
     </div>
 
-    <div id="screenCreate" class="menu-card fade-in" style="display: none;">
+    <div id="screenCreate" class="screen fade-in" style="display: none;">
       <div class="screen-header">
         <button id="backFromCreate" class="btn-icon-back">
             <img src="images/arrow.png" alt="Volver">
         </button>
-        <h2>CONFIGURAR</h2>
+        <h2>CONFIGURACIÓN DE MISIÓN</h2>
       </div>
 
-      <div class="form-container">
-        <div class="input-group">
-            <label>Tu Nombre</label>
-            <input type="text" id="hostName" maxlength="10" placeholder="Ej: Agente 007">
+      <div class="scroll-content">
+        <div class="config-card">
+            <label>TU ALIAS</label>
+            <input type="text" id="hostName" class="input-clean" maxlength="12" placeholder="Ej: Agente X">
         </div>
 
-        <div class="toggle-container">
-            <span class="mode-label">Modo Grupal</span>
-            <label class="switch">
-                <input type="checkbox" id="localMode">
-                <span class="slider round"></span>
-            </label>
-            <p class="toggle-hint">(Sin Discord)</p>
-        </div>
-
-        <div class="input-row">
-            <div class="input-half">
-                <label>Turno (seg)</label>
-                <input type="number" id="timeTurn" value="15" min="5" max="60">
-            </div>
-            <div class="input-half">
-                <label>Votación (seg)</label>
-                <input type="number" id="timeVote" value="120" min="30" max="300">
-            </div>
-        </div>
-
-        <div class="input-row">
-            <div class="input-half">
+        <div class="config-grid">
+            <div class="setting-card">
+                <div class="setting-icon">👥</div>
                 <label>Jugadores</label>
-                <input type="number" id="maxPlayers" value="10" min="4" max="15">
+                <div class="counter-control">
+                    <button class="btn-count" onclick="adjustValue('maxPlayers', -1)">-</button>
+                    <span id="displayPlayers">10</span>
+                    <button class="btn-count" onclick="adjustValue('maxPlayers', 1)">+</button>
+                </div>
+                <input type="hidden" id="maxPlayers" value="10">
             </div>
-            <div class="input-half">
+
+            <div class="setting-card">
+                <div class="setting-icon">🕵️</div>
                 <label>Impostores</label>
-                <input type="number" id="impostors" value="2" min="1" max="4">
+                <div class="counter-control">
+                    <button class="btn-count" onclick="adjustValue('impostors', -1)">-</button>
+                    <span id="displayImpostors">2</span>
+                    <button class="btn-count" onclick="adjustValue('impostors', 1)">+</button>
+                </div>
+                <input type="hidden" id="impostors" value="2">
+            </div>
+            
+             <div class="setting-card">
+                <div class="setting-icon">⏱️</div>
+                <label>Turno (s)</label>
+                 <div class="counter-control">
+                    <button class="btn-count" onclick="adjustValue('timeTurn', -5)">-</button>
+                    <span id="displayTurn">15</span>
+                    <button class="btn-count" onclick="adjustValue('timeTurn', 5)">+</button>
+                </div>
+                <input type="hidden" id="timeTurn" value="15">
+            </div>
+
+             <div class="setting-card toggle-card" id="toggleLocalMode">
+                <div class="setting-icon">🏠</div>
+                <label>Modo Grupal</label>
+                <div class="toggle-status">OFF</div>
+                <input type="checkbox" id="localMode" style="display:none;">
             </div>
         </div>
 
-        <div class="input-group">
-            <button id="btnOpenCategories" class="btn-outline">
-                📂 CATEGORÍAS (<span id="catCount">5</span>)
-            </button>
-        </div>
+        <h3 class="section-title">PAQUETES DE DATOS</h3>
+        <div class="categories-grid" id="categoriesGrid">
+            </div>
       </div>
       
-      <div class="spacer"></div>
-      <button id="btnCreateRoom" class="btn-main btn-action-green">INICIAR JUEGO</button>
+      <div class="bottom-dock">
+        <button id="btnCreateRoom" class="btn-main btn-green">INICIAR OPERACIÓN</button>
+      </div>
     </div>
 
-    <div id="screenJoin" class="menu-card fade-in" style="display: none;">
+    <div id="screenJoin" class="screen fade-in" style="display: none;">
       <div class="screen-header">
         <button id="backFromJoin" class="btn-icon-back">
             <img src="images/arrow.png" alt="Volver">
         </button>
-        <h2>UNIRSE</h2>
+        <h2>ACCEDER A SALA</h2>
       </div>
       
-      <div class="spacer"></div>
-
-      <div class="input-group">
-        <label>Tu Nombre</label>
-        <input type="text" id="joinName" maxlength="10" placeholder="Ej: Espía">
-      </div>
-      <div class="input-group">
-        <label>CÓDIGO DE SALA</label>
-        <input type="text" id="joinCode" class="code-input" placeholder="ABCD">
+      <div class="center-content">
+          <div class="input-card">
+            <label>TU ALIAS</label>
+            <input type="text" id="joinName" class="input-clean" maxlength="12" placeholder="Agente...">
+          </div>
+          <div class="input-card">
+            <label>CÓDIGO DE ACCESO</label>
+            <input type="text" id="joinCode" class="input-code" placeholder="A B C D">
+          </div>
       </div>
       
-      <div class="spacer"></div>
-      
-      <button id="btnJoinRoom" class="btn-main btn-primary">ENTRAR</button>
+      <div class="bottom-dock">
+        <button id="btnJoinRoom" class="btn-main btn-primary">CONECTAR</button>
+      </div>
     </div>
   </div>
 
-  <main id="mainContent" class="blurred" style="display:none;">
-    <div class="game-board">
-        <section class="game-area">
+  <main id="mainContent" style="display:none;">
+    <div class="game-container">
+        
+        <header class="game-header">
+            <div class="room-pill">
+                <span class="pill-label">SALA</span>
+                <span id="roomCodeDisplay" class="pill-value">----</span>
+                <button id="btnCopyCode" class="btn-icon-only">📋</button>
+            </div>
+            <div class="header-actions">
+                <button id="btnDiscordManual" class="btn-circle-icon discord-bg" style="display:none;">
+                    <img src="images/discord.png" alt="Voice">
+                </button>
+                <button id="btnExit" class="btn-circle-icon exit-bg">
+                    <img src="images/arrow.png" style="transform: rotate(0deg); width: 14px;">
+                </button>
+            </div>
+        </header>
+
+        <section class="game-center">
             
-            <div class="top-bar">
-                <div class="room-info-wrapper">
-                    <span class="room-label">SALA</span>
-                    <span id="roomCodeDisplay" class="room-code">----</span>
-                    <button id="btnCopyCode" class="btn-copy-style" title="Copiar">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                    </button>
-                </div>
-
-                <div class="top-right-actions">
-                    <button id="btnDiscordManual" class="btn-pill-discord" style="display:none;">
-                        <img src="images/discord.png" alt="Discord">
-                        <span>VOZ</span>
-                    </button>
-                    <button id="btnExit" class="btn-pill-exit">
-                         <img src="images/arrow.png" alt="Volver" style="transform: rotate(0deg);"> 
-                         <span>VOLVER</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="game-center">
-                <div id="viewCard" class="center-view">
-                    <div id="instructionsCard" class="card-box instruction-style">
-                        <h3 class="card-title">OBJETIVO</h3>
-                        <div class="inst-row">
-                            <span class="inst-icon">🕵️‍♂️</span>
-                            <p><strong>IMPOSTOR:</strong> Mézclate. Miente y deduce.</p>
-                        </div>
-                        <div class="inst-row">
-                            <span class="inst-icon">🧑‍🤝‍🧑</span>
-                            <p><strong>CIUDADANOS:</strong> Describan su palabra sutilmente.</p>
-                        </div>
-                        <div class="waiting-text">Esperando al anfitrión...</div>
+            <div id="viewCard" class="view-panel">
+                
+                <div id="instructionsPanel" class="info-panel">
+                    <h3>ESPERANDO AGENTES...</h3>
+                    <div class="loader-dots">
+                        <span></span><span></span><span></span>
                     </div>
+                    <p class="hint-text">El anfitrión iniciará la misión pronto.</p>
+                </div>
 
-                    <div id="roleCard" class="card-box secret-style" style="display:none;">
-                        <div class="secret-label">TU ROL</div>
-                        <div class="secret-word" id="wordDisplay">? ? ?</div>
-                        <div class="secret-role" id="roleDisplay">...</div>
-                        <div class="teammate-box" id="teammateDisplay" style="display:none;">
-                            <span class="teammate-label">TU ALIADO:</span>
-                            <span id="teammateNames" class="teammate-names">Nadie</span>
+                <div id="secretCardContainer" class="secret-card-wrapper" style="display:none;">
+                    <div class="secret-card-inner">
+                        <div class="card-front">
+                            <div class="lock-icon">🔒</div>
+                            <p>TOP SECRET</p>
+                            <span class="tap-hint">TOCA PARA DESENCRIPTAR</span>
+                        </div>
+                        <div class="card-back" id="cardBackContent">
+                            <div class="role-icon" id="roleIconDisplay">?</div>
+                            <h2 id="roleTitleDisplay">ROL</h2>
+                            <div class="secret-word-box">
+                                <span id="wordDisplay">---</span>
+                            </div>
+                            <div id="teammateBox" class="teammate-info" style="display:none;">
+                                <span>ALIADO:</span> <b id="teammateNames"></b>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                <div id="viewTurn" class="center-view" style="display:none;">
-                    <div class="turn-container">
-                        <div class="turn-avatar-circle"><span id="turnTimerDisplay">15</span></div>
-                        <h2 id="turnPlayerName">Jugador</h2>
-                        <p class="turn-hint">TURNO DE HABLAR</p>
-                        <button id="btnFinishTurn" class="btn-main btn-action-green" style="display:none;">✅ Terminé</button>
-                    </div>
-                </div>
-
-                <div id="viewVoting" class="center-view" style="display:none;">
-                    <h2 class="vote-title">¿QUIÉN ES EL IMPOSTOR?</h2>
-                    <div class="vote-hud">
-                        <div id="votingTimer" class="vote-timer">00:00</div>
-                        <div id="voteCounter" class="vote-counter">Votos: 0</div>
-                    </div>
-                    <div class="voting-grid" id="votingGrid"></div>
-                </div>
             </div>
 
-            <div class="bottom-bar">
-                <div class="action-buttons">
-                    <button id="btnStartRound" class="btn-main btn-action-green" disabled>INICIAR PARTIDA</button>
-                    <button id="btnSkipVote" class="btn-main btn-secondary" style="display:none;">SALTAR VOTO 💨</button>
+            <div id="viewTurn" class="view-panel" style="display:none;">
+                <div class="turn-avatar">
+                    <span id="turnTimerDisplay">15</span>
                 </div>
+                <h2 id="turnPlayerName" class="turn-name">Agente</h2>
+                <div class="status-badge">TRANSMITIENDO...</div>
+                <button id="btnFinishTurn" class="btn-action-round" style="display:none;">✅</button>
             </div>
+
+            <div id="viewVoting" class="view-panel" style="display:none;">
+                <h2 class="section-title-red">¿QUIÉN ES EL INFILTRADO?</h2>
+                <div class="vote-stats">
+                    <div class="timer-box" id="votingTimer">00:00</div>
+                    <div class="vote-count" id="voteCounter">0 Votos</div>
+                </div>
+                <div class="voting-grid" id="votingGrid"></div>
+            </div>
+
         </section>
 
-        <aside class="sidebar">
-            <div class="sidebar-header">JUGADORES</div>
-            <div id="playersList" class="player-list"></div>
-        </aside>
+        <footer class="game-footer">
+            <button id="btnStartRound" class="btn-wide btn-green" disabled>INICIAR MISIÓN</button>
+            <button id="btnSkipVote" class="btn-wide btn-grey" style="display:none;">SALTAR (SKIP) 💨</button>
+        </footer>
+
+        <div class="players-drawer">
+            <div class="drawer-handle"></div>
+            <div class="drawer-header">AGENTES EN LÍNEA</div>
+            <div id="playersList" class="players-scroll"></div>
+        </div>
     </div>
   </main>
 
-  <div id="modalCategories" class="modal-overlay" style="display: none;">
-      <div class="modal-card">
-          <h3>Categorías</h3>
-          <div class="category-grid-compact">
-              <label class="cat-chip"><input type="checkbox" value="lugares" checked> 📍 Lugares</label>
-              <label class="cat-chip"><input type="checkbox" value="comidas" checked> 🍔 Comidas</label>
-              <label class="cat-chip"><input type="checkbox" value="objetos" checked> 🛠️ Objetos</label>
-              <label class="cat-chip"><input type="checkbox" value="animales" checked> 🦁 Animales</label>
-              <label class="cat-chip"><input type="checkbox" value="profesiones" checked> 👮 Profesiones</label>
+  <div id="modalHowToPlay" class="overlay-full" style="display: none;">
+      <div class="modal-content">
+          <div class="modal-header">
+              <h3>PROTOCOLO DE MISIÓN</h3>
+              <button id="btnCloseHowToPlay" class="btn-close">✕</button>
           </div>
-          <button id="btnCloseCategories" class="btn-main btn-primary">GUARDAR</button>
-      </div>
-  </div>
-
-  <div id="modalHowToPlay" class="modal-overlay" style="display: none;">
-      <div class="modal-card">
-          <h3>¿Cómo Jugar?</h3>
-          <div style="text-align: left; font-size: 0.9rem; line-height: 1.5; color: #ccc; margin-bottom: 20px;">
-              <p>1. Recibirás una <strong>Palabra Secreta</strong> (o serás Impostor).</p>
-              <p>2. En tu turno, di una palabra relacionada.</p>
-              <p>3. <strong>Ciudadanos:</strong> No sean muy obvios.</p>
-              <p>4. <strong>Impostor:</strong> Intenta adivinar y finge saber la palabra.</p>
-              <p>5. Al final, voten para expulsar al sospechoso.</p>
+          <div class="tutorial-list">
+              <div class="tutorial-item">
+                  <div class="tut-icon">⚙️</div>
+                  <div class="tut-text">
+                      <strong>1. Configurar</strong>
+                      <p>El anfitrión define jugadores y categorías. Un jugador será el impostor.</p>
+                  </div>
+              </div>
+              <div class="tutorial-item">
+                  <div class="tut-icon">👁️</div>
+                  <div class="tut-text">
+                      <strong>2. Intel (Información)</strong>
+                      <p>Toca tu tarjeta para desencriptar tu rol. El impostor NO ve la palabra.</p>
+                  </div>
+              </div>
+              <div class="tutorial-item">
+                  <div class="tut-icon">💬</div>
+                  <div class="tut-text">
+                      <strong>3. Interrogatorio</strong>
+                      <p>Por turnos, digan una palabra relacionada. No sean obvios, el impostor escucha.</p>
+                  </div>
+              </div>
+              <div class="tutorial-item">
+                  <div class="tut-icon">🔍</div>
+                  <div class="tut-text">
+                      <strong>4. Ejecución</strong>
+                      <p>Voten para eliminar al sospechoso. Si fallan, gana el impostor.</p>
+                  </div>
+              </div>
           </div>
-          <button id="btnCloseHowToPlay" class="btn-main btn-secondary">ENTENDIDO</button>
       </div>
   </div>
 

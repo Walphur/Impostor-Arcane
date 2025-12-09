@@ -1,99 +1,116 @@
 const socket = io();
 
 // ==========================================
-// 1. SONIDOS
+// 1. DATA & AUDIO
 // ==========================================
 const audioFiles = {
     click: new Audio('sounds/click-345983.mp3'),
-    join: new Audio('sounds/new-notification-019-363747.mp3'), 
+    join: new Audio('sounds/new-notification-019-363747.mp3'),
     start: new Audio('sounds/game-start-317318.mp3'),
     eject: new Audio('sounds/fatal-body-fall-thud-352716.mp3'),
     win: new Audio('sounds/level-up-04-243762.mp3')
 };
-function playSound(name) {
-    try { if(audioFiles[name]) { audioFiles[name].currentTime=0; audioFiles[name].volume=0.5; audioFiles[name].play().catch(e=>{}); } } catch(e){}
-}
+function playSound(name) { try { if(audioFiles[name]) { audioFiles[name].currentTime=0; audioFiles[name].volume=0.5; audioFiles[name].play().catch(e=>{}); } } catch(e){} }
 
-// ==========================================
-// 2. REFERENCIAS
-// ==========================================
-// Pantallas
-const screenHome = document.getElementById('screenHome');
-const screenCreate = document.getElementById('screenCreate');
-const screenJoin = document.getElementById('screenJoin');
-const lobbyOverlay = document.getElementById('lobbyOverlay');
-const mainContent = document.getElementById('mainContent');
+const CATEGORIES_DATA = [
+    { id: 'lugares', icon: '📍', name: 'Lugares' },
+    { id: 'comidas', icon: '🍔', name: 'Comidas' },
+    { id: 'objetos', icon: '🛠️', name: 'Objetos' },
+    { id: 'animales', icon: '🦁', name: 'Animales' },
+    { id: 'profesiones', icon: '👮', name: 'Profesiones' },
+    { id: 'cine', icon: '🎬', name: 'Cine' }
+];
 
-// Modales
-const modalCats = document.getElementById('modalCategories');
-const modalHelp = document.getElementById('modalHowToPlay');
-
-// Elementos Juego
-const instructionsCard = document.getElementById('instructionsCard');
-const roleCard = document.getElementById('roleCard');
-const wordDisplay = document.getElementById('wordDisplay');
-const roleDisplay = document.getElementById('roleDisplay');
-const teammateDisplay = document.getElementById('teammateDisplay'); // Caja container
-const teammateNames = document.getElementById('teammateNames');    // Texto nombres
-
-// Variables Estado
 let myId = null;
 let isHost = false;
 let isMyPlayerDead = false;
 let localTimer = null;
 let selectedVoteId = null;
+let selectedCategories = new Set(['lugares', 'comidas', 'objetos', 'animales', 'profesiones']);
 
 // ==========================================
-// 3. NAVEGACIÓN
+// 2. UI LOGIC (Menus & Settings)
 // ==========================================
-function showScreen(name) {
+// Navegación Básica
+function showScreen(id) {
     playSound('click');
-    [screenHome, screenCreate, screenJoin].forEach(el => el.style.display = 'none');
-    if(name === 'home') screenHome.style.display = 'flex';
-    if(name === 'create') screenCreate.style.display = 'flex';
-    if(name === 'join') screenJoin.style.display = 'flex';
+    document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+    document.getElementById(id).style.display = 'flex'; // Usamos flex para layout
 }
 
-document.getElementById('btnGoCreate').onclick = () => showScreen('create');
-document.getElementById('btnGoJoin').onclick = () => showScreen('join');
-document.getElementById('backFromCreate').onclick = () => showScreen('home');
-document.getElementById('backFromJoin').onclick = () => showScreen('home');
+document.getElementById('btnGoCreate').onclick = () => showScreen('screenCreate');
+document.getElementById('btnGoJoin').onclick = () => showScreen('screenJoin');
+document.getElementById('backFromCreate').onclick = () => showScreen('screenHome');
+document.getElementById('backFromJoin').onclick = () => showScreen('screenHome');
 
-// Botón Cómo Jugar
-document.getElementById('btnHowToPlay').onclick = () => { playSound('click'); modalHelp.style.display = 'flex'; };
-document.getElementById('btnCloseHowToPlay').onclick = () => { playSound('click'); modalHelp.style.display = 'none'; };
+// Modal Cómo Jugar
+document.getElementById('btnHowToPlay').onclick = () => { playSound('click'); document.getElementById('modalHowToPlay').style.display='flex'; };
+document.getElementById('btnCloseHowToPlay').onclick = () => { playSound('click'); document.getElementById('modalHowToPlay').style.display='none'; };
 
-// Categorías
-document.getElementById('btnOpenCategories').onclick = () => { playSound('click'); modalCats.style.display = 'flex'; };
-document.getElementById('btnCloseCategories').onclick = () => { 
-    playSound('click'); 
-    modalCats.style.display = 'none';
-    document.getElementById('catCount').innerText = document.querySelectorAll('.cat-chip input:checked').length;
+// --- CONFIGURACIÓN (GRID + CONTADORES) ---
+// Generar Categorias
+const catGrid = document.getElementById('categoriesGrid');
+CATEGORIES_DATA.forEach(cat => {
+    const el = document.createElement('div');
+    el.className = 'cat-card selected'; // Por defecto seleccionadas
+    el.innerHTML = `<div class="cat-icon">${cat.icon}</div><div class="cat-name">${cat.name}</div><div class="cat-check">✓</div>`;
+    el.onclick = () => {
+        playSound('click');
+        if(selectedCategories.has(cat.id)) {
+            selectedCategories.delete(cat.id);
+            el.classList.remove('selected');
+        } else {
+            selectedCategories.add(cat.id);
+            el.classList.add('selected');
+        }
+    };
+    catGrid.appendChild(el);
+});
+
+// Ajuste Valores (+/-)
+window.adjustValue = function(inputId, delta) {
+    playSound('click');
+    const input = document.getElementById(inputId);
+    let val = parseInt(input.value);
+    
+    // Límites
+    if(inputId === 'maxPlayers') { val = Math.min(15, Math.max(3, val + delta)); document.getElementById('displayPlayers').innerText = val; }
+    if(inputId === 'impostors') { val = Math.min(4, Math.max(1, val + delta)); document.getElementById('displayImpostors').innerText = val; }
+    if(inputId === 'timeTurn') { val = Math.min(60, Math.max(5, val + delta)); document.getElementById('displayTurn').innerText = val; }
+    
+    input.value = val;
+};
+
+// Toggle Local
+document.getElementById('toggleLocalMode').onclick = function() {
+    playSound('click');
+    const check = document.getElementById('localMode');
+    check.checked = !check.checked;
+    this.classList.toggle('active', check.checked);
+    this.querySelector('.toggle-status').innerText = check.checked ? 'ON' : 'OFF';
 };
 
 // ==========================================
-// 4. CONEXIÓN Y CREACIÓN
+// 3. CONEXIÓN
 // ==========================================
 document.getElementById('btnCreateRoom').onclick = () => {
+    if(selectedCategories.size === 0) return alert("Elige al menos una categoría.");
     playSound('click');
-    const cats = Array.from(document.querySelectorAll('.cat-chip input:checked')).map(c => c.value);
-    if(cats.length === 0) return alert("Selecciona al menos una categoría.");
-
     socket.emit('createRoom', {
-        name: document.getElementById('hostName').value || 'Host',
+        name: document.getElementById('hostName').value || 'Agente X',
         maxPlayers: document.getElementById('maxPlayers').value,
         impostors: document.getElementById('impostors').value,
-        categories: cats,
+        categories: Array.from(selectedCategories),
         isLocal: document.getElementById('localMode').checked,
         turnTime: document.getElementById('timeTurn').value,
-        voteTime: document.getElementById('timeVote').value
+        voteTime: 120 // Default vote time
     }, handleConnection);
 };
 
 document.getElementById('btnJoinRoom').onclick = () => {
     playSound('click');
     socket.emit('joinRoom', {
-        name: document.getElementById('joinName').value || 'Player',
+        name: document.getElementById('joinName').value || 'Agente Y',
         roomCode: document.getElementById('joinCode').value
     }, handleConnection);
 };
@@ -101,56 +118,61 @@ document.getElementById('btnJoinRoom').onclick = () => {
 function handleConnection(res) {
     if(res.ok) {
         playSound('join');
-        lobbyOverlay.style.display = 'none';
-        mainContent.style.display = 'flex'; // Flex para activar layout CSS
-        setTimeout(() => mainContent.classList.remove('blurred'), 50);
-
+        document.getElementById('lobbyOverlay').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
+        
         myId = res.me.id;
         isHost = res.isHost;
         document.getElementById('roomCodeDisplay').innerText = res.roomCode;
         
-        // Mostrar botón discord si hay link
         if(res.discordLink) {
             document.getElementById('btnDiscordManual').style.display = 'flex';
             document.getElementById('btnDiscordManual').onclick = () => window.open(res.discordLink, '_blank');
-            window.open(res.discordLink, '_blank');
         }
-
-        // Estado inicial: ver instrucciones
-        instructionsCard.style.display = 'block';
-        roleCard.style.display = 'none';
+        
+        // Reset vistas
+        updateGameView({ phase: 'lobby', players: [] }); 
     } else {
         alert(res.error);
     }
 }
 
 document.getElementById('btnExit').onclick = () => location.reload();
-document.getElementById('btnCopyCode').onclick = () => {
-    navigator.clipboard.writeText(document.getElementById('roomCodeDisplay').innerText);
-    alert("Código copiado!");
+document.getElementById('btnCopyCode').onclick = () => { navigator.clipboard.writeText(document.getElementById('roomCodeDisplay').innerText); };
+
+// ==========================================
+// 4. JUEGO (REVEAL & FLOW)
+// ==========================================
+// Interacción Tarjeta Secreta
+document.getElementById('secretCardContainer').onclick = function() {
+    playSound('click');
+    this.classList.toggle('revealed');
 };
 
-// ==========================================
-// 5. LÓGICA DE JUEGO
-// ==========================================
 document.getElementById('btnStartRound').onclick = () => { playSound('click'); socket.emit('startRound'); };
 document.getElementById('btnFinishTurn').onclick = () => { playSound('click'); socket.emit('finishTurn'); };
-document.getElementById('btnSkipVote').onclick = () => { if(!isMyPlayerDead) { socket.emit('submitVote', {targetId:null}); document.getElementById('btnSkipVote').innerText="ESPERANDO..."; document.getElementById('btnSkipVote').disabled=true; }};
+document.getElementById('btnSkipVote').onclick = () => { 
+    if(!isMyPlayerDead) { 
+        socket.emit('submitVote', {targetId:null}); 
+        const b = document.getElementById('btnSkipVote');
+        b.innerText="ESPERANDO..."; b.disabled=true; 
+    }
+};
 
-// --- RECEPCIÓN DE ESTADO ---
+// --- ESTADOS DE SALA ---
 socket.on('roomState', (room) => {
     const me = room.players.find(p => p.id === myId);
     isMyPlayerDead = me ? me.isDead : false;
-
-    // Actualizar Header
+    
+    // Botones Globales
     const btnStart = document.getElementById('btnStartRound');
     const btnSkip = document.getElementById('btnSkipVote');
     
     if(room.phase === 'lobby') {
         btnStart.style.display = 'block';
+        btnStart.disabled = !(isHost && room.players.length >= 3);
         btnSkip.style.display = 'none';
-        btnStart.disabled = !(isHost && room.players.length >= 3); // Mínimo 3 para probar
-    } else if (room.phase === 'votacion') {
+    } else if(room.phase === 'votacion') {
         btnStart.style.display = 'none';
         btnSkip.style.display = 'block';
         if(isMyPlayerDead) btnSkip.disabled = true;
@@ -159,99 +181,125 @@ socket.on('roomState', (room) => {
         btnSkip.style.display = 'none';
     }
 
-    // Sidebar Jugadores
-    renderSidebar(room);
-
-    // Vistas Centrales
+    renderPlayers(room);
     updateGameView(room);
 });
 
-// --- ROL ASIGNADO (INICIO DE RONDA) ---
+// --- ROL (INICIO RONDA) ---
 socket.on('yourRole', (data) => {
     playSound('start');
     
-    // Ocultar instrucciones, mostrar tarjeta de rol
-    instructionsCard.style.display = 'none';
-    roleCard.style.display = 'block';
-    
-    // Resetear visualización
-    teammateDisplay.style.display = 'none';
-    wordDisplay.style.color = 'white';
-    
-    if(data.role === 'impostor') {
-        roleDisplay.innerText = 'ERES EL IMPOSTOR';
-        roleDisplay.style.color = '#E74C3C'; // Rojo
-        wordDisplay.innerText = '???';
-        wordDisplay.style.color = '#E74C3C';
+    // Reset tarjeta
+    const cardWrap = document.getElementById('secretCardContainer');
+    cardWrap.classList.remove('revealed');
+    cardWrap.style.display = 'block';
+    document.getElementById('instructionsPanel').style.display = 'none';
 
-        // LÓGICA DE COMPAÑEROS
+    // Rellenar datos dorso
+    const back = document.getElementById('cardBackContent');
+    const icon = document.getElementById('roleIconDisplay');
+    const title = document.getElementById('roleTitleDisplay');
+    const word = document.getElementById('wordDisplay');
+    const teamBox = document.getElementById('teammateBox');
+
+    back.className = 'card-back'; // Reset clases
+
+    if(data.role === 'impostor') {
+        back.classList.add('impostor-theme');
+        icon.innerText = '👺';
+        title.innerText = 'IMPOSTOR';
+        word.innerText = '???';
+        
         if(data.teammates && data.teammates.length > 0) {
-            teammateDisplay.style.display = 'block';
-            teammateNames.innerText = data.teammates.join(', ');
+            teamBox.style.display = 'block';
+            document.getElementById('teammateNames').innerText = data.teammates.join(', ');
+        } else {
+            teamBox.style.display = 'none';
         }
     } else {
-        roleDisplay.innerText = 'CIUDADANO';
-        roleDisplay.style.color = '#4A90E2'; // Azul
-        wordDisplay.innerText = data.word;
+        icon.innerText = '🕵️';
+        title.innerText = 'AGENTE';
+        word.innerText = data.word;
+        teamBox.style.display = 'none';
     }
 });
 
-// --- RESULTADOS VOTACIÓN ---
+// --- RESULTADO FINAL (Ref Img 8) ---
 socket.on('votingResults', (data) => {
     const overlay = document.getElementById('ejectionOverlay');
-    const title = document.getElementById('ejectedName');
-    const sub = document.getElementById('ejectedRole');
+    const title = document.getElementById('resultTitle');
+    const sub = document.getElementById('resultSubtitle');
+    const icon = document.getElementById('resultIcon');
+    const rWord = document.getElementById('resultWord');
+    const rImp = document.getElementById('resultImpostorName');
+    const btnBack = document.getElementById('btnBackToLobby');
 
-    if(data.gameResult) playSound('win'); else playSound('eject');
-
-    overlay.style.display = 'flex';
-    
-    if(data.kickedPlayer) {
-        title.innerText = `${data.kickedPlayer.name} fue expulsado.`;
-        sub.innerText = data.isImpostor ? "ERA UN IMPOSTOR" : "ERA INOCENTE";
-        sub.style.color = data.isImpostor ? '#E74C3C' : '#4A90E2';
-    } else {
-        title.innerText = "NADIE FUE EXPULSADO";
-        sub.innerText = "Empate o Skip";
-        sub.style.color = "#999";
-    }
-
+    // Lógica para mostrar pantalla intermedia o final
     if(data.gameResult) {
-        setTimeout(() => {
-            title.innerText = "PARTIDA TERMINADA";
-            sub.innerText = data.gameResult === 'citizensWin' ? "¡GANAN LOS CIUDADANOS!" : "¡GANAN LOS IMPOSTORES!";
-            sub.style.color = data.gameResult === 'citizensWin' ? '#27AE60' : '#E74C3C';
-        }, 2000);
-        setTimeout(() => { 
-            overlay.style.display = 'none'; 
-            // Volver al lobby visualmente
-            instructionsCard.style.display = 'block';
-            roleCard.style.display = 'none';
-        }, 6000);
+        playSound('win');
+        overlay.style.display = 'flex';
+        
+        if(data.gameResult === 'citizensWin') {
+            title.innerText = "¡VICTORIA!";
+            title.style.color = '#30D158'; // Verde
+            sub.innerText = "El impostor ha sido neutralizado.";
+            icon.innerText = '🏆';
+        } else {
+            title.innerText = "DERROTA";
+            title.style.color = '#FF453A'; // Rojo
+            sub.innerText = "El impostor ha escapado.";
+            icon.innerText = '💀';
+        }
+        
+        // Mostrar datos revelados
+        // Nota: Necesitarías que el server mande la palabra real en votingResults, 
+        // por ahora asumimos que el server la manda o la tenemos.
+        rWord.innerText = "CONFIDENCIAL"; 
+        rImp.innerText = data.kickedPlayer ? data.kickedPlayer.name : "Desconocido";
+
+        btnBack.onclick = () => {
+            overlay.style.display = 'none';
+            document.getElementById('secretCardContainer').style.display = 'none';
+            document.getElementById('instructionsPanel').style.display = 'block';
+        };
+
     } else {
-        setTimeout(() => { overlay.style.display = 'none'; document.getElementById('btnSkipVote').innerText="SALTAR VOTO 💨"; document.getElementById('btnSkipVote').disabled=false; }, 4000);
+        // Solo expulsión (no termina juego)
+        playSound('eject');
+        overlay.style.display = 'flex';
+        title.innerText = "EXPULSIÓN";
+        title.style.color = '#fff';
+        icon.innerText = '🥾';
+        
+        if(data.kickedPlayer) {
+            sub.innerText = `${data.kickedPlayer.name} fue eliminado.`;
+            rImp.innerText = data.isImpostor ? "ERA IMPOSTOR" : "ERA INOCENTE";
+        } else {
+            sub.innerText = "Nadie fue eliminado (Skip/Empate).";
+            rImp.innerText = "---";
+        }
+        rWord.innerText = "---";
+        
+        // Botón cambia función a "Cerrar"
+        btnBack.innerText = "CONTINUAR";
+        btnBack.onclick = () => { overlay.style.display = 'none'; btnBack.innerText="NUEVA MISIÓN"; };
     }
 });
 
 // ==========================================
-// 6. FUNCIONES VISUALES AUXILIARES
+// 5. VIEW HELPERS
 // ==========================================
-function renderSidebar(room) {
+function renderPlayers(room) {
     const list = document.getElementById('playersList');
     list.innerHTML = '';
     room.players.forEach(p => {
-        const row = document.createElement('div');
-        row.className = 'player-card';
-        if(p.isDead) row.classList.add('dead');
-        if(room.phase === 'palabras' && room.players[room.turnIndex]?.id === p.id) row.classList.add('talking');
+        const chip = document.createElement('div');
+        chip.className = 'player-chip';
+        if(p.id === myId) chip.classList.add('is-me');
+        if(p.isDead) chip.classList.add('is-dead');
         
-        const status = p.hasVoted && room.phase === 'votacion' ? '✅' : '';
-        row.innerHTML = `
-            <div class="p-avatar" style="background:${p.color}"></div>
-            <div style="flex:1">${p.name} ${p.id===myId?'(Tú)':''}</div>
-            <div>${status}</div>
-        `;
-        list.appendChild(row);
+        chip.innerHTML = `<span style="color:${p.color}">●</span> ${p.name}`;
+        list.appendChild(chip);
     });
 }
 
@@ -259,49 +307,37 @@ function updateGameView(room) {
     const vCard = document.getElementById('viewCard');
     const vTurn = document.getElementById('viewTurn');
     const vVote = document.getElementById('viewVoting');
-
-    // Resetear vistas
+    
     [vCard, vTurn, vVote].forEach(el => el.style.display = 'none');
     stopTimer();
 
     if(room.phase === 'lobby' || room.phase === 'lectura') {
         vCard.style.display = 'block';
-    } 
+    }
     else if(room.phase === 'palabras') {
+        vTurn.style.display = 'block';
         const ap = room.players[room.turnIndex];
         if(ap) {
-            vTurn.style.display = 'block';
             document.getElementById('turnPlayerName').innerText = ap.name;
-            document.getElementById('turnPlayerName').style.color = ap.color;
-            document.querySelector('.turn-avatar-circle').style.borderColor = ap.color;
-            
-            // Botón terminar turno solo si soy yo
+            document.querySelector('.turn-avatar').style.borderColor = ap.color;
             const btn = document.getElementById('btnFinishTurn');
             btn.style.display = (ap.id === myId) ? 'block' : 'none';
-
             startTimer(room.timeLeft, document.getElementById('turnTimerDisplay'));
-            // Sonido alerta turno
-            if(ap.id === myId && room.timeLeft > (parseInt(document.getElementById('timeTurn').value)-1)) playSound('join');
         }
-    } 
+    }
     else if(room.phase === 'votacion') {
         vVote.style.display = 'block';
         startTimer(room.timeLeft, document.getElementById('votingTimer'));
-        document.getElementById('voteCounter').innerText = `Votos: ${room.votesInfo.current}/${room.votesInfo.total}`;
+        document.getElementById('voteCounter').innerText = `${room.votesInfo.current}/${room.votesInfo.total} Votos`;
         
-        // Render Grid Votación
         const grid = document.getElementById('votingGrid');
         grid.innerHTML = '';
         room.players.forEach(p => {
-            if(p.isDead || p.id === myId) return; // No votarse a si mismo ni a muertos
+            if(p.isDead || p.id === myId) return;
             const card = document.createElement('div');
             card.className = 'vote-card';
             if(selectedVoteId === p.id) card.classList.add('selected');
-            
-            card.innerHTML = `
-                <div style="font-size:2rem;margin-bottom:5px;">👤</div>
-                <div style="font-weight:bold;font-size:0.8rem;overflow:hidden;text-overflow:ellipsis;">${p.name}</div>
-            `;
+            card.innerHTML = `<div class="vote-avatar" style="color:${p.color}">👤</div><div class="vote-name">${p.name}</div>`;
             card.onclick = () => {
                 if(isMyPlayerDead) return;
                 playSound('click');
@@ -315,16 +351,8 @@ function updateGameView(room) {
     }
 }
 
-function startTimer(seconds, element) {
-    if(element) element.innerText = seconds;
-    localTimer = setInterval(() => {
-        seconds--;
-        if(seconds < 0) seconds = 0;
-        if(element) element.innerText = seconds;
-        if(seconds === 0) stopTimer();
-    }, 1000);
+function startTimer(s, el) {
+    if(el) el.innerText = s;
+    localTimer = setInterval(() => { s--; if(s<0)s=0; if(el)el.innerText=s; if(s===0)stopTimer(); }, 1000);
 }
-
-function stopTimer() {
-    if(localTimer) clearInterval(localTimer);
-}
+function stopTimer() { if(localTimer) clearInterval(localTimer); }
