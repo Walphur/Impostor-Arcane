@@ -1,7 +1,7 @@
 const socket = io();
 
 // ==========================================
-// 1. SISTEMA DE SONIDOS
+// 1. SONIDOS
 // ==========================================
 const audioFiles = {
     click: new Audio('sounds/click-345983.mp3'),
@@ -10,53 +10,48 @@ const audioFiles = {
     eject: new Audio('sounds/fatal-body-fall-thud-352716.mp3'),
     win: new Audio('sounds/level-up-04-243762.mp3')
 };
-
 function playSound(name) {
-    try {
-        if(audioFiles[name]) {
-            audioFiles[name].currentTime = 0; 
-            audioFiles[name].volume = 0.5;    
-            audioFiles[name].play().catch(e => console.log("Audio bloqueado:", e));
-        }
-    } catch(e) { console.error("Error audio:", e); }
+    try { if(audioFiles[name]) { audioFiles[name].currentTime=0; audioFiles[name].volume=0.5; audioFiles[name].play().catch(e=>{}); } } catch(e){}
 }
 
 // ==========================================
-// 2. REFERENCIAS DOM
+// 2. REFERENCIAS
 // ==========================================
+// Pantallas
 const screenHome = document.getElementById('screenHome');
 const screenCreate = document.getElementById('screenCreate');
 const screenJoin = document.getElementById('screenJoin');
-const lobbyOverlay=document.getElementById('lobbyOverlay');
+const lobbyOverlay = document.getElementById('lobbyOverlay');
+const mainContent = document.getElementById('mainContent');
 
+// Modales
 const modalCats = document.getElementById('modalCategories');
-const btnOpenCats = document.getElementById('btnOpenCategories');
-const btnCloseCats = document.getElementById('btnCloseCategories');
-const catCountLabel = document.getElementById('catCount');
+const modalHelp = document.getElementById('modalHowToPlay');
 
-const mainContent=document.getElementById('mainContent'), roomCodeDisplay=document.getElementById('roomCodeDisplay'), playersListEl=document.getElementById('playersList'), votingGrid=document.getElementById('votingGrid');
-const viewCard=document.getElementById('viewCard'), viewTurn=document.getElementById('viewTurn'), viewVoting=document.getElementById('viewVoting');
-const turnPlayerName=document.getElementById('turnPlayerName'), turnTimerDisplay=document.getElementById('turnTimerDisplay'), turnAvatar=document.querySelector('.turn-avatar-circle'), roleDisplay=document.getElementById('roleDisplay'), wordDisplay=document.getElementById('wordDisplay'), teammateDisplay=document.getElementById('teammateDisplay'), ejectionOverlay=document.getElementById('ejectionOverlay');
-const btnStart=document.getElementById('btnStartRound'), btnSkip=document.getElementById('btnSkipVote'), btnFinishTurn=document.getElementById('btnFinishTurn'), btnDiscordManual=document.getElementById('btnDiscordManual'), btnExit=document.getElementById('btnExit');
-const gameBoard = document.querySelector('.game-board');
-const voteCounter = document.getElementById('voteCounter');
-const votingTimer = document.getElementById('votingTimer');
+// Elementos Juego
+const instructionsCard = document.getElementById('instructionsCard');
+const roleCard = document.getElementById('roleCard');
+const wordDisplay = document.getElementById('wordDisplay');
+const roleDisplay = document.getElementById('roleDisplay');
+const teammateDisplay = document.getElementById('teammateDisplay'); // Caja container
+const teammateNames = document.getElementById('teammateNames');    // Texto nombres
 
-let myId=null, isHost=false, localTimer=null, selectedVoteId=null, isMyPlayerDead=false, currentDiscordLink=null;
+// Variables Estado
+let myId = null;
+let isHost = false;
+let isMyPlayerDead = false;
+let localTimer = null;
+let selectedVoteId = null;
 
-// Ocultar juego al inicio
-mainContent.style.display = 'none';
-
-// --- NAVEGACIÓN MENU ---
-function showScreen(screenName) {
+// ==========================================
+// 3. NAVEGACIÓN
+// ==========================================
+function showScreen(name) {
     playSound('click');
-    screenHome.style.display = 'none';
-    screenCreate.style.display = 'none';
-    screenJoin.style.display = 'none';
-
-    if(screenName === 'home') screenHome.style.display = 'flex';
-    if(screenName === 'create') screenCreate.style.display = 'flex';
-    if(screenName === 'join') screenJoin.style.display = 'flex';
+    [screenHome, screenCreate, screenJoin].forEach(el => el.style.display = 'none');
+    if(name === 'home') screenHome.style.display = 'flex';
+    if(name === 'create') screenCreate.style.display = 'flex';
+    if(name === 'join') screenJoin.style.display = 'flex';
 }
 
 document.getElementById('btnGoCreate').onclick = () => showScreen('create');
@@ -64,231 +59,272 @@ document.getElementById('btnGoJoin').onclick = () => showScreen('join');
 document.getElementById('backFromCreate').onclick = () => showScreen('home');
 document.getElementById('backFromJoin').onclick = () => showScreen('home');
 
-// --- LÓGICA MODAL CATEGORÍAS ---
-btnOpenCats.onclick = () => { playSound('click'); modalCats.style.display = 'flex'; };
-btnCloseCats.onclick = () => { 
+// Botón Cómo Jugar
+document.getElementById('btnHowToPlay').onclick = () => { playSound('click'); modalHelp.style.display = 'flex'; };
+document.getElementById('btnCloseHowToPlay').onclick = () => { playSound('click'); modalHelp.style.display = 'none'; };
+
+// Categorías
+document.getElementById('btnOpenCategories').onclick = () => { playSound('click'); modalCats.style.display = 'flex'; };
+document.getElementById('btnCloseCategories').onclick = () => { 
     playSound('click'); 
-    modalCats.style.display = 'none'; 
-    const count = document.querySelectorAll('.cat-chip input:checked').length;
-    catCountLabel.innerText = count;
+    modalCats.style.display = 'none';
+    document.getElementById('catCount').innerText = document.querySelectorAll('.cat-chip input:checked').length;
 };
 
-// --- BOTÓN COPIAR CÓDIGO ---
-document.getElementById('btnCopyCode').onclick = () => {
-    playSound('click');
-    const code = document.getElementById('roomCodeDisplay').innerText;
-    navigator.clipboard.writeText(code).then(() => {
-        const btn = document.getElementById('btnCopyCode');
-        const originalHTML = btn.innerHTML;
-        btn.innerHTML = '✅'; 
-        btn.style.color = '#22c55e';
-        setTimeout(() => {
-            btn.innerHTML = originalHTML;
-            btn.style.color = '';
-        }, 1500);
-    }).catch(err => { console.error('Error al copiar:', err); });
-};
-
-// --- BOTONES CREAR / UNIRSE ---
+// ==========================================
+// 4. CONEXIÓN Y CREACIÓN
+// ==========================================
 document.getElementById('btnCreateRoom').onclick = () => {
     playSound('click');
-    const checkboxes = document.querySelectorAll('.cat-chip input[type="checkbox"]:checked');
-    const categories = Array.from(checkboxes).map(cb => cb.value);
-    
-    if(categories.length === 0) return alert("¡Elige al menos una categoría!");
+    const cats = Array.from(document.querySelectorAll('.cat-chip input:checked')).map(c => c.value);
+    if(cats.length === 0) return alert("Selecciona al menos una categoría.");
 
-    const hostNameEl = document.getElementById('hostName');
-    const maxPlayersEl = document.getElementById('maxPlayers');
-    const impostorsEl = document.getElementById('impostors');
-    const turnTimeEl = document.getElementById('timeTurn');
-    const voteTimeEl = document.getElementById('timeVote');
-    const localModeEl = document.getElementById('localMode');
-
-    if(!hostNameEl) return alert("Recarga la página, faltan elementos.");
-
-    socket.emit('createRoom', { 
-        name: hostNameEl.value || 'Host', 
-        maxPlayers: maxPlayersEl.value, 
-        impostors: impostorsEl.value, 
-        categories: categories,
-        isLocal: localModeEl ? localModeEl.checked : false,
-        turnTime: turnTimeEl ? turnTimeEl.value : 15, 
-        voteTime: voteTimeEl ? voteTimeEl.value : 120
+    socket.emit('createRoom', {
+        name: document.getElementById('hostName').value || 'Host',
+        maxPlayers: document.getElementById('maxPlayers').value,
+        impostors: document.getElementById('impostors').value,
+        categories: cats,
+        isLocal: document.getElementById('localMode').checked,
+        turnTime: document.getElementById('timeTurn').value,
+        voteTime: document.getElementById('timeVote').value
     }, handleConnection);
 };
 
-document.getElementById('btnJoinRoom').onclick=()=>{ 
+document.getElementById('btnJoinRoom').onclick = () => {
     playSound('click');
-    const nameEl = document.getElementById('joinName');
-    const codeEl = document.getElementById('joinCode');
-    socket.emit('joinRoom', { 
-        name: nameEl.value || 'Player', 
-        roomCode: codeEl.value 
-    }, handleConnection); 
+    socket.emit('joinRoom', {
+        name: document.getElementById('joinName').value || 'Player',
+        roomCode: document.getElementById('joinCode').value
+    }, handleConnection);
 };
 
-// === MANEJO DE CONEXIÓN ===
-function handleConnection(res){ 
-    if(res.ok){ 
-        playSound('join'); 
-        lobbyOverlay.style.display='none'; 
-        mainContent.style.display='block'; 
-        setTimeout(() => {
-            mainContent.classList.remove('blurred');
-        }, 50); 
+function handleConnection(res) {
+    if(res.ok) {
+        playSound('join');
+        lobbyOverlay.style.display = 'none';
+        mainContent.style.display = 'flex'; // Flex para activar layout CSS
+        setTimeout(() => mainContent.classList.remove('blurred'), 50);
+
+        myId = res.me.id;
+        isHost = res.isHost;
+        document.getElementById('roomCodeDisplay').innerText = res.roomCode;
         
-        myId=res.me.id; isHost=res.isHost; roomCodeDisplay.innerText=res.roomCode; 
-        
-        if(res.discordLink) { 
-            currentDiscordLink = res.discordLink; 
-            btnDiscordManual.style.display = 'flex'; 
-            window.open(res.discordLink, '_blank'); 
-        } else { 
-            btnDiscordManual.style.display = 'none'; 
+        // Mostrar botón discord si hay link
+        if(res.discordLink) {
+            document.getElementById('btnDiscordManual').style.display = 'flex';
+            document.getElementById('btnDiscordManual').onclick = () => window.open(res.discordLink, '_blank');
+            window.open(res.discordLink, '_blank');
         }
-    } else { 
-        alert(res.error); 
-    } 
+
+        // Estado inicial: ver instrucciones
+        instructionsCard.style.display = 'block';
+        roleCard.style.display = 'none';
+    } else {
+        alert(res.error);
+    }
 }
 
-btnDiscordManual.onclick = () => { playSound('click'); if(currentDiscordLink) window.open(currentDiscordLink, '_blank'); };
-btnExit.onclick = () => { playSound('click'); location.reload(); };
-
-// --- ACCIONES JUEGO ---
-btnStart.onclick=()=>{ 
-    playSound('click'); 
-    socket.emit('startRound'); 
+document.getElementById('btnExit').onclick = () => location.reload();
+document.getElementById('btnCopyCode').onclick = () => {
+    navigator.clipboard.writeText(document.getElementById('roomCodeDisplay').innerText);
+    alert("Código copiado!");
 };
 
-btnFinishTurn.onclick=()=>{ 
-    playSound('click'); 
-    socket.emit('finishTurn'); 
-};
+// ==========================================
+// 5. LÓGICA DE JUEGO
+// ==========================================
+document.getElementById('btnStartRound').onclick = () => { playSound('click'); socket.emit('startRound'); };
+document.getElementById('btnFinishTurn').onclick = () => { playSound('click'); socket.emit('finishTurn'); };
+document.getElementById('btnSkipVote').onclick = () => { if(!isMyPlayerDead) { socket.emit('submitVote', {targetId:null}); document.getElementById('btnSkipVote').innerText="ESPERANDO..."; document.getElementById('btnSkipVote').disabled=true; }};
 
-btnSkip.onclick=()=>{ 
-    if(isMyPlayerDead) return; 
-    playSound('click');
-    socket.emit('submitVote', {targetId:null}); 
-    btnSkip.innerText="ESPERANDO..."; 
-    btnSkip.disabled=true; 
-};
-
-// --- EVENTOS SERVIDOR ---
-socket.on('roomState', (room)=>{ 
+// --- RECEPCIÓN DE ESTADO ---
+socket.on('roomState', (room) => {
     const me = room.players.find(p => p.id === myId);
-    if(me) isMyPlayerDead = me.isDead || false;
+    isMyPlayerDead = me ? me.isDead : false;
+
+    // Actualizar Header
+    const btnStart = document.getElementById('btnStartRound');
+    const btnSkip = document.getElementById('btnSkipVote');
     
-    if(room.votesInfo && voteCounter) {
-        voteCounter.innerText = `VOTOS: ${room.votesInfo.current} / ${room.votesInfo.total}`;
+    if(room.phase === 'lobby') {
+        btnStart.style.display = 'block';
+        btnSkip.style.display = 'none';
+        btnStart.disabled = !(isHost && room.players.length >= 3); // Mínimo 3 para probar
+    } else if (room.phase === 'votacion') {
+        btnStart.style.display = 'none';
+        btnSkip.style.display = 'block';
+        if(isMyPlayerDead) btnSkip.disabled = true;
+    } else {
+        btnStart.style.display = 'none';
+        btnSkip.style.display = 'none';
     }
-    
-    updateHeader(room); renderSidebar(room); updateGameView(room); 
+
+    // Sidebar Jugadores
+    renderSidebar(room);
+
+    // Vistas Centrales
+    updateGameView(room);
 });
 
-socket.on('yourRole', (data)=>{
-    playSound('start'); 
-    const card=document.querySelector('.secret-card'); teammateDisplay.style.display='none';
-    if(data.role==='impostor'){ 
-        roleDisplay.innerText='ERES EL IMPOSTOR'; wordDisplay.innerText='ERES EL IMPOSTOR'; wordDisplay.classList.add('impostor-word');
-        if(data.teammates&&data.teammates.length>0){teammateDisplay.style.display='block';teammateDisplay.innerText=`ALIADO: ${data.teammates.join(', ')}`;} 
-    } else { 
-        roleDisplay.innerText='CIUDADANO'; wordDisplay.innerText=data.word; wordDisplay.classList.remove('impostor-word');
-    }
-});
-
-socket.on('votingResults', (data)=>{
-    if(data.gameResult) playSound('win'); 
-    else playSound('eject');
-
-    ejectionOverlay.style.display='flex';
-    const t=document.getElementById('ejectedName'), s=document.getElementById('ejectedRole');
-    if(data.kickedPlayer){ 
-        t.innerText=`${data.kickedPlayer.name} fue expulsado.`; 
-        s.innerText=data.isImpostor?"ERA EL IMPOSTOR":"ERA INOCENTE"; 
-        s.className=data.isImpostor?"eject-subtitle impostor-text":"eject-subtitle innocent-text"; 
-    } else { t.innerText="Nadie fue expulsado."; s.innerText="SKIP / EMPATE"; s.className="eject-subtitle"; }
+// --- ROL ASIGNADO (INICIO DE RONDA) ---
+socket.on('yourRole', (data) => {
+    playSound('start');
     
-    if(data.gameResult){ 
-        setTimeout(()=>{ 
-            t.innerText="JUEGO TERMINADO"; 
-            s.innerText=data.gameResult==='citizensWin'?"¡VICTORIA CIUDADANA!":"¡VICTORIA IMPOSTORA!"; 
-            s.className=data.gameResult==='citizensWin'?"eject-subtitle innocent-text":"eject-subtitle impostor-text"; 
-        },2000); 
+    // Ocultar instrucciones, mostrar tarjeta de rol
+    instructionsCard.style.display = 'none';
+    roleCard.style.display = 'block';
+    
+    // Resetear visualización
+    teammateDisplay.style.display = 'none';
+    wordDisplay.style.color = 'white';
+    
+    if(data.role === 'impostor') {
+        roleDisplay.innerText = 'ERES EL IMPOSTOR';
+        roleDisplay.style.color = '#E74C3C'; // Rojo
+        wordDisplay.innerText = '???';
+        wordDisplay.style.color = '#E74C3C';
+
+        // LÓGICA DE COMPAÑEROS
+        if(data.teammates && data.teammates.length > 0) {
+            teammateDisplay.style.display = 'block';
+            teammateNames.innerText = data.teammates.join(', ');
+        }
+    } else {
+        roleDisplay.innerText = 'CIUDADANO';
+        roleDisplay.style.color = '#4A90E2'; // Azul
+        wordDisplay.innerText = data.word;
     }
-    setTimeout(()=>{ ejectionOverlay.style.display='none'; btnSkip.innerText="SALTAR VOTO"; btnSkip.disabled=false; },5000);
 });
 
-// --- RENDERIZADO ---
-function renderSidebar(room){
-    playersListEl.innerHTML='';
-    room.players.forEach(p=>{
-        const c=document.createElement('div'); c.className='player-card'; c.style.borderLeftColor=p.color;
+// --- RESULTADOS VOTACIÓN ---
+socket.on('votingResults', (data) => {
+    const overlay = document.getElementById('ejectionOverlay');
+    const title = document.getElementById('ejectedName');
+    const sub = document.getElementById('ejectedRole');
+
+    if(data.gameResult) playSound('win'); else playSound('eject');
+
+    overlay.style.display = 'flex';
+    
+    if(data.kickedPlayer) {
+        title.innerText = `${data.kickedPlayer.name} fue expulsado.`;
+        sub.innerText = data.isImpostor ? "ERA UN IMPOSTOR" : "ERA INOCENTE";
+        sub.style.color = data.isImpostor ? '#E74C3C' : '#4A90E2';
+    } else {
+        title.innerText = "NADIE FUE EXPULSADO";
+        sub.innerText = "Empate o Skip";
+        sub.style.color = "#999";
+    }
+
+    if(data.gameResult) {
+        setTimeout(() => {
+            title.innerText = "PARTIDA TERMINADA";
+            sub.innerText = data.gameResult === 'citizensWin' ? "¡GANAN LOS CIUDADANOS!" : "¡GANAN LOS IMPOSTORES!";
+            sub.style.color = data.gameResult === 'citizensWin' ? '#27AE60' : '#E74C3C';
+        }, 2000);
+        setTimeout(() => { 
+            overlay.style.display = 'none'; 
+            // Volver al lobby visualmente
+            instructionsCard.style.display = 'block';
+            roleCard.style.display = 'none';
+        }, 6000);
+    } else {
+        setTimeout(() => { overlay.style.display = 'none'; document.getElementById('btnSkipVote').innerText="SALTAR VOTO 💨"; document.getElementById('btnSkipVote').disabled=false; }, 4000);
+    }
+});
+
+// ==========================================
+// 6. FUNCIONES VISUALES AUXILIARES
+// ==========================================
+function renderSidebar(room) {
+    const list = document.getElementById('playersList');
+    list.innerHTML = '';
+    room.players.forEach(p => {
+        const row = document.createElement('div');
+        row.className = 'player-card';
+        if(p.isDead) row.classList.add('dead');
+        if(room.phase === 'palabras' && room.players[room.turnIndex]?.id === p.id) row.classList.add('talking');
         
-        if(p.isDead) c.classList.add('dead');
-        else if(room.phase==='palabras'&&room.players[room.turnIndex]?.id===p.id) c.classList.add('talking');
-        
-        let status=''; if(room.phase==='votacion'&&p.hasVoted) status='✅'; if(p.isDead) status='💀';
-        c.innerHTML=`<div class="p-avatar" style="background:${p.color}"></div><div class="p-name">${p.name} ${p.id===myId?'(Tú)':''}</div><div class="p-status">${status}</div>`;
-        playersListEl.appendChild(c);
+        const status = p.hasVoted && room.phase === 'votacion' ? '✅' : '';
+        row.innerHTML = `
+            <div class="p-avatar" style="background:${p.color}"></div>
+            <div style="flex:1">${p.name} ${p.id===myId?'(Tú)':''}</div>
+            <div>${status}</div>
+        `;
+        list.appendChild(row);
     });
 }
 
-function updateGameView(room){
-    if(room.phase==='votacion') gameBoard.classList.add('voting-mode'); else gameBoard.classList.remove('voting-mode');
-    
-    if(room.phase==='lectura'){ showView(viewCard); document.querySelector('.secret-card').style.transform="scale(1.1)"; roleDisplay.innerText="¡MIRA TU ROL!"; stopLocalTimer(); return; }
-    
-    if(room.phase==='votacion'){ 
-        document.querySelector('.secret-card').style.transform="scale(1)"; showView(viewVoting); 
-        renderVotingGrid(room.players); 
-        startLocalTimer(room.timeLeft, 'vote'); 
-        return; 
-    }
-    
-    if(room.phase==='palabras'){ 
-        document.querySelector('.secret-card').style.transform="scale(1)"; const ap=room.players[room.turnIndex]; 
-        if(ap){ 
-            showView(viewTurn); turnPlayerName.innerText=ap.name; turnPlayerName.style.color=ap.color; turnAvatar.style.borderColor=ap.color; 
-            startLocalTimer(room.timeLeft, 'turn'); 
+function updateGameView(room) {
+    const vCard = document.getElementById('viewCard');
+    const vTurn = document.getElementById('viewTurn');
+    const vVote = document.getElementById('viewVoting');
+
+    // Resetear vistas
+    [vCard, vTurn, vVote].forEach(el => el.style.display = 'none');
+    stopTimer();
+
+    if(room.phase === 'lobby' || room.phase === 'lectura') {
+        vCard.style.display = 'block';
+    } 
+    else if(room.phase === 'palabras') {
+        const ap = room.players[room.turnIndex];
+        if(ap) {
+            vTurn.style.display = 'block';
+            document.getElementById('turnPlayerName').innerText = ap.name;
+            document.getElementById('turnPlayerName').style.color = ap.color;
+            document.querySelector('.turn-avatar-circle').style.borderColor = ap.color;
             
-            if(ap.id === myId) {
-                btnFinishTurn.style.display = 'block';
-                if(room.timeLeft > (document.getElementById('timeTurn')?.value - 1) || 14) playSound('join'); 
-            } else {
-                btnFinishTurn.style.display = 'none'; 
-            }
-        } 
-        return; 
+            // Botón terminar turno solo si soy yo
+            const btn = document.getElementById('btnFinishTurn');
+            btn.style.display = (ap.id === myId) ? 'block' : 'none';
+
+            startTimer(room.timeLeft, document.getElementById('turnTimerDisplay'));
+            // Sonido alerta turno
+            if(ap.id === myId && room.timeLeft > (parseInt(document.getElementById('timeTurn').value)-1)) playSound('join');
+        }
+    } 
+    else if(room.phase === 'votacion') {
+        vVote.style.display = 'block';
+        startTimer(room.timeLeft, document.getElementById('votingTimer'));
+        document.getElementById('voteCounter').innerText = `Votos: ${room.votesInfo.current}/${room.votesInfo.total}`;
+        
+        // Render Grid Votación
+        const grid = document.getElementById('votingGrid');
+        grid.innerHTML = '';
+        room.players.forEach(p => {
+            if(p.isDead || p.id === myId) return; // No votarse a si mismo ni a muertos
+            const card = document.createElement('div');
+            card.className = 'vote-card';
+            if(selectedVoteId === p.id) card.classList.add('selected');
+            
+            card.innerHTML = `
+                <div style="font-size:2rem;margin-bottom:5px;">👤</div>
+                <div style="font-weight:bold;font-size:0.8rem;overflow:hidden;text-overflow:ellipsis;">${p.name}</div>
+            `;
+            card.onclick = () => {
+                if(isMyPlayerDead) return;
+                playSound('click');
+                document.querySelectorAll('.vote-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedVoteId = p.id;
+                socket.emit('submitVote', {targetId: p.id});
+            };
+            grid.appendChild(card);
+        });
     }
-    document.querySelector('.secret-card').style.transform="scale(1)"; showView(viewCard); stopLocalTimer();
 }
 
-function renderVotingGrid(players){
-    votingGrid.innerHTML='';
-    players.forEach(p=>{
-        if(p.isDead || p.id===myId) return;
-        const c=document.createElement('div'); c.className='vote-card';
-        if(selectedVoteId===p.id) c.classList.add('selected');
-        c.innerHTML=`<div class="vote-avatar" style="background:${p.color}">👤</div><div class="vote-name">${p.name}</div>`;
-        c.onclick=()=>{ 
-            if(isMyPlayerDead) return; 
-            playSound('click'); 
-            document.querySelectorAll('.vote-card').forEach(x=>x.classList.remove('selected')); c.classList.add('selected'); selectedVoteId=p.id; socket.emit('submitVote', {targetId:p.id}); 
-        };
-        votingGrid.appendChild(c);
-    });
+function startTimer(seconds, element) {
+    if(element) element.innerText = seconds;
+    localTimer = setInterval(() => {
+        seconds--;
+        if(seconds < 0) seconds = 0;
+        if(element) element.innerText = seconds;
+        if(seconds === 0) stopTimer();
+    }, 1000);
 }
 
-function updateHeader(room){ 
-    const phaseLabel = document.getElementById('phasePill');
-    if(phaseLabel) phaseLabel.innerText = room.phase.toUpperCase();
-
-    if(room.phase==='lobby'){ btnStart.style.display='block'; btnSkip.style.display='none'; if(isHost&&room.players.length>=3){btnStart.disabled=false; btnStart.style.opacity='1';}else{btnStart.disabled=true; btnStart.style.opacity='0.5';} }
-    else if(room.phase==='votacion'){ btnStart.style.display='none'; btnSkip.style.display='block'; if(isMyPlayerDead){btnSkip.innerText="ESTÁS MUERTO"; btnSkip.disabled=true;} }
-    else{ btnStart.style.display='block'; btnStart.disabled=true; btnSkip.style.display='none'; } 
+function stopTimer() {
+    if(localTimer) clearInterval(localTimer);
 }
-
-function showView(el){ [viewCard, viewTurn, viewVoting].forEach(v=>v.style.display='none'); el.style.display='block'; }
-function startLocalTimer(s, type){ stopLocalTimer(); updateTimerDisplay(s, type); localTimer=setInterval(()=>{ s--; if(s<0)s=0; updateTimerDisplay(s, type); if(s===0)stopLocalTimer(); },1000); }
-function updateTimerDisplay(s, type) { if(type === 'vote' && votingTimer) { votingTimer.innerText = s + "s"; if(s <= 10) votingTimer.classList.add('danger'); else votingTimer.classList.remove('danger'); } else if(turnTimerDisplay) { turnTimerDisplay.innerText = s; } }
-function stopLocalTimer(){ if(localTimer)clearInterval(localTimer); }

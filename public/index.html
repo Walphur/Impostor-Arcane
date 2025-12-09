@@ -3,15 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Incognito</title>
-  <link rel="icon" type="image/png" href="favicon.png">
+  <title>Impostor Game</title>
   <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;900&display=swap" rel="stylesheet">
 </head>
 <body>
-
-  <div class="bg-dots"></div>
 
   <div id="ejectionOverlay" class="ejection-overlay" style="display: none;">
     <div class="ejection-card">
@@ -24,29 +20,27 @@
     
     <div id="screenHome" class="menu-card fade-in">
       <div class="brand-header">
-        <svg class="logo-svg-container" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" fill="currentColor">
-            <path d="M575.1 256c0 22.5-13.8 41.6-33.1 50-3 28.5-16.1 54.1-36.1 74-30 29.9-73.5 49.1-123.7 56.2-21.4 3-43.5 4.6-66.2 4.6s-44.8-1.5-66.2-4.6c-50.2-7-93.7-26.2-123.7-56.2-20-19.8-33.2-45.5-36.1-74-19.3-8.4-33.1-27.5-33.1-50 0-23.3 14.8-43.1 35.3-50.5l21.4-90.1c6.7-28.3 31.6-48.5 60.5-49.2l.1-.3c.2-22.5 12.5-43.2 32.4-54.4C225 4.3 246.1 0 269.1 0c37.9 0 70.5 22.7 84.5 55.4 19.9 11.2 32.2 31.9 32.4 54.4l.1 .3c28.9 .7 53.8 20.9 60.5 49.2l21.4 90.1c20.5 7.4 35.3 27.2 35.3 50.5 0 0 0 0 0 0zM269.1 41.1c-8.3 0-15.8 1.8-22.6 5 6.8 11.9 16.5 22.2 28.4 30.5-13.6-2.7-28.8-7.7-41.8-15.8-10.6 9.1-18.4 21.5-21.8 35.4-5 21.1 2.6 41.9 16.8 54.6 17.2-8.4 37.5-14.4 59.7-17.5-8.3-11.8-13.2-26.1-13.2-41.4 0-5.2 .6-10.2 1.6-15 7.3-12.3 25.8-41.7 48.3-46.7-17.9-18.3-41.9-29.3-68.6-29.3 0 0 0 0 0 0zm227.8 214.9h-19.7l-18.6-78.3c-2.4-10-11.3-17.1-21.6-17.4h-2c-16 0-30.4-9.4-37.6-23.5 0 0 0 0 0 .1-23.5 3.3-44.8 9.7-62.9 18.7 8.8 8.6 14.2 20.6 14.2 34 0 26.1-21.2 47.4-47.4 47.4s-47.4-21.2-47.4-47.4c0-13.4 5.5-25.4 14.2-34-18.1-9-39.4-15.4-62.9-18.7 .1-.1 .1-.1 0 0-7.2 14.1-21.6 23.5-37.6 23.5h-2c-10.3 .3-19.2 7.4-21.6 17.4l-18.6 78.3H86c-8.9 0-16.2 7.3-16.2 16.2s7.3 16.2 16.2 16.2h48.6l6.1 25.6c1.9 19 10.7 36.1 24 49.3 24.6 24.5 58.8 40 97.8 45.9 17.6 2.6 35.8 4 54.4 4 18.6 0 36.9-1.3 54.4-4 39-5.8 73.1-21.4 97.8-45.9 13.3-13.2 22.2-30.3 24-49.3l6.1-25.6h48.6c8.9 0 16.2-7.3 16.2-16.2s-7.3-16.2-16.2-16.2 0 0 0 0 0 0z"/>
-            <path d="M162.5 373.7c18.8-8.1 33-24.4 38.3-44.5-17.9 12-39.2 19.4-62.1 20.6 5.5 11.3 14.1 20.7 23.8 23.9zM389.2 373.7c9.7-3.2 18.3-12.6 23.8-23.9-22.9-1.2-44.2-8.6-62.1-20.6 5.3 20.1 19.5 36.4 38.3 44.5zm38.7-57.4C405.8 336 380.2 347 352 348.3c-7.5-14.1-21.1-24.4-37-26.6-15.7-2.2-31.8 2.8-44.7 13.9-12.9-11-29-16.1-44.7-13.9-15.9 2.2-29.5 12.5-37 26.6-28.2-1.4-53.8-12.3-75.9-31.9 2.8-11.6 4.3-23.7 4.3-36.2 0-7.9-.6-15.6-1.7-23.1 24 5.5 46.2 16.3 65 31.3 12-15.3 30.7-25 51.5-25s39.5 9.7 51.5 25c18.8-15 41-25.9 65-31.3-1.1 7.5-1.7 15.2-1.7 23.1 0 12.5 1.5 24.5 4.3 36.2z"/>
-        </svg>
-        
-        <h1 class="brand-title">INCOGNITO</h1>
-        <p style="color: var(--neon-blue); font-family: 'Courier Prime', monospace; letter-spacing: 3px; font-size: 0.8rem; margin-top: 10px;">SYSTEM_READY</p>
+        <img src="images/logo.png" alt="Logo" class="logo-img">
+        <h1 class="brand-title">IMPOSTOR</h1>
       </div>
       
       <div class="home-actions">
-        <button id="btnGoCreate" class="btn-main btn-neon-blue">CREAR SALA</button>
-        <button id="btnGoJoin" class="btn-main btn-outline">UNIRSE A SALA</button>
+        <button id="btnGoCreate" class="btn-main btn-primary">CREAR SALA</button>
+        <button id="btnGoJoin" class="btn-main btn-secondary">UNIRSE A SALA</button>
+        <button id="btnHowToPlay" class="btn-text">¿CÓMO JUGAR?</button>
       </div>
 
       <div class="footer-links">
-        <span>v8.0 New Identity</span>
+        <span>v9.0 App Edition</span>
       </div>
     </div>
 
     <div id="screenCreate" class="menu-card fade-in" style="display: none;">
       <div class="screen-header">
-        <button id="backFromCreate" class="btn-back">← Volver</button>
-        <h2>CONFIGURAR PARTIDA</h2>
+        <button id="backFromCreate" class="btn-icon-back">
+            <img src="images/arrow.png" alt="Volver">
+        </button>
+        <h2>CONFIGURAR</h2>
       </div>
 
       <div class="form-container">
@@ -55,12 +49,13 @@
             <input type="text" id="hostName" maxlength="10" placeholder="Ej: Agente 007">
         </div>
 
-        <div class="input-group">
-            <label class="local-mode-btn">
+        <div class="toggle-container">
+            <span class="mode-label">Modo Grupal</span>
+            <label class="switch">
                 <input type="checkbox" id="localMode">
-                <span class="checkmark-box"></span>
-                <span class="mode-text">🏠 MODO PRESENCIAL (SIN DISCORD)</span>
+                <span class="slider round"></span>
             </label>
+            <p class="toggle-hint">(Todos en el mismo lugar, sin Discord)</p>
         </div>
 
         <div class="input-row">
@@ -86,20 +81,22 @@
         </div>
 
         <div class="input-group">
-            <button id="btnOpenCategories" class="btn-outline-small">
-                📂 SELECCIONAR CATEGORÍAS (<span id="catCount">5</span>)
+            <button id="btnOpenCategories" class="btn-outline">
+                📂 CATEGORÍAS (<span id="catCount">5</span>)
             </button>
         </div>
       </div>
       
       <div class="spacer"></div>
-      <button id="btnCreateRoom" class="btn-main btn-primary">INICIAR JUEGO</button>
+      <button id="btnCreateRoom" class="btn-main btn-action-green">INICIAR JUEGO</button>
     </div>
 
     <div id="screenJoin" class="menu-card fade-in" style="display: none;">
       <div class="screen-header">
-        <button id="backFromJoin" class="btn-back">← Volver</button>
-        <h2>UNIRSE A PARTIDA</h2>
+        <button id="backFromJoin" class="btn-icon-back">
+            <img src="images/arrow.png" alt="Volver">
+        </button>
+        <h2>UNIRSE</h2>
       </div>
       
       <div class="spacer"></div>
@@ -115,9 +112,8 @@
       
       <div class="spacer"></div>
       
-      <button id="btnJoinRoom" class="btn-main btn-secondary">ENTRAR</button>
+      <button id="btnJoinRoom" class="btn-main btn-primary">ENTRAR</button>
     </div>
-
   </div>
 
   <main id="mainContent" class="blurred" style="display:none;">
@@ -125,31 +121,46 @@
         <section class="game-area">
             <div class="top-bar">
                 <div class="room-info-group">
-                    <span class="room-label">SALA</span>
+                    <span class="room-label">SALA:</span>
                     <span id="roomCodeDisplay" class="room-code">---</span>
-                    <button id="btnCopyCode" class="btn-copy" title="Copiar código">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                    </button>
+                    <button id="btnCopyCode" class="btn-copy">📋</button>
                 </div>
 
                 <div class="top-right-actions">
-                    <button id="btnDiscordManual" class="btn-discord-small" style="display:none;">
-                        🎧 VOZ
+                    <button id="btnDiscordManual" class="btn-discord" style="display:none;">
+                        <img src="images/discord.png" alt="Discord">
                     </button>
-                    <button id="btnExit" class="btn-exit-red">
-                        ← VOLVER
-                    </button>
+                    <button id="btnExit" class="btn-exit-text">SALIR</button>
                 </div>
             </div>
 
             <div class="game-center">
                 <div id="viewCard" class="center-view">
-                    <div class="secret-card">
+                    
+                    <div id="instructionsCard" class="card-box instruction-style">
+                        <h3 class="card-title">OBJETIVO</h3>
+                        <div class="inst-row">
+                            <span class="inst-icon">🕵️‍♂️</span>
+                            <p><strong>IMPOSTOR:</strong> Mézclate. No sabes la palabra secreta. Miente y deduce.</p>
+                        </div>
+                        <div class="inst-row">
+                            <span class="inst-icon">🧑‍🤝‍🧑</span>
+                            <p><strong>CIUDADANOS:</strong> Todos tienen la misma palabra. Descríbela sutilmente.</p>
+                        </div>
+                        <div class="waiting-text">Esperando al anfitrión...</div>
+                    </div>
+
+                    <div id="roleCard" class="card-box secret-style" style="display:none;">
                         <div class="secret-label">TU ROL</div>
                         <div class="secret-word" id="wordDisplay">? ? ?</div>
-                        <div class="secret-role" id="roleDisplay">Esperando inicio...</div>
-                        <div class="teammate-hint" id="teammateDisplay" style="display:none;"></div>
+                        <div class="secret-role" id="roleDisplay">...</div>
+                        
+                        <div class="teammate-box" id="teammateDisplay" style="display:none;">
+                            <span class="teammate-label">TU ALIADO:</span>
+                            <span id="teammateNames" class="teammate-names">Nadie</span>
+                        </div>
                     </div>
+
                 </div>
 
                 <div id="viewTurn" class="center-view" style="display:none;">
@@ -157,7 +168,7 @@
                         <div class="turn-avatar-circle"><span id="turnTimerDisplay">15</span></div>
                         <h2 id="turnPlayerName">Jugador</h2>
                         <p class="turn-hint">TURNO DE HABLAR</p>
-                        <button id="btnFinishTurn" class="btn-finish-turn" style="display:none;">✅ Terminé</button>
+                        <button id="btnFinishTurn" class="btn-main btn-action-green" style="display:none;">✅ Terminé</button>
                     </div>
                 </div>
 
@@ -173,14 +184,14 @@
 
             <div class="bottom-bar">
                 <div class="action-buttons">
-                    <button id="btnStartRound" class="btn-action btn-start" disabled>INICIAR PARTIDA</button>
-                    <button id="btnSkipVote" class="btn-action btn-skip" style="display:none;">SALTAR VOTO 💨</button>
+                    <button id="btnStartRound" class="btn-main btn-action-green" disabled>INICIAR PARTIDA</button>
+                    <button id="btnSkipVote" class="btn-main btn-secondary" style="display:none;">SALTAR VOTO 💨</button>
                 </div>
             </div>
         </section>
 
         <aside class="sidebar">
-            <div class="sidebar-header">JUGADORES <span id="myInfo"></span></div>
+            <div class="sidebar-header">JUGADORES</div>
             <div id="playersList" class="player-list"></div>
         </aside>
     </div>
@@ -188,7 +199,7 @@
 
   <div id="modalCategories" class="modal-overlay" style="display: none;">
       <div class="modal-card">
-          <h3>Selecciona Categorías</h3>
+          <h3>Categorías</h3>
           <div class="category-grid-compact">
               <label class="cat-chip"><input type="checkbox" value="lugares" checked> 📍 Lugares</label>
               <label class="cat-chip"><input type="checkbox" value="comidas" checked> 🍔 Comidas</label>
@@ -196,7 +207,21 @@
               <label class="cat-chip"><input type="checkbox" value="animales" checked> 🦁 Animales</label>
               <label class="cat-chip"><input type="checkbox" value="profesiones" checked> 👮 Profesiones</label>
           </div>
-          <button id="btnCloseCategories" class="btn-main btn-secondary">GUARDAR Y VOLVER</button>
+          <button id="btnCloseCategories" class="btn-main btn-primary">GUARDAR</button>
+      </div>
+  </div>
+
+  <div id="modalHowToPlay" class="modal-overlay" style="display: none;">
+      <div class="modal-card">
+          <h3>¿Cómo Jugar?</h3>
+          <div style="text-align: left; font-size: 0.9rem; line-height: 1.5; color: #ccc; margin-bottom: 20px;">
+              <p>1. Recibirás una <strong>Palabra Secreta</strong> (o serás Impostor).</p>
+              <p>2. En tu turno, di una palabra relacionada.</p>
+              <p>3. <strong>Ciudadanos:</strong> No sean muy obvios.</p>
+              <p>4. <strong>Impostor:</strong> Intenta adivinar y finge saber la palabra.</p>
+              <p>5. Al final, voten para expulsar al sospechoso.</p>
+          </div>
+          <button id="btnCloseHowToPlay" class="btn-main btn-secondary">ENTENDIDO</button>
       </div>
   </div>
 
