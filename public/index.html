@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Impostor Game</title>
+  <title>Incognito.</title>
+  <link rel="icon" type="image/png" href="images/favicon.png">
   <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;900&display=swap" rel="stylesheet">
 </head>
@@ -21,7 +22,7 @@
     <div id="screenHome" class="menu-card fade-in">
       <div class="brand-header">
         <img src="images/logo.png" alt="Logo" class="logo-img">
-        <h1 class="brand-title">IMPOSTOR</h1>
+        <h1 class="brand-title">INCOGNITO<span class="dot-red">.</span></h1>
       </div>
       
       <div class="home-actions">
@@ -31,7 +32,7 @@
       </div>
 
       <div class="footer-links">
-        <span>v9.0 App Edition</span>
+        <span>v9.5 Final UI</span>
       </div>
     </div>
 
@@ -55,7 +56,7 @@
                 <input type="checkbox" id="localMode">
                 <span class="slider round"></span>
             </label>
-            <p class="toggle-hint">(Todos en el mismo lugar, sin Discord)</p>
+            <p class="toggle-hint">(Sin Discord)</p>
         </div>
 
         <div class="input-row">
@@ -119,33 +120,39 @@
   <main id="mainContent" class="blurred" style="display:none;">
     <div class="game-board">
         <section class="game-area">
+            
             <div class="top-bar">
-                <div class="room-info-group">
-                    <span class="room-label">SALA:</span>
-                    <span id="roomCodeDisplay" class="room-code">---</span>
-                    <button id="btnCopyCode" class="btn-copy">📋</button>
+                <div class="room-info-wrapper">
+                    <span class="room-label">SALA</span>
+                    <span id="roomCodeDisplay" class="room-code">----</span>
+                    <button id="btnCopyCode" class="btn-copy-style" title="Copiar">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
                 </div>
 
                 <div class="top-right-actions">
-                    <button id="btnDiscordManual" class="btn-discord" style="display:none;">
+                    <button id="btnDiscordManual" class="btn-pill-discord" style="display:none;">
                         <img src="images/discord.png" alt="Discord">
+                        <span>VOZ</span>
                     </button>
-                    <button id="btnExit" class="btn-exit-text">SALIR</button>
+                    <button id="btnExit" class="btn-pill-exit">
+                         <img src="images/arrow.png" alt="Volver" style="transform: rotate(0deg);"> 
+                         <span>VOLVER</span>
+                    </button>
                 </div>
             </div>
 
             <div class="game-center">
                 <div id="viewCard" class="center-view">
-                    
                     <div id="instructionsCard" class="card-box instruction-style">
                         <h3 class="card-title">OBJETIVO</h3>
                         <div class="inst-row">
                             <span class="inst-icon">🕵️‍♂️</span>
-                            <p><strong>IMPOSTOR:</strong> Mézclate. No sabes la palabra secreta. Miente y deduce.</p>
+                            <p><strong>IMPOSTOR:</strong> Mézclate. Miente y deduce.</p>
                         </div>
                         <div class="inst-row">
                             <span class="inst-icon">🧑‍🤝‍🧑</span>
-                            <p><strong>CIUDADANOS:</strong> Todos tienen la misma palabra. Descríbela sutilmente.</p>
+                            <p><strong>CIUDADANOS:</strong> Describan su palabra sutilmente.</p>
                         </div>
                         <div class="waiting-text">Esperando al anfitrión...</div>
                     </div>
@@ -154,13 +161,11 @@
                         <div class="secret-label">TU ROL</div>
                         <div class="secret-word" id="wordDisplay">? ? ?</div>
                         <div class="secret-role" id="roleDisplay">...</div>
-                        
                         <div class="teammate-box" id="teammateDisplay" style="display:none;">
                             <span class="teammate-label">TU ALIADO:</span>
                             <span id="teammateNames" class="teammate-names">Nadie</span>
                         </div>
                     </div>
-
                 </div>
 
                 <div id="viewTurn" class="center-view" style="display:none;">
