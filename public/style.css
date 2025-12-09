@@ -1,4 +1,4 @@
-:root { --bg-dark:#020617; --bg-panel:#0f172a; --text:#f8fafc; --primary:#ef4444; --secondary:#22c55e; --neon-blue:#3b82f6; --discord:#5865F2; --border:rgba(255,255,255,0.15); --font-family:'Inter',system-ui,sans-serif; }
+:root { --bg-dark:#020617; --bg-panel:#0f172a; --text:#f8fafc; --primary:#ef4444; --secondary:#22c55e; --neon-blue:#3b82f6; --discord:#5865F2; --border:rgba(255,255,255,0.15); --font-family:'Inter',system-ui,sans-serif; --font-mono: 'Courier Prime', monospace; }
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-family); -webkit-tap-highlight-color: transparent; }
 body { background-color: var(--bg-dark); color: var(--text); min-height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
 
@@ -88,12 +88,31 @@ main.blurred { filter: blur(20px); opacity: 0; pointer-events: none; transform: 
 .menu-card { background: var(--bg-panel); padding: 40px; border-radius: 30px; border: 1px solid var(--border); width: 100%; max-width: 500px; box-shadow: 0 30px 80px rgba(0,0,0,0.6); display: flex; flex-direction: column; animation: fadeIn 0.4s ease-out; }
 .fade-in { animation: popIn 0.3s ease-out; }
 
-/* HOME */
+/* --- NUEVOS ESTILOS DE HOME (LOGO SVG) --- */
 .brand-header { text-align: center; margin-bottom: 40px; }
-.logo-glitch { font-size: 5rem; margin-bottom: 10px; filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.5)); animation: float 4s ease-in-out infinite; }
-.brand-title { font-size: 3.5rem; font-weight: 900; letter-spacing: -2px; color: white; text-transform: uppercase; }
-.home-actions { display: flex; flex-direction: column; gap: 15px; width: 100%; }
-.footer-links { margin-top: 30px; text-align: center; font-size: 0.8rem; color: #64748b; }
+
+/* Contenedor del nuevo logo SVG */
+.logo-svg-container {
+    width: 150px; /* Tamaño del logo */
+    height: auto;
+    margin-bottom: 25px;
+    color: var(--neon-blue); /* Color principal del neón */
+    /* Efecto de brillo neón */
+    filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.8)) drop-shadow(0 0 30px rgba(59, 130, 246, 0.4));
+    animation: float 4s ease-in-out infinite;
+}
+
+.brand-title { 
+    font-family: var(--font-mono); /* Fuente estilo código */
+    font-size: 3.5rem; 
+    font-weight: 900; 
+    letter-spacing: -3px; 
+    color: white; 
+    text-transform: uppercase; 
+    text-shadow: 3px 3px 0px rgba(59, 130, 246, 0.3);
+}
+.home-actions { display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 400px; margin: 0 auto; }
+.footer-links { margin-top: 40px; text-align: center; font-size: 0.8rem; color: #64748b; }
 
 /* HEADER SCREENS */
 .screen-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
@@ -111,54 +130,14 @@ main.blurred { filter: blur(20px); opacity: 0; pointer-events: none; transform: 
 input { width: 100%; padding: 14px; background: #020617; border: 1px solid var(--border); color: white; border-radius: 12px; font-size: 1rem; outline: none; transition: 0.2s; }
 input:focus { border-color: var(--neon-blue); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
 
-/* === NUEVO DISEÑO CHECKBOX (FIX "FEO") === */
-.local-mode-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center; /* Centrado perfecto */
-    gap: 12px;
-    background: rgba(34, 197, 94, 0.05);
-    border: 2px solid #334155;
-    padding: 15px;
-    border-radius: 16px;
-    cursor: pointer;
-    transition: all 0.2s;
-    user-select: none;
-    position: relative;
-}
+/* CHECKBOX */
+.local-mode-btn { display: flex; align-items: center; justify-content: center; gap: 12px; background: rgba(34, 197, 94, 0.05); border: 2px solid #334155; padding: 15px; border-radius: 16px; cursor: pointer; transition: all 0.2s; user-select: none; position: relative; }
 .local-mode-btn:hover { background: rgba(34, 197, 94, 0.1); border-color: var(--secondary); }
-
-/* Ocultar input nativo */
 .local-mode-btn input { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
-
-/* Nuevo Checkbox Personalizado */
-.checkmark-box {
-    height: 24px;
-    width: 24px;
-    background-color: transparent;
-    border: 2px solid #64748b;
-    border-radius: 8px; /* Redondeado */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: 0.2s;
-}
-/* Estado Activado */
-.local-mode-btn input:checked ~ .checkmark-box {
-    background-color: var(--secondary);
-    border-color: var(--secondary);
-    box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
-}
-/* Icono del Check */
-.checkmark-box::after {
-    content: "✓";
-    color: #022c22;
-    font-weight: 900;
-    font-size: 16px;
-    display: none;
-}
+.checkmark-box { height: 24px; width: 24px; background-color: transparent; border: 2px solid #64748b; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+.local-mode-btn input:checked ~ .checkmark-box { background-color: var(--secondary); border-color: var(--secondary); box-shadow: 0 0 10px rgba(34, 197, 94, 0.5); }
+.checkmark-box::after { content: "✓"; color: #022c22; font-weight: 900; font-size: 16px; display: none; }
 .local-mode-btn input:checked ~ .checkmark-box::after { display: block; }
-/* Texto */
 .mode-text { font-weight: bold; color: #cbd5e1; font-size: 0.95rem; }
 .local-mode-btn input:checked ~ .mode-text { color: var(--secondary); }
 
