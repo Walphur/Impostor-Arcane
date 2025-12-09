@@ -1,7 +1,7 @@
 const socket = io();
 
 // ==========================================
-// 1. DATA & AUDIO
+// 1. DATA
 // ==========================================
 const audioFiles = {
     click: new Audio('sounds/click-345983.mp3'),
@@ -29,31 +29,60 @@ let selectedVoteId = null;
 let selectedCategories = new Set(['lugares', 'comidas', 'objetos', 'animales', 'profesiones']);
 
 // ==========================================
-// 2. UI LOGIC (Menus & Settings)
+// 2. UI LOGIC
 // ==========================================
-// Navegación Básica
 function showScreen(id) {
     playSound('click');
     document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
-    document.getElementById(id).style.display = 'flex'; // Usamos flex para layout
+    document.getElementById(id).style.display = 'flex';
 }
 
+// Navegación Básica
 document.getElementById('btnGoCreate').onclick = () => showScreen('screenCreate');
 document.getElementById('btnGoJoin').onclick = () => showScreen('screenJoin');
 document.getElementById('backFromCreate').onclick = () => showScreen('screenHome');
 document.getElementById('backFromJoin').onclick = () => showScreen('screenHome');
+document.getElementById('backFromCategories').onclick = () => showScreen('screenCreate');
+
+// Navegación Categorías (Botones)
+document.getElementById('btnGoCategories').onclick = () => showScreen('screenCategories');
+document.getElementById('btnConfirmCategories').onclick = () => { 
+    showScreen('screenCreate');
+    document.getElementById('catCountDisplay').innerText = selectedCategories.size;
+};
 
 // Modal Cómo Jugar
 document.getElementById('btnHowToPlay').onclick = () => { playSound('click'); document.getElementById('modalHowToPlay').style.display='flex'; };
 document.getElementById('btnCloseHowToPlay').onclick = () => { playSound('click'); document.getElementById('modalHowToPlay').style.display='none'; };
 
-// --- CONFIGURACIÓN (GRID + CONTADORES) ---
-// Generar Categorias
+// --- CONFIG CONTADORES ---
+window.adjustValue = function(inputId, delta) {
+    playSound('click');
+    const input = document.getElementById(inputId);
+    let val = parseInt(input.value);
+    
+    if(inputId === 'maxPlayers') { val = Math.min(15, Math.max(3, val + delta)); document.getElementById('displayPlayers').innerText = val; }
+    if(inputId === 'impostors') { val = Math.min(4, Math.max(1, val + delta)); document.getElementById('displayImpostors').innerText = val; }
+    if(inputId === 'timeTurn') { val = Math.min(60, Math.max(5, val + delta)); document.getElementById('displayTurn').innerText = val; }
+    if(inputId === 'timeVote') { val = Math.min(300, Math.max(30, val + delta)); document.getElementById('displayVote').innerText = val; }
+    
+    input.value = val;
+};
+
+// --- TOGGLE SWITCH ---
+document.getElementById('toggleLocalMode').onclick = function() {
+    playSound('click');
+    const check = document.getElementById('localMode');
+    check.checked = !check.checked;
+    this.classList.toggle('active', check.checked);
+};
+
+// --- RENDER CATEGORIAS ---
 const catGrid = document.getElementById('categoriesGrid');
 CATEGORIES_DATA.forEach(cat => {
     const el = document.createElement('div');
-    el.className = 'cat-card selected'; // Por defecto seleccionadas
-    el.innerHTML = `<div class="cat-icon">${cat.icon}</div><div class="cat-name">${cat.name}</div><div class="cat-check">✓</div>`;
+    el.className = 'cat-card selected';
+    el.innerHTML = `<div class="cat-icon">${cat.icon}</div><div class="cat-name">${cat.name}</div>`;
     el.onclick = () => {
         playSound('click');
         if(selectedCategories.has(cat.id)) {
@@ -66,29 +95,6 @@ CATEGORIES_DATA.forEach(cat => {
     };
     catGrid.appendChild(el);
 });
-
-// Ajuste Valores (+/-)
-window.adjustValue = function(inputId, delta) {
-    playSound('click');
-    const input = document.getElementById(inputId);
-    let val = parseInt(input.value);
-    
-    // Límites
-    if(inputId === 'maxPlayers') { val = Math.min(15, Math.max(3, val + delta)); document.getElementById('displayPlayers').innerText = val; }
-    if(inputId === 'impostors') { val = Math.min(4, Math.max(1, val + delta)); document.getElementById('displayImpostors').innerText = val; }
-    if(inputId === 'timeTurn') { val = Math.min(60, Math.max(5, val + delta)); document.getElementById('displayTurn').innerText = val; }
-    
-    input.value = val;
-};
-
-// Toggle Local
-document.getElementById('toggleLocalMode').onclick = function() {
-    playSound('click');
-    const check = document.getElementById('localMode');
-    check.checked = !check.checked;
-    this.classList.toggle('active', check.checked);
-    this.querySelector('.toggle-status').innerText = check.checked ? 'ON' : 'OFF';
-};
 
 // ==========================================
 // 3. CONEXIÓN
@@ -103,7 +109,7 @@ document.getElementById('btnCreateRoom').onclick = () => {
         categories: Array.from(selectedCategories),
         isLocal: document.getElementById('localMode').checked,
         turnTime: document.getElementById('timeTurn').value,
-        voteTime: 120 // Default vote time
+        voteTime: document.getElementById('timeVote').value
     }, handleConnection);
 };
 
@@ -130,8 +136,7 @@ function handleConnection(res) {
             document.getElementById('btnDiscordManual').onclick = () => window.open(res.discordLink, '_blank');
         }
         
-        // Reset vistas
-        updateGameView({ phase: 'lobby', players: [] }); 
+        updateGameView({ phase: 'lobby', players: [] });
     } else {
         alert(res.error);
     }
@@ -141,9 +146,8 @@ document.getElementById('btnExit').onclick = () => location.reload();
 document.getElementById('btnCopyCode').onclick = () => { navigator.clipboard.writeText(document.getElementById('roomCodeDisplay').innerText); };
 
 // ==========================================
-// 4. JUEGO (REVEAL & FLOW)
+// 4. JUEGO
 // ==========================================
-// Interacción Tarjeta Secreta
 document.getElementById('secretCardContainer').onclick = function() {
     playSound('click');
     this.classList.toggle('revealed');
@@ -159,12 +163,13 @@ document.getElementById('btnSkipVote').onclick = () => {
     }
 };
 
-// --- ESTADOS DE SALA ---
+// --- ESTADOS ---
 socket.on('roomState', (room) => {
     const me = room.players.find(p => p.id === myId);
     isMyPlayerDead = me ? me.isDead : false;
+    const myRole = room.roles ? room.roles[myId] : null; // Asumimos que el server manda esto si quieres persistencia
     
-    // Botones Globales
+    // Header Buttons
     const btnStart = document.getElementById('btnStartRound');
     const btnSkip = document.getElementById('btnSkipVote');
     
@@ -185,24 +190,26 @@ socket.on('roomState', (room) => {
     updateGameView(room);
 });
 
-// --- ROL (INICIO RONDA) ---
+// --- ROL ---
 socket.on('yourRole', (data) => {
     playSound('start');
     
-    // Reset tarjeta
+    // Resetear UI para nueva ronda
     const cardWrap = document.getElementById('secretCardContainer');
     cardWrap.classList.remove('revealed');
     cardWrap.style.display = 'block';
     document.getElementById('instructionsPanel').style.display = 'none';
+    document.getElementById('ejectionOverlay').style.display = 'none';
+    document.getElementById('finalDetailsBox').style.display = 'none';
 
-    // Rellenar datos dorso
+    // Rellenar Dorso
     const back = document.getElementById('cardBackContent');
     const icon = document.getElementById('roleIconDisplay');
     const title = document.getElementById('roleTitleDisplay');
     const word = document.getElementById('wordDisplay');
     const teamBox = document.getElementById('teammateBox');
 
-    back.className = 'card-back'; // Reset clases
+    back.className = 'card-back'; 
 
     if(data.role === 'impostor') {
         back.classList.add('impostor-theme');
@@ -213,93 +220,108 @@ socket.on('yourRole', (data) => {
         if(data.teammates && data.teammates.length > 0) {
             teamBox.style.display = 'block';
             document.getElementById('teammateNames').innerText = data.teammates.join(', ');
-        } else {
-            teamBox.style.display = 'none';
-        }
+        } else { teamBox.style.display = 'none'; }
     } else {
         icon.innerText = '🕵️';
         title.innerText = 'AGENTE';
         word.innerText = data.word;
         teamBox.style.display = 'none';
     }
+    
+    // Guardar mi rol localmente para saber si gané luego
+    localStorage.setItem('myRole', data.role);
 });
 
-// --- RESULTADO FINAL (Ref Img 8) ---
+// --- RESULTADOS ---
 socket.on('votingResults', (data) => {
     const overlay = document.getElementById('ejectionOverlay');
     const title = document.getElementById('resultTitle');
     const sub = document.getElementById('resultSubtitle');
     const icon = document.getElementById('resultIcon');
+    const detailsBox = document.getElementById('finalDetailsBox');
     const rWord = document.getElementById('resultWord');
     const rImp = document.getElementById('resultImpostorName');
     const btnBack = document.getElementById('btnBackToLobby');
+    
+    const myRole = localStorage.getItem('myRole');
 
-    // Lógica para mostrar pantalla intermedia o final
+    // 1. FIN DE JUEGO (Victoria/Derrota)
     if(data.gameResult) {
         playSound('win');
         overlay.style.display = 'flex';
+        detailsBox.style.display = 'block'; // Mostrar palabra e impostor real
         
-        if(data.gameResult === 'citizensWin') {
+        // Asignar palabra (Mockup si el servidor no la manda aun, idealmente data.secretWord)
+        rWord.innerText = "CONFIDENCIAL"; 
+        
+        // Logica de quien ganó
+        const impostorsWon = (data.gameResult === 'impostorsWin');
+        
+        // Encontrar nombre del impostor (si el server manda data.impostorsNames array, usalo)
+        // Por ahora usamos data.kickedPlayer si fue kickeado, sino "Secreto"
+        rImp.innerText = data.kickedPlayer ? data.kickedPlayer.name : "Desconocido";
+
+        // Determinar mi resultado personal
+        let iWon = false;
+        if(myRole === 'impostor' && impostorsWon) iWon = true;
+        if(myRole === 'ciudadano' && !impostorsWon) iWon = true;
+
+        if(iWon) {
             title.innerText = "¡VICTORIA!";
             title.style.color = '#30D158'; // Verde
-            sub.innerText = "El impostor ha sido neutralizado.";
             icon.innerText = '🏆';
         } else {
             title.innerText = "DERROTA";
             title.style.color = '#FF453A'; // Rojo
-            sub.innerText = "El impostor ha escapado.";
             icon.innerText = '💀';
         }
         
-        // Mostrar datos revelados
-        // Nota: Necesitarías que el server mande la palabra real en votingResults, 
-        // por ahora asumimos que el server la manda o la tenemos.
-        rWord.innerText = "CONFIDENCIAL"; 
-        rImp.innerText = data.kickedPlayer ? data.kickedPlayer.name : "Desconocido";
+        sub.innerText = impostorsWon ? "Los impostores dominaron." : "El impostor fue neutralizado.";
 
+        btnBack.innerText = "NUEVA MISIÓN";
         btnBack.onclick = () => {
             overlay.style.display = 'none';
             document.getElementById('secretCardContainer').style.display = 'none';
             document.getElementById('instructionsPanel').style.display = 'block';
         };
 
-    } else {
-        // Solo expulsión (no termina juego)
+    } 
+    // 2. SOLO EXPULSIÓN (Juego sigue)
+    else {
         playSound('eject');
         overlay.style.display = 'flex';
+        detailsBox.style.display = 'none'; // NO MOSTRAR PALABRA AUN
+
         title.innerText = "EXPULSIÓN";
         title.style.color = '#fff';
         icon.innerText = '🥾';
         
         if(data.kickedPlayer) {
-            sub.innerText = `${data.kickedPlayer.name} fue eliminado.`;
-            rImp.innerText = data.isImpostor ? "ERA IMPOSTOR" : "ERA INOCENTE";
+            sub.innerText = `${data.kickedPlayer.name} ha sido eliminado.`;
+            // Opcional: Mostrar si era impostor o no
+            // sub.innerText += data.isImpostor ? " (Era Impostor)" : " (Era Inocente)";
         } else {
             sub.innerText = "Nadie fue eliminado (Skip/Empate).";
-            rImp.innerText = "---";
         }
-        rWord.innerText = "---";
         
-        // Botón cambia función a "Cerrar"
         btnBack.innerText = "CONTINUAR";
-        btnBack.onclick = () => { overlay.style.display = 'none'; btnBack.innerText="NUEVA MISIÓN"; };
+        btnBack.onclick = () => { overlay.style.display = 'none'; };
     }
 });
 
 // ==========================================
-// 5. VIEW HELPERS
+// 5. HELPERS
 // ==========================================
 function renderPlayers(room) {
     const list = document.getElementById('playersList');
     list.innerHTML = '';
     room.players.forEach(p => {
-        const chip = document.createElement('div');
-        chip.className = 'player-chip';
-        if(p.id === myId) chip.classList.add('is-me');
-        if(p.isDead) chip.classList.add('is-dead');
+        const row = document.createElement('div');
+        row.className = 'player-row';
+        if(p.isDead) row.classList.add('dead');
         
-        chip.innerHTML = `<span style="color:${p.color}">●</span> ${p.name}`;
-        list.appendChild(chip);
+        row.innerHTML = `<div class="p-dot" style="background:${p.color}"></div><span>${p.name} ${p.id===myId?'(Tú)':''}</span>`;
+        list.appendChild(row);
     });
 }
 
@@ -328,7 +350,7 @@ function updateGameView(room) {
     else if(room.phase === 'votacion') {
         vVote.style.display = 'block';
         startTimer(room.timeLeft, document.getElementById('votingTimer'));
-        document.getElementById('voteCounter').innerText = `${room.votesInfo.current}/${room.votesInfo.total} Votos`;
+        document.getElementById('voteCounter').innerText = `${room.votesInfo.current} / ${room.votesInfo.total}`;
         
         const grid = document.getElementById('votingGrid');
         grid.innerHTML = '';
@@ -337,7 +359,7 @@ function updateGameView(room) {
             const card = document.createElement('div');
             card.className = 'vote-card';
             if(selectedVoteId === p.id) card.classList.add('selected');
-            card.innerHTML = `<div class="vote-avatar" style="color:${p.color}">👤</div><div class="vote-name">${p.name}</div>`;
+            card.innerHTML = `<div class="vote-avatar" style="color:${p.color}; font-size:1.5rem;">👤</div><div class="vote-name" style="font-size:0.8rem; font-weight:bold;">${p.name}</div>`;
             card.onclick = () => {
                 if(isMyPlayerDead) return;
                 playSound('click');
