@@ -3,17 +3,11 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-const { Client, GatewayIntentBits, ChannelType, PermissionFlagsBits } = require('discord.js');
+// const { Client, ... } = require('discord.js'); // Descomentar si usas el bot real
 
-// --- CONFIG DISCORD ---
-const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
-const GUILD_ID = process.env.DISCORD_GUILD_ID;        
-const CATEGORIA_ID = process.env.DISCORD_CATEGORY_ID; 
+// Si no usas el bot de discord real por ahora, dejalo comentado o configúralo
+const DISCORD_TOKEN = process.env.DISCORD_TOKEN; 
 
-const discordClient = new Client({ intents: [ GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates ] });
-if (DISCORD_TOKEN) discordClient.login(DISCORD_TOKEN).catch(e => console.error("Discord Error:", e));
-
-// --- BASE DE DATOS PALABRAS ---
 const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#f97316', '#a855f7', '#ec4899', '#06b6d4', '#84cc16', '#78716c', '#f43f5e', '#6366f1', '#14b8a6', '#d946ef', '#64748b'];
 const WORD_DB = {
     lugares: ['SAUNA', 'CEMENTERIO', 'SUBMARINO', 'ASCENSOR', 'IGLÚ', 'CASINO', 'CIRCO', 'ESTACIÓN ESPACIAL', 'HORMIGUERO', 'CINE', 'BARCO PIRATA', 'ZOOLÓGICO', 'HOSPITAL', 'AEROPUERTO', 'PLAYA', 'BIBLIOTECA'],
@@ -40,27 +34,6 @@ function shuffleArray(array) {
     return array;
 }
 
-// --- DISCORD HELPERS ---
-async function crearCanalDiscord(nombre, limite) { 
-    try { 
-        const guild = discordClient.guilds.cache.get(GUILD_ID); if(!guild) return null;
-        const canal = await guild.channels.create({ 
-            name: `Sala ${nombre}`, 
-            type: ChannelType.GuildVoice, 
-            parent: CATEGORIA_ID, 
-            userLimit: limite || 15, 
-            permissionOverwrites: [
-                { id: guild.roles.everyone.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.Speak] }
-            ] 
-        });
-        const invite = await canal.createInvite({maxAge:0, maxUses:0, unique: true}); 
-        return {voiceId: canal.id, inviteLink: invite.url}; 
-    } catch(e){ console.error("Error creando canal:", e); return null; }
-}
-
-async function borrarCanalDiscord(id) { try{const g=discordClient.guilds.cache.get(GUILD_ID); if(g) await g.channels.cache.get(id)?.delete();}catch(e){} }
-
-// --- SERVER SETUP ---
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' }, pingTimeout: 60000 });
@@ -127,82 +100,49 @@ function startVoting(room) {
 
 function finishVoting(room, reason) {
     if(room.timer) clearTimeout(room.timer);
-    
     const tally = {};
     Object.values(room.votes).forEach(v => { if(v) tally[v] = (tally[v]||0)+1; });
-
-    let max = 0;
-    let candidates = [];
-    for (const [id, count] of Object.entries(tally)) {
-        if (count > max) { max = count; candidates = [id]; }
-        else if (count === max) { candidates.push(id); } 
-    }
-
+    let max = 0; let candidates = [];
+    for (const [id, count] of Object.entries(tally)) { if (count > max) { max = count; candidates = [id]; } else if (count === max) { candidates.push(id); } }
     let kicked = null;
     if (candidates.length === 1) kicked = room.players.find(p => p.id === candidates[0]);
 
-    let isImpostor = false;
-    let gameResult = null;
-
+    let isImpostor = false; let gameResult = null;
     if (kicked) {
         isImpostor = (room.roles[kicked.id] === 'impostor');
         const pIdx = room.players.findIndex(p => p.id === kicked.id);
         if (pIdx !== -1) room.players[pIdx].isDead = true; 
-
         const livImp = room.players.filter(p => !p.isDead && room.roles[p.id]==='impostor').length;
         const livCit = room.players.filter(p => !p.isDead && room.roles[p.id]==='ciudadano').length;
-
-        if(livImp === 0) gameResult = 'citizensWin';
-        else if(livImp >= livCit) gameResult = 'impostorsWin';
+        if(livImp === 0) gameResult = 'citizensWin'; else if(livImp >= livCit) gameResult = 'impostorsWin';
     }
 
-    // --- CORRECCIÓN: Enviar datos reales ---
-    // Buscar quiénes son los verdaderos impostores para mostrarlos al final
     const realImpostorsList = room.players.filter(p => room.roles[p.id] === 'impostor').map(p => p.name);
     const realImpostorNameStr = realImpostorsList.length > 0 ? realImpostorsList.join(', ') : 'N/A';
 
     io.to(room.code).emit('votingResults', { 
-        reason, 
-        kickedPlayer: kicked?{name:kicked.name}:null, 
-        isImpostor, 
-        gameResult,
-        // NUEVOS DATOS: Palabra real y nombre real del impostor
-        secretWord: room.secretWord,
-        realImpostorName: realImpostorNameStr
+        reason, kickedPlayer: kicked?{name:kicked.name}:null, isImpostor, gameResult,
+        secretWord: room.secretWord, realImpostorName: realImpostorNameStr
     });
-    // ---------------------------------------
     
-    if(gameResult) {
-        room.phase = 'lobby'; 
-        setTimeout(() => emitRoomState(room), 5000);
-    } else {
-        room.phase = 'palabras'; room.turnIndex = -1; room.spoken = {}; room.votes = {};
-        setTimeout(() => { if(rooms[room.code]) nextTurn(room); }, 4000);
-    }
+    if(gameResult) { room.phase = 'lobby'; setTimeout(() => emitRoomState(room), 5000); } 
+    else { room.phase = 'palabras'; room.turnIndex = -1; room.spoken = {}; room.votes = {}; setTimeout(() => { if(rooms[room.code]) nextTurn(room); }, 4000); }
 }
 
 io.on('connection', (socket) => {
-    socket.on('createRoom', async (data, cb) => {
+    socket.on('createRoom', (data, cb) => {
         const code = generateCode();
         let maxP = Math.min(parseInt(data.maxPlayers)||10, 15);
-        let discordData = {voiceId:null, inviteLink:null};
-        
-        if(DISCORD_TOKEN && !data.isLocal) { 
-            const r = await crearCanalDiscord(code, maxP); 
-            if(r) discordData=r; 
-        }
-
+        let discordLink = null; // Simulado si no hay token
         const room = {
             code, hostId: socket.id, maxPlayers: maxP, impostors: parseInt(data.impostors)||2,
             categories: data.categories || [],
             config: { turnTime: (parseInt(data.turnTime)||15)*1000, voteTime: (parseInt(data.voteTime)||120)*1000 },
             players: [{ id: socket.id, name: data.name||'Host', color: PLAYER_COLORS[0], isDead: false }],
-            phase: 'lobby', turnIndex: -1, roles: {}, spoken: {}, votes: {},
-            discordVoiceChannel: discordData.voiceId, discordLink: discordData.inviteLink,
-            secretWord: null // Inicializar
+            phase: 'lobby', turnIndex: -1, roles: {}, spoken: {}, votes: {}, secretWord: null, discordLink
         };
         rooms[code] = room; socketRoom[socket.id] = code; socket.join(code);
-        cb({ok: true, roomCode: code, me: {id:socket.id}, isHost: true, discordLink: discordData.inviteLink});
+        cb({ok: true, roomCode: code, me: {id:socket.id}, isHost: true, discordLink});
         emitRoomState(room);
     });
 
@@ -212,7 +152,6 @@ io.on('connection', (socket) => {
         if(room) {
             if(room.players.length >= room.maxPlayers) return cb({ok:false, error:'Sala llena'});
             if(room.players.some(p => p.name.toUpperCase() === data.name.toUpperCase())) return cb({ok:false, error:'Nombre en uso'});
-            
             socket.join(code); socketRoom[socket.id] = code;
             room.players.push({id:socket.id, name:data.name, color:assignColor(room), isDead: false});
             room.spoken[socket.id] = false;
@@ -221,20 +160,18 @@ io.on('connection', (socket) => {
         } else cb({ok:false, error:'Sala no existe'});
     });
 
-socket.on('startRound', () => {
+    socket.on('startRound', () => {
         const room = getRoomOfSocket(socket.id);
         if(room && room.hostId === socket.id) {
             room.players.forEach(p => p.isDead = false);
             room.votes = {}; room.spoken = {}; room.turnIndex = -1;
 
-            // 1. ASIGNAR ROLES (Cualquiera puede ser impostor, incluido el Host)
-            const allPlayers = [...room.players]; // Copia de todos
-            const shuffled = shuffleArray(allPlayers); // Mezclar todos
-            const impIds = shuffled.slice(0, room.impostors).map(p => p.id); // Tomar los primeros N como impostores
+            // --- LÓGICA IMPOSTOR ALEATORIO ---
+            const allPlayers = [...room.players];
+            const shuffled = shuffleArray(allPlayers);
+            const impIds = shuffled.slice(0, room.impostors).map(p => p.id);
             
-            const word = getRandomWord(room.categories);
-            room.secretWord = word;
-
+            room.secretWord = getRandomWord(room.categories);
             const impNames = room.players.filter(p => impIds.includes(p.id)).map(p => p.name);
 
             room.roles = {};
@@ -242,32 +179,21 @@ socket.on('startRound', () => {
                 const role = impIds.includes(p.id) ? 'impostor' : 'ciudadano';
                 room.roles[p.id] = role;
                 const teammates = role === 'impostor' ? impNames.filter(n => n !== p.name) : [];
-                io.to(p.id).emit('yourRole', { role, word: role==='ciudadano'?word:null, teammates });
+                io.to(p.id).emit('yourRole', { role, word: role==='ciudadano'?room.secretWord:null, teammates });
                 room.spoken[p.id] = false;
             });
             
             room.phase = 'lectura'; emitRoomState(room);
             
-            // 2. DEFINIR PRIMER TURNO (Nunca el Impostor)
+            // --- INICIO PRIMER TURNO (CIUDADANO GARANTIZADO) ---
             setTimeout(()=>{ 
                 if(rooms[room.code]){ 
                     room.phase='palabras'; 
-                    
-                    // Filtramos los índices de quienes son CIUDADANOS
-                    const citizenIndices = room.players
-                        .map((p, index) => ({ index, id: p.id }))
-                        .filter(item => room.roles[item.id] === 'ciudadano')
-                        .map(item => item.index);
-
-                    // Elegimos al azar uno de los ciudadanos para empezar
+                    const citizenIndices = room.players.map((p, index) => ({ index, id: p.id })).filter(item => room.roles[item.id] === 'ciudadano').map(item => item.index);
                     if(citizenIndices.length > 0) {
                         const randomIdx = Math.floor(Math.random() * citizenIndices.length);
                         room.turnIndex = citizenIndices[randomIdx];
-                    } else {
-                        // Fallback por seguridad (si todos fueran impostores)
-                        room.turnIndex = 0; 
-                    }
-
+                    } else { room.turnIndex = 0; }
                     nextTurn(room); 
                 } 
             }, 7000);
@@ -276,16 +202,13 @@ socket.on('startRound', () => {
 
     socket.on('finishTurn', () => { const r = getRoomOfSocket(socket.id); if(r && r.phase==='palabras' && r.players[r.turnIndex]?.id===socket.id) { r.spoken[socket.id]=true; nextTurn(r); } });
     socket.on('submitVote', (d) => { const r=getRoomOfSocket(socket.id); if(r && r.phase==='votacion' && !r.players.find(x=>x.id===socket.id).isDead) { r.votes[socket.id]=d.targetId; emitRoomState(r); if(Object.keys(r.votes).length >= r.players.filter(x=>!x.isDead).length) finishVoting(r, 'Todos votaron'); } });
-    
     socket.on('disconnect', () => {
         const room = getRoomOfSocket(socket.id);
         if (room) {
             room.players = room.players.filter(p => p.id !== socket.id);
             delete socketRoom[socket.id];
-            if (room.players.length === 0) {
-                if (room.discordVoiceChannel) borrarCanalDiscord(room.discordVoiceChannel);
-                delete rooms[room.code];
-            } else { if (room.hostId === socket.id) room.hostId = room.players[0].id; emitRoomState(room); }
+            if (room.players.length === 0) delete rooms[room.code];
+            else { if (room.hostId === socket.id) room.hostId = room.players[0].id; emitRoomState(room); }
         }
     });
 });

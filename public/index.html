@@ -15,27 +15,17 @@
       <div id="resultIcon" class="result-icon">⚖️</div>
       <h1 id="resultTitle" class="result-title">RESULTADO</h1>
       <p id="resultSubtitle" class="result-subtitle">...</p>
-      
       <div class="result-details-box" id="finalDetailsBox" style="display:none;">
-        <div class="data-row">
-            <span class="label">PALABRA CLAVE</span>
-            <span id="resultWord" class="value-green">---</span>
-        </div>
-        <div class="data-row">
-            <span class="label">EL IMPOSTOR ERA</span>
-            <span id="resultImpostorName" class="value-red">---</span>
-        </div>
+        <div class="data-row"><span class="label">PALABRA CLAVE</span><span id="resultWord" class="value-green">---</span></div>
+        <div class="data-row"><span class="label">EL IMPOSTOR ERA</span><span id="resultImpostorName" class="value-red">---</span></div>
       </div>
       <button id="btnBackToLobby" class="btn-main btn-primary">CONTINUAR</button>
     </div>
   </div>
 
   <div id="lobbyOverlay" class="lobby-overlay">
-    
     <div id="screenHome" class="screen fade-in center-layout">
-      <div class="brand-header">
-        <div class="logo-container"><img src="images/logo.png" alt="Incognito" class="logo-img"></div>
-      </div>
+      <div class="brand-header"><div class="logo-container"><img src="images/logo.png" alt="Incognito" class="logo-img"></div></div>
       <div class="home-menu-panel">
         <button id="btnGoCreate" class="btn-big btn-primary">CREAR SALA</button>
         <button id="btnGoJoin" class="btn-big btn-secondary">UNIRSE A SALA</button>
@@ -45,153 +35,70 @@
 
     <div id="screenCreate" class="screen fade-in center-layout" style="display: none;">
       <div class="screen-header">
-        <button id="backFromCreate" class="btn-icon-back">
-            <img src="images/arrow.png" alt="Volver">
-        </button>
+        <button id="backFromCreate" class="btn-icon-back"><img src="images/arrow.png" alt="Volver"></button>
         <h2>CONFIGURAR</h2>
       </div>
-      
       <div class="scroll-content config-width">
-        <div class="app-card">
-            <label>TU NOMBRE</label>
-            <input type="text" id="hostName" class="input-modern" maxlength="12" placeholder="Ej: Agente 007">
-        </div>
-
+        <div class="app-card"><label>TU NOMBRE</label><input type="text" id="hostName" class="input-modern" maxlength="12" placeholder="Ej: Agente 007"></div>
         <div class="config-grid">
-            <div class="app-card center-text">
-                <label>JUGADORES</label>
-                <div class="counter-control">
-                    <button class="btn-round" onclick="adjustValue('maxPlayers', -1)">-</button>
-                    <span id="displayPlayers">10</span>
-                    <button class="btn-round" onclick="adjustValue('maxPlayers', 1)">+</button>
-                </div>
-                <input type="hidden" id="maxPlayers" value="10">
-            </div>
-            <div class="app-card center-text">
-                <label>IMPOSTORES</label>
-                <div class="counter-control">
-                    <button class="btn-round" onclick="adjustValue('impostors', -1)">-</button>
-                    <span id="displayImpostors">2</span>
-                    <button class="btn-round" onclick="adjustValue('impostors', 1)">+</button>
-                </div>
-                <input type="hidden" id="impostors" value="2">
-            </div>
-            <div class="app-card center-text">
-                <label>TURNO (s)</label>
-                 <div class="counter-control">
-                    <button class="btn-round" onclick="adjustValue('timeTurn', -5)">-</button>
-                    <span id="displayTurn">15</span>
-                    <button class="btn-round" onclick="adjustValue('timeTurn', 5)">+</button>
-                </div>
-                <input type="hidden" id="timeTurn" value="15">
-            </div>
-             <div class="app-card center-text">
-                <label>VOTACIÓN (s)</label>
-                 <div class="counter-control">
-                    <button class="btn-round" onclick="adjustValue('timeVote', -10)">-</button>
-                    <span id="displayVote">120</span>
-                    <button class="btn-round" onclick="adjustValue('timeVote', 10)">+</button>
-                </div>
-                <input type="hidden" id="timeVote" value="120">
-            </div>
+            <div class="app-card center-text"><label>JUGADORES</label><div class="counter-control"><button class="btn-round" onclick="adjustValue('maxPlayers', -1)">-</button><span id="displayPlayers">10</span><button class="btn-round" onclick="adjustValue('maxPlayers', 1)">+</button></div><input type="hidden" id="maxPlayers" value="10"></div>
+            <div class="app-card center-text"><label>IMPOSTORES</label><div class="counter-control"><button class="btn-round" onclick="adjustValue('impostors', -1)">-</button><span id="displayImpostors">2</span><button class="btn-round" onclick="adjustValue('impostors', 1)">+</button></div><input type="hidden" id="impostors" value="2"></div>
+            <div class="app-card center-text"><label>TURNO (s)</label><div class="counter-control"><button class="btn-round" onclick="adjustValue('timeTurn', -5)">-</button><span id="displayTurn">15</span><button class="btn-round" onclick="adjustValue('timeTurn', 5)">+</button></div><input type="hidden" id="timeTurn" value="15"></div>
+             <div class="app-card center-text"><label>VOTACIÓN (s)</label><div class="counter-control"><button class="btn-round" onclick="adjustValue('timeVote', -10)">-</button><span id="displayVote">120</span><button class="btn-round" onclick="adjustValue('timeVote', 10)">+</button></div><input type="hidden" id="timeVote" value="120"></div>
         </div>
-
         <div class="app-card toggle-row" id="toggleLocalMode">
-            <div class="toggle-info">
-                <label style="margin:0; font-size: 0.9rem; cursor: pointer;">MODO GRUPAL</label>
-                <span class="sub-label">Sin conexión de audio</span>
-            </div>
-            <div class="toggle-switch"><div class="knob"></div></div>
-            <input type="checkbox" id="localMode" style="display:none;">
+            <div class="toggle-info"><label style="margin:0; font-size: 0.9rem; cursor: pointer;">MODO GRUPAL (Sin Audio)</label><span class="sub-label">Presencial</span></div>
+            <div class="toggle-switch"><div class="knob"></div></div><input type="checkbox" id="localMode" style="display:none;">
         </div>
-        
-        <button id="btnGoCategories" class="btn-outline-modern">
-            📂 SELECCIONAR CATEGORÍAS (<span id="catCountDisplay">5</span>)
-        </button>
+        <button id="btnGoCategories" class="btn-outline-modern">📂 SELECCIONAR CATEGORÍAS (<span id="catCountDisplay">5</span>)</button>
       </div>
-      
-      <div class="bottom-dock">
-          <button id="btnCreateRoom" class="btn-main btn-green">INICIAR MISIÓN</button>
-      </div>
+      <div class="bottom-dock"><button id="btnCreateRoom" class="btn-main btn-green">INICIAR MISIÓN</button></div>
     </div>
 
     <div id="screenCategories" class="screen fade-in center-layout" style="display: none;">
         <div class="screen-header">
-            <button id="backFromCategories" class="btn-icon-back">
-                <img src="images/arrow.png" alt="Volver">
-            </button>
+            <button id="backFromCategories" class="btn-icon-back"><img src="images/arrow.png" alt="Volver"></button>
             <h2>CATEGORÍAS</h2>
         </div>
-        <div class="scroll-content config-width">
-            <div class="categories-grid" id="categoriesGrid"></div>
-        </div>
-        <div class="bottom-dock">
-            <button id="btnConfirmCategories" class="btn-main btn-primary">CONFIRMAR</button>
-        </div>
+        <div class="scroll-content config-width"><div class="categories-grid" id="categoriesGrid"></div></div>
+        <div class="bottom-dock"><button id="btnConfirmCategories" class="btn-main btn-primary">CONFIRMAR</button></div>
     </div>
 
     <div id="screenJoin" class="screen fade-in center-layout" style="display: none;">
       <div class="screen-header">
-        <button id="backFromJoin" class="btn-icon-back">
-            <img src="images/arrow.png" alt="Volver">
-        </button>
+        <button id="backFromJoin" class="btn-icon-back"><img src="images/arrow.png" alt="Volver"></button>
         <h2>UNIRSE A SALA</h2>
       </div>
       <div class="center-content config-width">
-          <div class="app-card">
-            <label>TU NOMBRE</label>
-            <input type="text" id="joinName" class="input-modern" maxlength="12" placeholder="Agente...">
-          </div>
-          <div class="app-card">
-            <label>CÓDIGO DE SALA</label>
-            <input type="text" id="joinCode" class="input-modern" placeholder="Ej: ABCD">
-          </div>
+          <div class="app-card"><label>TU NOMBRE</label><input type="text" id="joinName" class="input-modern" maxlength="12" placeholder="Agente..."></div>
+          <div class="app-card"><label>CÓDIGO DE SALA</label><input type="text" id="joinCode" class="input-modern" placeholder="Ej: ABCD"></div>
       </div>
-      <div class="bottom-dock">
-          <button id="btnJoinRoom" class="btn-main btn-primary">CONECTAR</button>
-      </div>
+      <div class="bottom-dock"><button id="btnJoinRoom" class="btn-main btn-primary">CONECTAR</button></div>
     </div>
   </div>
 
   <main id="mainContent" style="display:none;">
     <div class="game-layout">
-        
         <section class="game-main-area">
-            
             <header class="game-header">
                 <div class="room-pill">
-                    <span class="room-label-big">SALA</span>
-                    <span id="roomCodeDisplay" class="room-code-big">----</span>
-                    <button id="btnCopyCode" class="btn-copy-simple">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                    </button>
+                    <span class="room-label-big">SALA</span><span id="roomCodeDisplay" class="room-code-big">----</span>
+                    <button id="btnCopyCode" class="btn-copy-simple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
                 </div>
                 <div class="header-actions">
-                    <button id="btnDiscordManual" class="btn-header-icon discord-bg" style="display:none;">
-                        <img src="images/discord.png" alt="Voz">
-                    </button>
-                    <button id="btnExit" class="btn-header-icon exit-bg">
-                        <img src="images/arrow.png" style="transform: rotate(0deg);" alt="Salir">
-                    </button>
+                    <button id="btnDiscordManual" class="btn-header-icon discord-bg" style="display:none;"><img src="images/discord.png" alt="Voz"></button>
+                    <button id="btnExit" class="btn-header-icon exit-bg"><img src="images/arrow.png" style="transform: rotate(0deg);" alt="Salir"></button>
                 </div>
             </header>
 
             <div class="game-center">
                 <div id="viewCard" class="view-panel">
-                    <div id="instructionsPanel" class="status-box">
-                        <h3>ESPERANDO AGENTES...</h3>
-                        <div class="loading-bar"><div class="bar-fill"></div></div>
-                    </div>
+                    <div id="instructionsPanel" class="status-box"><h3>ESPERANDO AGENTES...</h3><div class="loading-bar"><div class="bar-fill"></div></div></div>
                     <div id="secretCardContainer" class="secret-card-wrapper" style="display:none;">
                         <div class="secret-card-inner">
-                            <div class="card-front">
-                                <div class="lock-icon">🔒</div>
-                                <p>CONFIDENCIAL</p>
-                                <span class="tap-hint">TOCA PARA REVELAR</span>
-                            </div>
+                            <div class="card-front"><div class="lock-icon">🔒</div><p>CONFIDENCIAL</p><span class="tap-hint">TOCA PARA REVELAR</span></div>
                             <div class="card-back" id="cardBackContent">
-                                <div class="role-icon" id="roleIconDisplay">?</div>
-                                <h2 id="roleTitleDisplay">ROL</h2>
+                                <div class="role-icon" id="roleIconDisplay">?</div><h2 id="roleTitleDisplay">ROL</h2>
                                 <div class="secret-word-box"><span id="wordDisplay">---</span></div>
                                 <div id="teammateBox" class="teammate-info" style="display:none;"><span>ALIADO:</span> <b id="teammateNames"></b></div>
                             </div>
@@ -201,23 +108,15 @@
 
                 <div id="viewTurn" class="view-panel" style="display:none;">
                     <div class="turn-card-modern">
-                        <div class="turn-avatar"><span id="turnTimerDisplay">15</span></div>
-                        <h2 id="turnPlayerName">Agente</h2>
-                        
-                        <div class="status-pill">
-                            <span class="status-dot"></span> TRANSMITIENDO...
-                        </div>
-
+                        <div class="turn-avatar"><span id="turnTimerDisplay">15</span></div><h2 id="turnPlayerName">Agente</h2>
+                        <div class="status-pill"><span class="status-dot"></span> TRANSMITIENDO...</div>
                         <button id="btnFinishTurn" class="btn-finish-modern" style="display:none;">✅ HE TERMINADO</button>
                     </div>
                 </div>
 
                 <div id="viewVoting" class="view-panel" style="display:none;">
                     <h2 class="section-title-modern">¿QUIÉN ES EL IMPOSTOR?</h2>
-                    <div class="vote-hud">
-                        <div class="hud-item">⏱️ <span id="votingTimer">00:00</span></div>
-                        <div class="hud-item">🗳️ <span id="voteCounter">0 Votos</span></div>
-                    </div>
+                    <div class="vote-hud"><div class="hud-item">⏱️ <span id="votingTimer">00:00</span></div><div class="hud-item">🗳️ <span id="voteCounter">0 Votos</span></div></div>
                     <div class="voting-grid" id="votingGrid"></div>
                 </div>
             </div>
@@ -232,29 +131,16 @@
             <div class="sidebar-header-modern">AGENTES EN LÍNEA</div>
             <div id="playersList" class="players-list-vertical"></div>
         </aside>
-
     </div>
   </main>
 
   <div id="modalHowToPlay" class="overlay-full" style="display: none;">
       <div class="modal-card">
-          <div class="modal-header">
-              <h3>PROTOCOLO</h3>
-              <button id="btnCloseHowToPlay" class="btn-close">✕</button>
-          </div>
+          <div class="modal-header"><h3>PROTOCOLO</h3><button id="btnCloseHowToPlay" class="btn-close">✕</button></div>
           <div class="tutorial-list">
-              <div class="tutorial-item">
-                  <div class="tut-icon">👁️</div>
-                  <div class="tut-text"><strong>1. INTELIGENCIA</strong><p>Toca tu tarjeta. El Impostor NO verá la palabra clave.</p></div>
-              </div>
-              <div class="tutorial-item">
-                  <div class="tut-icon">💬</div>
-                  <div class="tut-text"><strong>2. PISTAS</strong><p>Digan una palabra relacionada. Se sutil para no delatarte.</p></div>
-              </div>
-              <div class="tutorial-item">
-                  <div class="tut-icon">🎯</div>
-                  <div class="tut-text"><strong>3. VOTACIÓN</strong><p>Eliminen al sospechoso antes de que sea tarde.</p></div>
-              </div>
+              <div class="tutorial-item"><div class="tut-icon">👁️</div><div class="tut-text"><strong>1. INTELIGENCIA</strong><p>Toca tu tarjeta. El Impostor NO verá la palabra clave.</p></div></div>
+              <div class="tutorial-item"><div class="tut-icon">💬</div><div class="tut-text"><strong>2. PISTAS</strong><p>Digan una palabra relacionada. Se sutil para no delatarte.</p></div></div>
+              <div class="tutorial-item"><div class="tut-icon">🎯</div><div class="tut-text"><strong>3. VOTACIÓN</strong><p>Eliminen al sospechoso antes de que sea tarde.</p></div></div>
           </div>
       </div>
   </div>
