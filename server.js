@@ -1,12 +1,11 @@
 require('dotenv').config();
-
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const { Client, GatewayIntentBits, ChannelType, PermissionFlagsBits } = require('discord.js');
 
-// CONFIG DISCORD
+// --- CONFIG DISCORD ---
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const GUILD_ID = process.env.DISCORD_GUILD_ID;        
 const CATEGORIA_ID = process.env.DISCORD_CATEGORY_ID; 
@@ -14,17 +13,17 @@ const CATEGORIA_ID = process.env.DISCORD_CATEGORY_ID;
 const discordClient = new Client({ intents: [ GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates ] });
 if (DISCORD_TOKEN) discordClient.login(DISCORD_TOKEN).catch(e => console.error("Discord Error:", e));
 
-// COLORES & PALABRAS
+// --- BASE DE DATOS PALABRAS ---
 const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#f97316', '#a855f7', '#ec4899', '#06b6d4', '#84cc16', '#78716c', '#f43f5e', '#6366f1', '#14b8a6', '#d946ef', '#64748b'];
 const WORD_DB = {
     lugares: ['SAUNA', 'CEMENTERIO', 'SUBMARINO', 'ASCENSOR', 'IGLÚ', 'CASINO', 'CIRCO', 'ESTACIÓN ESPACIAL', 'HORMIGUERO', 'CINE', 'BARCO PIRATA', 'ZOOLÓGICO', 'HOSPITAL', 'AEROPUERTO', 'PLAYA', 'BIBLIOTECA'],
     comidas: ['SUSHI', 'PAELLA', 'TACOS', 'HELADO', 'HUEVO FRITO', 'CEVICHE', 'ASADO', 'FONDUE', 'MEDIALUNA', 'SOPA', 'COCO', 'CHICLE', 'PIZZA', 'HAMBURGUESA', 'POCHOCLOS', 'CHOCOLATE'],
     objetos: ['PARAGUAS', 'CEPILLO DE DIENTES', 'MICROONDAS', 'GUITARRA', 'INODORO', 'LAVADORA', 'ESPEJO', 'DRON', 'TARJETA DE CRÉDITO', 'VELA', 'ZAPATO', 'LINTERNA', 'RELOJ', 'LLAVES'],
     animales: ['PINGÜINO', 'CANGURO', 'MOSQUITO', 'PULPO', 'PEREZOSO', 'CAMALEÓN', 'MURCIÉLAGO', 'JIRAFA', 'ABEJA', 'LEÓN', 'TIBURÓN', 'ELEFANTE', 'GATO', 'PERRO'],
-    profesiones: ['ASTRONAUTA', 'MIMO', 'CIRUJANO', 'JARDINERO', 'DETECTIVE', 'BUZO', 'ÁRBITRO', 'CAJERO', 'PRESIDENTE', 'FANTASMA', 'BOMBERO', 'PROFESOR', 'POLICÍA', 'CHEF']
+    profesiones: ['ASTRONAUTA', 'MIMO', 'CIRUJANO', 'JARDINERO', 'DETECTIVE', 'BUZO', 'ÁRBITRO', 'CAJERO', 'PRESIDENTE', 'FANTASMA', 'BOMBERO', 'PROFESOR', 'POLICÍA', 'CHEF'],
+    cine: ['TITANIC', 'SHREK', 'HARRY POTTER', 'STAR WARS', 'AVENGERS', 'MATRIX', 'EL REY LEÓN', 'JURASSIC PARK', 'FROZEN', 'BATMAN', 'SPIDERMAN', 'TOY STORY']
 };
 
-// HELPERS
 function getRandomWord(cat) {
     let pool = [];
     if (!cat || cat.length === 0) Object.values(WORD_DB).forEach(arr => pool.push(...arr));
@@ -41,53 +40,40 @@ function shuffleArray(array) {
     return array;
 }
 
-// Discord Functions
+// --- DISCORD HELPERS ---
 async function crearCanalDiscord(nombre, limite) { 
     try { 
         const guild = discordClient.guilds.cache.get(GUILD_ID); if(!guild) return null;
-        
-        // FIX: Allow ViewChannel para que la invitación funcione sin roles específicos
         const canal = await guild.channels.create({ 
             name: `Sala ${nombre}`, 
             type: ChannelType.GuildVoice, 
             parent: CATEGORIA_ID, 
             userLimit: limite || 15, 
             permissionOverwrites: [
-                {
-                    id: guild.roles.everyone.id, 
-                    // IMPORTANTE: Permitir ver para que el link funcione, pero podemos denegar hablar si quieres
-                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.Speak]
-                }
+                { id: guild.roles.everyone.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.Speak] }
             ] 
         });
-        
         const invite = await canal.createInvite({maxAge:0, maxUses:0, unique: true}); 
         return {voiceId: canal.id, inviteLink: invite.url}; 
-    } catch(e){ 
-        console.error("Error creando canal:", e);
-        return null; 
-    }
+    } catch(e){ console.error("Error creando canal:", e); return null; }
 }
 
 async function borrarCanalDiscord(id) { try{const g=discordClient.guilds.cache.get(GUILD_ID); if(g) await g.channels.cache.get(id)?.delete();}catch(e){} }
-function generateCode() { const c='ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let r='',i=0; do{r='';for(let j=0;j<4;j++)r+=c[Math.floor(Math.random()*c.length)];i++}while(rooms[r]&&i<100); return r;}
-function assignColor(r) { const u=r.players.map(p=>p.color); return PLAYER_COLORS.find(c=>!u.includes(c))||'#fff'; }
-function getRoomOfSocket(id) { const c = socketRoom[id]; return c ? rooms[c] : null; }
 
-// SERVIDOR
+// --- SERVER SETUP ---
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { 
-    cors: { origin: '*' },
-    pingTimeout: 60000, 
-    pingInterval: 25000 
-});
+const io = new Server(server, { cors: { origin: '*' }, pingTimeout: 60000 });
 
 const CLIENT_DIR = path.join(__dirname, 'public');
 app.use(express.static(CLIENT_DIR));
 
 const rooms = {};
 const socketRoom = {};
+
+function generateCode() { const c='ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let r='',i=0; do{r='';for(let j=0;j<4;j++)r+=c[Math.floor(Math.random()*c.length)];i++}while(rooms[r]&&i<100); return r;}
+function assignColor(r) { const u=r.players.map(p=>p.color); return PLAYER_COLORS.find(c=>!u.includes(c))||'#fff'; }
+function getRoomOfSocket(id) { const c = socketRoom[id]; return c ? rooms[c] : null; }
 
 function emitRoomState(room) {
     if (!room) return;
@@ -147,16 +133,13 @@ function finishVoting(room, reason) {
 
     let max = 0;
     let candidates = [];
-    
     for (const [id, count] of Object.entries(tally)) {
         if (count > max) { max = count; candidates = [id]; }
         else if (count === max) { candidates.push(id); } 
     }
 
     let kicked = null;
-    if (candidates.length === 1) {
-        kicked = room.players.find(p => p.id === candidates[0]);
-    }
+    if (candidates.length === 1) kicked = room.players.find(p => p.id === candidates[0]);
 
     let isImpostor = false;
     let gameResult = null;
@@ -179,9 +162,8 @@ function finishVoting(room, reason) {
         room.phase = 'lobby'; 
         setTimeout(() => emitRoomState(room), 5000);
     } else {
-        // Reinicio ronda
         room.phase = 'palabras'; room.turnIndex = -1; room.spoken = {}; room.votes = {};
-        setTimeout(() => { if(rooms[room.code]) nextTurn(room); }, 5000);
+        setTimeout(() => { if(rooms[room.code]) nextTurn(room); }, 4000);
     }
 }
 
@@ -190,7 +172,11 @@ io.on('connection', (socket) => {
         const code = generateCode();
         let maxP = Math.min(parseInt(data.maxPlayers)||10, 15);
         let discordData = {voiceId:null, inviteLink:null};
-        if(DISCORD_TOKEN && !data.isLocal) { const r = await crearCanalDiscord(code, maxP); if(r) discordData=r; }
+        
+        if(DISCORD_TOKEN && !data.isLocal) { 
+            const r = await crearCanalDiscord(code, maxP); 
+            if(r) discordData=r; 
+        }
 
         const room = {
             code, hostId: socket.id, maxPlayers: maxP, impostors: parseInt(data.impostors)||2,
@@ -225,7 +211,6 @@ io.on('connection', (socket) => {
         if(room && room.hostId === socket.id) {
             room.players.forEach(p => p.isDead = false);
             room.votes = {}; room.spoken = {}; room.turnIndex = -1;
-
             const shuffled = shuffleArray([...room.players]);
             const impIds = shuffled.slice(0, room.impostors).map(p=>p.id);
             const word = getRandomWord(room.categories);
@@ -241,50 +226,22 @@ io.on('connection', (socket) => {
             });
             
             room.phase = 'lectura'; emitRoomState(room);
-            setTimeout(()=>{ 
-                if(rooms[room.code]){ 
-                    room.phase='palabras'; 
-                    room.turnIndex = Math.floor(Math.random() * room.players.length); 
-                    nextTurn(room); 
-                }
-            }, 7000);
+            setTimeout(()=>{ if(rooms[room.code]){ room.phase='palabras'; room.turnIndex = Math.floor(Math.random() * room.players.length); nextTurn(room); } }, 7000);
         }
     });
 
-    socket.on('finishTurn', () => {
-        const room = getRoomOfSocket(socket.id);
-        if(room && room.phase === 'palabras' && room.players[room.turnIndex]?.id === socket.id) {
-            room.spoken[socket.id] = true;
-            nextTurn(room); 
-        }
-    });
-
-    socket.on('submitVote', (data) => {
-        const room = getRoomOfSocket(socket.id);
-        const p = room.players.find(x => x.id === socket.id);
-        if(room && room.phase === 'votacion' && p && !p.isDead) {
-            room.votes[socket.id] = data.targetId;
-            emitRoomState(room);
-            const living = room.players.filter(x => !x.isDead).length;
-            if(Object.keys(room.votes).length >= living) finishVoting(room, 'Todos votaron');
-        }
-    });
-
+    socket.on('finishTurn', () => { const r = getRoomOfSocket(socket.id); if(r && r.phase==='palabras' && r.players[r.turnIndex]?.id===socket.id) { r.spoken[socket.id]=true; nextTurn(r); } });
+    socket.on('submitVote', (d) => { const r=getRoomOfSocket(socket.id); if(r && r.phase==='votacion' && !r.players.find(x=>x.id===socket.id).isDead) { r.votes[socket.id]=d.targetId; emitRoomState(r); if(Object.keys(r.votes).length >= r.players.filter(x=>!x.isDead).length) finishVoting(r, 'Todos votaron'); } });
+    
     socket.on('disconnect', () => {
         const room = getRoomOfSocket(socket.id);
         if (room) {
             room.players = room.players.filter(p => p.id !== socket.id);
             delete socketRoom[socket.id];
-
             if (room.players.length === 0) {
-                if (room.discordVoiceChannel) {
-                    borrarCanalDiscord(room.discordVoiceChannel);
-                }
+                if (room.discordVoiceChannel) borrarCanalDiscord(room.discordVoiceChannel);
                 delete rooms[room.code];
-            } else {
-                if (room.hostId === socket.id) room.hostId = room.players[0].id; 
-                emitRoomState(room);
-            }
+            } else { if (room.hostId === socket.id) room.hostId = room.players[0].id; emitRoomState(room); }
         }
     });
 });
