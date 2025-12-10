@@ -6,27 +6,27 @@
   <title>Incognito.</title>
   <link rel="icon" type="image/png" href="images/favicon.png">
   <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
   <div id="ejectionOverlay" class="overlay-full" style="display: none;">
-    <div class="result-container">
-      <div id="resultIcon" class="result-icon">⚖️</div>
-      <h1 id="resultTitle" class="result-title">RESULTADO</h1>
-      <p id="resultSubtitle" class="result-subtitle">...</p>
+    <div class="result-card-hacker">
+      <div id="resultIcon" class="result-icon"></div>
+      <h1 id="resultTitle" class="result-title">SYSTEM_CHECK</h1>
+      <p id="resultSubtitle" class="result-subtitle">Analizando resultados...</p>
       
-      <div class="result-details-card" id="finalDetailsBox" style="display:none;">
-        <div class="detail-row">
-            <span>Palabra Clave:</span>
-            <span id="resultWord" class="highlight-text">---</span>
+      <div class="result-data-grid" id="finalDetailsBox" style="display:none;">
+        <div class="data-row">
+            <span class="data-label">CLAVE_ENCRIPTADA:</span>
+            <span id="resultWord" class="data-value glitched-text">---</span>
         </div>
-        <div class="detail-row">
-            <span>El Impostor era:</span>
-            <span id="resultImpostorName" class="highlight-red">---</span>
+        <div class="data-row">
+            <span class="data-label">INFILTRADO:</span>
+            <span id="resultImpostorName" class="data-value text-red">---</span>
         </div>
       </div>
-      <button id="btnBackToLobby" class="btn-main btn-primary">CONTINUAR</button>
+      <button id="btnBackToLobby" class="btn-hacker btn-fill">REINICIAR SISTEMA</button>
     </div>
   </div>
 
@@ -34,104 +34,110 @@
     <div id="screenHome" class="screen fade-in center-layout">
       <div class="brand-header">
         <div class="logo-container"><img src="images/logo.png" alt="Incognito" class="logo-img"></div>
-        <h1 class="brand-title">INCOGNITO<span class="dot-red">.</span></h1>
-        <p class="brand-subtitle">JUEGO DE ESPIONAJE SOCIAL</p>
-      </div>
-      <div class="home-actions">
-        <button id="btnGoCreate" class="btn-big btn-primary">CREAR SALA</button>
-        <button id="btnGoJoin" class="btn-big btn-secondary">UNIRSE A SALA</button>
-        <button id="btnHowToPlay" class="btn-link">¿CÓMO JUGAR?</button>
+        </div>
+      <div class="home-menu-panel">
+        <button id="btnGoCreate" class="btn-hacker btn-fill">CREAR OPERACIÓN</button>
+        <button id="btnGoJoin" class="btn-hacker btn-outline">ACCESO REMOTO</button>
+        <button id="btnHowToPlay" class="btn-text-link">[ MANUAL DE PROTOCOLO ]</button>
       </div>
     </div>
 
     <div id="screenCreate" class="screen fade-in center-layout" style="display: none;">
       <div class="screen-header">
-        <button id="backFromCreate" class="btn-icon-back"><img src="images/arrow.png" alt="Volver"></button>
-        <h2>CONFIGURAR PARTIDA</h2>
+        <button id="backFromCreate" class="btn-icon-back">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+        <h2>CONFIG_SALA</h2>
       </div>
       <div class="scroll-content config-width">
-        <div class="config-card glass-card">
-            <label><span class="label-icon">👤</span> TU NOMBRE</label>
-            <input type="text" id="hostName" class="input-clean" maxlength="12" placeholder="Ej: Agente 007">
+        <div class="hacker-panel">
+            <label>IDENTIDAD (HOST)</label>
+            <input type="text" id="hostName" class="input-hacker" maxlength="12" placeholder="Agente...">
         </div>
         <div class="config-grid">
-            <div class="setting-card glass-card">
-                <label><span class="label-icon">👥</span> JUGADORES</label>
+            <div class="hacker-panel center-content">
+                <label>AGENTES</label>
                 <div class="counter-control">
-                    <button class="btn-count" onclick="adjustValue('maxPlayers', -1)">-</button>
+                    <button class="btn-mini" onclick="adjustValue('maxPlayers', -1)">-</button>
                     <span id="displayPlayers">10</span>
-                    <button class="btn-count" onclick="adjustValue('maxPlayers', 1)">+</button>
+                    <button class="btn-mini" onclick="adjustValue('maxPlayers', 1)">+</button>
                 </div>
                 <input type="hidden" id="maxPlayers" value="10">
             </div>
-            <div class="setting-card glass-card">
-                <label><span class="label-icon">🕵️</span> IMPOSTORES</label>
+            <div class="hacker-panel center-content">
+                <label>INFILTRADOS</label>
                 <div class="counter-control">
-                    <button class="btn-count" onclick="adjustValue('impostors', -1)">-</button>
+                    <button class="btn-mini" onclick="adjustValue('impostors', -1)">-</button>
                     <span id="displayImpostors">2</span>
-                    <button class="btn-count" onclick="adjustValue('impostors', 1)">+</button>
+                    <button class="btn-mini" onclick="adjustValue('impostors', 1)">+</button>
                 </div>
                 <input type="hidden" id="impostors" value="2">
             </div>
-            <div class="setting-card glass-card">
-                <label><span class="label-icon">⏱️</span> TURNO (s)</label>
+            <div class="hacker-panel center-content">
+                <label>TURNO (seg)</label>
                  <div class="counter-control">
-                    <button class="btn-count" onclick="adjustValue('timeTurn', -5)">-</button>
+                    <button class="btn-mini" onclick="adjustValue('timeTurn', -5)">-</button>
                     <span id="displayTurn">15</span>
-                    <button class="btn-count" onclick="adjustValue('timeTurn', 5)">+</button>
+                    <button class="btn-mini" onclick="adjustValue('timeTurn', 5)">+</button>
                 </div>
                 <input type="hidden" id="timeTurn" value="15">
             </div>
-             <div class="setting-card glass-card">
-                <label><span class="label-icon">🗳️</span> VOTACIÓN (s)</label>
+             <div class="hacker-panel center-content">
+                <label>VOTACIÓN (seg)</label>
                  <div class="counter-control">
-                    <button class="btn-count" onclick="adjustValue('timeVote', -10)">-</button>
+                    <button class="btn-mini" onclick="adjustValue('timeVote', -10)">-</button>
                     <span id="displayVote">120</span>
-                    <button class="btn-count" onclick="adjustValue('timeVote', 10)">+</button>
+                    <button class="btn-mini" onclick="adjustValue('timeVote', 10)">+</button>
                 </div>
                 <input type="hidden" id="timeVote" value="120">
             </div>
         </div>
-        <div class="config-card toggle-row glass-card" id="toggleLocalMode">
+        <div class="hacker-panel toggle-row" id="toggleLocalMode">
             <div class="toggle-info">
-                <label style="margin:0; font-size: 0.9rem;"><span class="label-icon">🏠</span> MODO GRUPAL</label>
-                <span class="sub-label">Sin Discord / Presencial</span>
+                <label style="margin:0;">MODO OFFLINE</label>
+                <span class="sub-label">Sin conexión de voz</span>
             </div>
             <div class="toggle-switch"><div class="knob"></div></div>
             <input type="checkbox" id="localMode" style="display:none;">
         </div>
-        <button id="btnGoCategories" class="btn-outline-big">📂 SELECCIONAR CATEGORÍAS (<span id="catCountDisplay">5</span>)</button>
+        <button id="btnGoCategories" class="btn-hacker btn-outline" style="margin-top: 15px;">
+            SELECCIONAR DATOS (<span id="catCountDisplay">5</span>)
+        </button>
       </div>
-      <div class="bottom-dock config-width"><button id="btnCreateRoom" class="btn-main btn-green">INICIAR OPERACIÓN</button></div>
+      <div class="bottom-dock-panel">
+          <button id="btnCreateRoom" class="btn-hacker btn-fill">EJECUTAR</button>
+      </div>
     </div>
 
     <div id="screenCategories" class="screen fade-in center-layout" style="display: none;">
         <div class="screen-header">
-            <button id="backFromCategories" class="btn-icon-back"><img src="images/arrow.png" alt="Volver"></button>
-            <h2>PAQUETES DE DATOS</h2>
+            <button id="backFromCategories" class="btn-icon-back">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <h2>BASE_DE_DATOS</h2>
         </div>
-        <div class="scroll-content config-width">
-            <div class="categories-grid" id="categoriesGrid"></div>
-        </div>
-        <div class="bottom-dock config-width"><button id="btnConfirmCategories" class="btn-main btn-primary">CONFIRMAR</button></div>
+        <div class="scroll-content config-width"><div class="categories-grid" id="categoriesGrid"></div></div>
+        <div class="bottom-dock-panel"><button id="btnConfirmCategories" class="btn-hacker btn-fill">GUARDAR CAMBIOS</button></div>
     </div>
 
     <div id="screenJoin" class="screen fade-in center-layout" style="display: none;">
       <div class="screen-header">
-        <button id="backFromJoin" class="btn-icon-back"><img src="images/arrow.png" alt="Volver"></button>
-        <h2>ACCESO REMOTO</h2>
+        <button id="backFromJoin" class="btn-icon-back">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+        <h2>CONEXIÓN_SEGURA</h2>
       </div>
       <div class="center-content config-width">
-          <div class="input-card glass-card">
-            <label><span class="label-icon">👤</span> JUGADOR</label>
-            <input type="text" id="joinName" class="input-clean" maxlength="12" placeholder="Nombre...">
+          <div class="hacker-panel">
+            <label>ALIAS</label>
+            <input type="text" id="joinName" class="input-hacker" maxlength="12" placeholder="Nombre...">
           </div>
-          <div class="input-card glass-card">
-            <label><span class="label-icon">🔑</span> CÓDIGO DE SALA</label>
-            <input type="text" id="joinCode" class="input-clean code-style" placeholder="Ej: ABCD">
+          <div class="hacker-panel">
+            <label>CÓDIGO DE ENCRIPTACIÓN</label>
+            <input type="text" id="joinCode" class="input-hacker" placeholder="XXXX">
           </div>
       </div>
-      <div class="bottom-dock config-width"><button id="btnJoinRoom" class="btn-main btn-primary">CONECTAR</button></div>
+      <div class="bottom-dock-panel"><button id="btnJoinRoom" class="btn-hacker btn-fill">ESTABLECER ENLACE</button></div>
     </div>
   </div>
 
@@ -139,36 +145,38 @@
     <div class="game-layout">
         
         <section class="game-main-area">
-            <header class="game-header">
-                <div class="room-pill">
-                    <span class="pill-label">SALA</span>
-                    <span id="roomCodeDisplay" class="pill-value-red">----</span>
-                    <button id="btnCopyCode" class="btn-copy-icon" title="Copiar">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            
+            <header class="game-header-panel">
+                <div class="room-info">
+                    <span class="label-tiny">SALA_ID</span>
+                    <span id="roomCodeDisplay" class="code-display">----</span>
+                    <button id="btnCopyCode" class="btn-icon-small" title="Copiar">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                     </button>
                 </div>
                 <div class="header-actions">
-                    <button id="btnDiscordManual" class="btn-circle-icon discord-bg" style="display:none;">
-                        <img src="images/discord.png" alt="Voice">
+                    <button id="btnDiscordManual" class="btn-header-action discord-style" style="display:none;">
+                        <img src="images/discord.png" alt="Discord">
+                        <span>VOZ</span>
                     </button>
-                    <button id="btnExit" class="btn-circle-icon exit-bg">
-                        <img src="images/arrow.png" style="transform: rotate(0deg); width: 14px;">
+                    <button id="btnExit" class="btn-header-action exit-style">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                     </button>
                 </div>
             </header>
 
             <div class="game-center">
                 <div id="viewCard" class="view-panel">
-                    <div id="instructionsPanel" class="info-panel">
-                        <h3>ESPERANDO AGENTES...</h3>
-                        <div class="loader-dots"><span></span><span></span><span></span></div>
+                    <div id="instructionsPanel" class="hacker-box">
+                        <h3>ESPERANDO CONEXIÓN...</h3>
+                        <div class="scanning-bar"></div>
                     </div>
                     <div id="secretCardContainer" class="secret-card-wrapper" style="display:none;">
                         <div class="secret-card-inner">
                             <div class="card-front">
                                 <div class="lock-icon">🔒</div>
-                                <p>CONFIDENCIAL</p>
-                                <span class="tap-hint">TOCA PARA REVELAR</span>
+                                <p>ARCHIVO_ENCRIPTADO</p>
+                                <span class="tap-hint">[ CLICK PARA ACCEDER ]</span>
                             </div>
                             <div class="card-back" id="cardBackContent">
                                 <div class="role-icon" id="roleIconDisplay">?</div>
@@ -184,27 +192,27 @@
                     <div class="turn-avatar"><span id="turnTimerDisplay">15</span></div>
                     <h2 id="turnPlayerName" class="turn-name">Agente</h2>
                     <div class="status-badge">TRANSMITIENDO...</div>
-                    <button id="btnFinishTurn" class="btn-action-pill" style="display:none;">✅ TERMINAR TURNO</button>
+                    <button id="btnFinishTurn" class="btn-hacker btn-fill">FIN DE TRANSMISIÓN</button>
                 </div>
 
                 <div id="viewVoting" class="view-panel" style="display:none;">
-                    <h2 class="section-title-red">¿QUIÉN ES EL IMPOSTOR?</h2>
+                    <h2 class="section-title-neon">¿QUIÉN ES EL INFILTRADO?</h2>
                     <div class="vote-stats">
                         <div class="timer-box" id="votingTimer">00:00</div>
-                        <div class="vote-count" id="voteCounter">0 Votos</div>
+                        <div class="vote-count" id="voteCounter">0/0</div>
                     </div>
                     <div class="voting-grid" id="votingGrid"></div>
                 </div>
             </div>
 
-            <footer class="game-footer">
-                <button id="btnStartRound" class="btn-wide btn-green" disabled>INICIAR MISIÓN</button>
-                <button id="btnSkipVote" class="btn-wide btn-grey" style="display:none;">SALTAR (SKIP) 💨</button>
+            <footer class="game-footer-panel">
+                <button id="btnStartRound" class="btn-hacker btn-fill" disabled>INICIAR MISIÓN</button>
+                <button id="btnSkipVote" class="btn-hacker btn-outline" style="display:none;">OMITIR VOTO</button>
             </footer>
         </section>
 
         <aside class="game-sidebar">
-            <div class="sidebar-title">AGENTES EN LÍNEA</div>
+            <div class="sidebar-title">RED_DE_AGENTES</div>
             <div id="playersList" class="players-list-vertical"></div>
         </aside>
 
@@ -212,12 +220,39 @@
   </main>
 
   <div id="modalHowToPlay" class="overlay-full" style="display: none;">
-      <div class="modal-content">
-          <div class="modal-header"><h3>PROTOCOLO</h3><button id="btnCloseHowToPlay" class="btn-close">✕</button></div>
+      <div class="modal-content-hacker">
+          <div class="modal-header">
+              <h3>PROTOCOLO_SEGURIDAD</h3>
+              <button id="btnCloseHowToPlay" class="btn-close-text">✕</button>
+          </div>
           <div class="tutorial-list">
-              <div class="tutorial-item"><div class="tut-icon">👁️</div><div class="tut-text"><strong>1. Intel</strong><p>Toca tu tarjeta. El impostor NO ve la palabra.</p></div></div>
-              <div class="tutorial-item"><div class="tut-icon">💬</div><div class="tut-text"><strong>2. Pistas</strong><p>Turnense para decir una palabra relacionada.</p></div></div>
-              <div class="tutorial-item"><div class="tut-icon">🔍</div><div class="tut-text"><strong>3. Votación</strong><p>Eliminen al sospechoso.</p></div></div>
+              <div class="tutorial-item">
+                  <div class="tut-icon-box">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                  </div>
+                  <div class="tut-text">
+                      <strong>1. INTELIGENCIA</strong>
+                      <p>Revela tu tarjeta. Si eres Ciudadano, verás la clave. Si eres Impostor, verás un error de encriptación.</p>
+                  </div>
+              </div>
+              <div class="tutorial-item">
+                  <div class="tut-icon-box">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                  </div>
+                  <div class="tut-text">
+                      <strong>2. INTERROGATORIO</strong>
+                      <p>Por turnos, digan una palabra relacionada a la clave. Se sutil: el Impostor está escuchando.</p>
+                  </div>
+              </div>
+              <div class="tutorial-item">
+                  <div class="tut-icon-box">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
+                  </div>
+                  <div class="tut-text">
+                      <strong>3. ELIMINACIÓN</strong>
+                      <p>Debatan y voten para desconectar al sospechoso. Si fallan, el sistema se compromete.</p>
+                  </div>
+              </div>
           </div>
       </div>
   </div>
