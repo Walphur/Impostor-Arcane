@@ -221,23 +221,19 @@ io.on('connection', (socket) => {
         } else cb({ok:false, error:'Sala no existe'});
     });
 
-    socket.on('startRound', () => {
+socket.on('startRound', () => {
         const room = getRoomOfSocket(socket.id);
         if(room && room.hostId === socket.id) {
             room.players.forEach(p => p.isDead = false);
             room.votes = {}; room.spoken = {}; room.turnIndex = -1;
 
-            // --- CORRECCIÓN: El Host (índice 0) no puede ser impostor ---
-            const hostPlayer = room.players[0];
-            const otherPlayers = room.players.slice(1);
-            
-            // Mezclamos solo a los demás jugadores
-            const shuffledOthers = shuffleArray([...otherPlayers]);
-            // Elegimos los IDs de los impostores de esa lista mezclada
-            const impIds = shuffledOthers.slice(0, room.impostors).map(p => p.id);
+            // 1. ASIGNAR ROLES (Cualquiera puede ser impostor, incluido el Host)
+            const allPlayers = [...room.players]; // Copia de todos
+            const shuffled = shuffleArray(allPlayers); // Mezclar todos
+            const impIds = shuffled.slice(0, room.impostors).map(p => p.id); // Tomar los primeros N como impostores
             
             const word = getRandomWord(room.categories);
-            room.secretWord = word; // Guardamos la palabra en la sala
+            room.secretWord = word;
 
             const impNames = room.players.filter(p => impIds.includes(p.id)).map(p => p.name);
 
@@ -251,7 +247,30 @@ io.on('connection', (socket) => {
             });
             
             room.phase = 'lectura'; emitRoomState(room);
-            setTimeout(()=>{ if(rooms[room.code]){ room.phase='palabras'; room.turnIndex = Math.floor(Math.random() * room.players.length); nextTurn(room); } }, 7000);
+            
+            // 2. DEFINIR PRIMER TURNO (Nunca el Impostor)
+            setTimeout(()=>{ 
+                if(rooms[room.code]){ 
+                    room.phase='palabras'; 
+                    
+                    // Filtramos los índices de quienes son CIUDADANOS
+                    const citizenIndices = room.players
+                        .map((p, index) => ({ index, id: p.id }))
+                        .filter(item => room.roles[item.id] === 'ciudadano')
+                        .map(item => item.index);
+
+                    // Elegimos al azar uno de los ciudadanos para empezar
+                    if(citizenIndices.length > 0) {
+                        const randomIdx = Math.floor(Math.random() * citizenIndices.length);
+                        room.turnIndex = citizenIndices[randomIdx];
+                    } else {
+                        // Fallback por seguridad (si todos fueran impostores)
+                        room.turnIndex = 0; 
+                    }
+
+                    nextTurn(room); 
+                } 
+            }, 7000);
         }
     });
 
