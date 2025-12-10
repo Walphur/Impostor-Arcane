@@ -6,16 +6,55 @@ const path = require('path');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN; 
 
-const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#f97316', '#a855f7', '#ec4899', '#06b6d4', '#84cc16', '#78716c', '#f43f5e', '#6366f1', '#14b8a6', '#d946ef', '#64748b'];
+const PLAYER_COLORS = ['#00ff41', '#008F11', '#003B00', '#ADFF2F', '#32CD32', '#98FB98', '#00FA9A', '#7FFFD4', '#66CDAA', '#2E8B57', '#20B2AA', '#5F9EA0'];
+
+// --- BASE DE DATOS MASIVA (50 Palabras por cat) ---
 const WORD_DB = {
-    lugares: ['SAUNA', 'CEMENTERIO', 'SUBMARINO', 'ASCENSOR', 'IGLÚ', 'CASINO', 'CIRCO', 'ESTACIÓN ESPACIAL', 'HORMIGUERO', 'CINE', 'BARCO PIRATA', 'ZOOLÓGICO', 'HOSPITAL', 'AEROPUERTO', 'PLAYA', 'BIBLIOTECA'],
-    comidas: ['SUSHI', 'PAELLA', 'TACOS', 'HELADO', 'HUEVO FRITO', 'CEVICHE', 'ASADO', 'FONDUE', 'MEDIALUNA', 'SOPA', 'COCO', 'CHICLE', 'PIZZA', 'HAMBURGUESA', 'POCHOCLOS', 'CHOCOLATE'],
-    objetos: ['PARAGUAS', 'CEPILLO DE DIENTES', 'MICROONDAS', 'GUITARRA', 'INODORO', 'LAVADORA', 'ESPEJO', 'DRON', 'TARJETA DE CRÉDITO', 'VELA', 'ZAPATO', 'LINTERNA', 'RELOJ', 'LLAVES'],
-    animales: ['PINGÜINO', 'CANGURO', 'MOSQUITO', 'PULPO', 'PEREZOSO', 'CAMALEÓN', 'MURCIÉLAGO', 'JIRAFA', 'ABEJA', 'LEÓN', 'TIBURÓN', 'ELEFANTE', 'GATO', 'PERRO'],
-    profesiones: ['ASTRONAUTA', 'MIMO', 'CIRUJANO', 'JARDINERO', 'DETECTIVE', 'BUZO', 'ÁRBITRO', 'CAJERO', 'PRESIDENTE', 'FANTASMA', 'BOMBERO', 'PROFESOR', 'POLICÍA', 'CHEF'],
-    cine: ['TITANIC', 'SHREK', 'HARRY POTTER', 'STAR WARS', 'AVENGERS', 'MATRIX', 'EL REY LEÓN', 'JURASSIC PARK', 'FROZEN', 'BATMAN', 'SPIDERMAN', 'TOY STORY']
+    lugares: [
+        'CINE', 'PLAYA', 'HOSPITAL', 'ESCUELA', 'AEROPUERTO', 'GIMNASIO', 'BIBLIOTECA', 'ESTADIO', 'SUPERMERCADO', 'BANCO',
+        'ZOOLÓGICO', 'MUSEO', 'PARQUE', 'IGLESIA', 'RESTAURANTE', 'HOTEL', 'FARMACIA', 'ESTACIÓN DE POLICÍA', 'BOMBEROS', 'CORREO',
+        'DISCOTECA', 'CEMENTERIO', 'CÁRCEL', 'UNIVERSIDAD', 'GASOLINERA', 'LAVANDERÍA', 'PELUQUERÍA', 'CENTRO COMERCIAL', 'CASINO', 'CIRCO',
+        'TEATRO', 'ACUARIO', 'OBSERVATORIO', 'PLANETARIO', 'BOLERA', 'PISTA DE HIELO', 'PARQUE DE DIVERSIONES', 'SPA', 'SAUNA', 'CAMPING',
+        'GRANJA', 'FARO', 'PUERTO', 'ESTACIÓN DE TREN', 'METRO', 'SUBMARINO', 'NAVE ESPACIAL', 'CUEVA', 'VOLCÁN', 'ISLA DESIERTA'
+    ],
+    comidas: [
+        'PIZZA', 'HAMBURGUESA', 'SUSHI', 'PASTA', 'ENSALADA', 'TACOS', 'HELADO', 'CHOCOLATE', 'PANQUEQUES', 'HUEVO FRITO',
+        'POLLO ASADO', 'BIFE', 'EMPANADAS', 'SOPA', 'ARROZ', 'CEREAL', 'YOGUR', 'FRUTILLA', 'MANZANA', 'BANANA',
+        'NARANJA', 'UVA', 'SANDÍA', 'MELÓN', 'PIÑA', 'KIWI', 'DURAZNO', 'PERA', 'CEREZA', 'LIMÓN',
+        'PAPAS FRITAS', 'NACHOS', 'POCHOCLOS', 'GALLETITAS', 'TORTA', 'BROWNIE', 'ALFAJOR', 'MEDIALUNA', 'TOSTADA', 'SÁNDWICH',
+        'HOT DOG', 'LASAÑA', 'RAVIOLES', 'ÑOQUIS', 'MILANESA', 'GUISO', 'LENTEJAS', 'GARBANZOS', 'ATÚN', 'SALMÓN'
+    ],
+    objetos: [
+        'TELÉFONO', 'COMPUTADORA', 'TELEVISOR', 'RELOJ', 'CÁMARA', 'AURICULARES', 'LINTERNA', 'LLAVES', 'BILLETERA', 'ANTEOJOS',
+        'MOCHILA', 'LIBRO', 'CUADERNO', 'LÁPIZ', 'BIROME', 'TIJERAS', 'CUCHILLO', 'TENEDOR', 'CUCHARA', 'PLATO',
+        'VASO', 'TAZA', 'BOTELLA', 'SARTÉN', 'OLLA', 'LICUADORA', 'TOSTADORA', 'MICROONDAS', 'HELADERA', 'LAVARROPAS',
+        'PLANCHA', 'SECADOR DE PELO', 'CEPILLO DE DIENTES', 'PEINE', 'JABÓN', 'TOALLA', 'SÁBANA', 'ALMOHADA', 'COLCHÓN', 'SILLA',
+        'MESA', 'SILLÓN', 'CAMA', 'ARMARIO', 'ESPEJO', 'LÁMPARA', 'VENTILADOR', 'AIRE ACONDICIONADO', 'ESTUFA', 'ALFOMBRA'
+    ],
+    animales: [
+        'PERRO', 'GATO', 'LEÓN', 'TIGRE', 'ELEFANTE', 'JIRAFA', 'MONO', 'OSO', 'LOBO', 'ZORRO',
+        'CONEJO', 'RATÓN', 'HÁMSTER', 'CABALLO', 'VACA', 'CERDO', 'OVEJA', 'CABRA', 'GALLINA', 'PATO',
+        'PAVO', 'PINGÜINO', 'ÁGUILA', 'LORA', 'BÚHO', 'PALOMA', 'GAVIOTA', 'DELFÍN', 'BALLENA', 'TIBURÓN',
+        'PULPO', 'CANGREJO', 'TORTUGA', 'SERPIENTE', 'COCODRILO', 'RANA', 'SAPO', 'ARAÑA', 'ESCORPIÓN', 'MARIPOSA',
+        'ABEJA', 'HORMIGA', 'MOSCA', 'MOSQUITO', 'GUSANO', 'CARACOL', 'CANGURO', 'KOALA', 'PANDA', 'ZEBRA'
+    ],
+    profesiones: [
+        'MÉDICO', 'ENFERMERO', 'PROFESOR', 'POLICÍA', 'BOMBERO', 'ABOGADO', 'JUEZ', 'INGENIERO', 'ARQUITECTO', 'PROGRAMADOR',
+        'DISEÑADOR', 'ARTISTA', 'MÚSICO', 'ACTOR', 'CANTANTE', 'BAILARÍN', 'ESCRITOR', 'PERIODISTA', 'FOTÓGRAFO', 'COCINERO',
+        'CAMARERO', 'PANADERO', 'CARNICERO', 'VERDULERO', 'MECÁNICO', 'ELECTRICISTA', 'PLOMERO', 'CARPINTERO', 'ALBAÑIL', 'PINTOR',
+        'JARDINERO', 'AGRICULTOR', 'PESCADOR', 'PILOTO', 'AZAFATA', 'CONDUCTOR', 'TAXISTA', 'CAMIONERO', 'CARTERO', 'BIBLIOTECARIO',
+        'CIENTÍFICO', 'ASTRONAUTA', 'ASTRÓNOMO', 'ARQUEÓLOGO', 'PSICÓLOGO', 'DENTISTA', 'VETERINARIO', 'PELUQUERO', 'MAQUILLADOR', 'MODELO'
+    ],
+    cine: [
+        'TITANIC', 'AVATAR', 'STAR WARS', 'JURASSIC PARK', 'MATRIX', 'EL SEÑOR DE LOS ANILLOS', 'HARRY POTTER', 'AVENGERS', 'SPIDERMAN', 'BATMAN',
+        'SUPERMAN', 'WONDER WOMAN', 'FLASH', 'AQUAMAN', 'IRON MAN', 'CAPITÁN AMÉRICA', 'THOR', 'HULK', 'BLACK PANTHER', 'DOCTOR STRANGE',
+        'GUARDIANES DE LA GALAXIA', 'DEADPOOL', 'X-MEN', 'LOGAN', 'JOKER', 'EL PADRINO', 'SCARFACE', 'PULP FICTION', 'KILL BILL', 'FORREST GUMP',
+        'EL REY LEÓN', 'TOY STORY', 'SHREK', 'FROZEN', 'BUSCANDO A NEMO', 'LOS INCREÍBLES', 'COCO', 'UP', 'WALL-E', 'RATATOUILLE',
+        'MONSTERS INC', 'CARS', 'ALADDIN', 'LA BELLA Y LA BESTIA', 'LA SIRENITA', 'CENICIENTA', 'BLANCANIEVES', 'PINOCHO', 'DUMBO', 'BAMBI'
+    ]
 };
 
+// ... (Resto de funciones auxiliares igual)
 function getRandomWord(cat) {
     let pool = [];
     if (!cat || cat.length === 0) Object.values(WORD_DB).forEach(arr => pool.push(...arr));
@@ -36,9 +75,8 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' }, pingTimeout: 60000 });
 
-// BIEN (Para que lea tu carpeta public)
-const CLIENT_DIR = path.join(__dirname, 'public');
-app.use(express.static(CLIENT_DIR)); // USAR ESTO SI ESTAN EN LA RAIZ
+const CLIENT_DIR = path.join(__dirname, 'public'); 
+app.use(express.static(CLIENT_DIR));
 
 const rooms = {};
 const socketRoom = {};
@@ -65,21 +103,42 @@ function emitRoomState(room) {
     });
 }
 
+// --- FIX DEL BUG DE VOTACION AQUÍ ---
 function nextTurn(room) {
     if(room.timer) clearTimeout(room.timer);
+    
+    // Verificar si todos hablaron
     const living = room.players.filter(p => !p.isDead);
     const allSpoken = living.every(p => room.spoken[p.id]);
     
-    if(allSpoken){ startVoting(room); return; }
+    if(allSpoken){ 
+        startVoting(room); 
+        return; 
+    }
 
-    let next = room.turnIndex, loops=0;
-    do { next = (next+1) % room.players.length; loops++; } 
-    while((room.spoken[room.players[next].id] || room.players[next].isDead) && loops < room.players.length * 2);
+    // Calcular siguiente turno
+    let next = room.turnIndex;
+    let attempts = 0;
+    do { 
+        next = (next+1) % room.players.length; 
+        attempts++;
+    } while(
+        (room.spoken[room.players[next].id] || room.players[next].isDead) && 
+        attempts < room.players.length * 2
+    );
+
+    // Seguridad: Si después de buscar no encontramos a nadie, forzamos votación
+    if(attempts >= room.players.length * 2) {
+        startVoting(room);
+        return;
+    }
 
     room.turnIndex = next; 
     room.turnDeadline = Date.now() + room.config.turnTime;
     
+    // Timer del turno
     room.timer = setTimeout(()=>{ 
+        // Si se acaba el tiempo, marcamos como hablado y pasamos
         if(room.players[room.turnIndex]) room.spoken[room.players[room.turnIndex].id]=true; 
         nextTurn(room); 
     }, room.config.turnTime);
@@ -92,8 +151,10 @@ function startVoting(room) {
     room.phase='votacion'; 
     room.voteDeadline = Date.now() + room.config.voteTime; 
     room.votes = {}; 
-    io.to(room.code).emit('votingStarted'); 
-    emitRoomState(room);
+    
+    // IMPORTANTE: Emitir estado INMEDIATAMENTE para forzar el cambio de pantalla en el cliente
+    emitRoomState(room); 
+    
     room.timer = setTimeout(()=>finishVoting(room, 'Tiempo agotado'), room.config.voteTime);
 }
 
@@ -126,12 +187,21 @@ function finishVoting(room, reason) {
     
     if(gameResult) { 
         room.phase = 'lobby'; 
-        // Reiniciar para siguiente ronda
         room.players.forEach(p => p.isDead = false);
         setTimeout(() => emitRoomState(room), 5000); 
     } else { 
+        // Reiniciar ronda de palabras
         room.phase = 'palabras'; room.turnIndex = -1; room.spoken = {}; room.votes = {}; 
-        setTimeout(() => { if(rooms[room.code]) nextTurn(room); }, 4000); 
+        setTimeout(() => { 
+            if(rooms[room.code]) {
+                // Empezar turno aleatorio de nuevo
+                 const livingIndices = room.players.map((p, index) => index).filter(i => !room.players[i].isDead);
+                 if(livingIndices.length > 0) {
+                     room.turnIndex = livingIndices[Math.floor(Math.random() * livingIndices.length)];
+                 } else { room.turnIndex = 0; } // Fallback
+                 nextTurn(room); 
+            }
+        }, 4000); 
     }
 }
 
