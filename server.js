@@ -36,8 +36,9 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' }, pingTimeout: 60000 });
 
-const CLIENT_DIR = path.join(__dirname, 'public'); // Asegurate que tus archivos HTML/CSS/JS estan en una carpeta llamada 'public' o ajusta esto
-app.use(express.static(__dirname)); // USAR ESTO SI ESTAN EN LA RAIZ
+// BIEN (Para que lea tu carpeta public)
+const CLIENT_DIR = path.join(__dirname, 'public');
+app.use(express.static(CLIENT_DIR)); // USAR ESTO SI ESTAN EN LA RAIZ
 
 const rooms = {};
 const socketRoom = {};
