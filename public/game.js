@@ -155,19 +155,16 @@ socket.on('votingResults', (data) => {
 
     if(data.gameResult) {
         playSound('win'); overlay.style.display = 'flex'; detailsBox.style.display = 'block';
-        
-        // --- CORRECCIÓN: Usar datos reales enviados por el servidor ---
         rWord.innerText = data.secretWord || "---"; 
         rImp.innerText = data.realImpostorName || "---";
-        // ---------------------------------------------------------------
 
         const citizensWon = (data.gameResult === 'citizensWin');
         let iWon = false;
         if(citizensWon && myRole === 'ciudadano') iWon = true;
         if(!citizensWon && myRole === 'impostor') iWon = true;
 
-        if(iWon) { title.innerText = "¡VICTORIA!"; title.style.color = '#30D158'; icon.innerText = '🏆'; } 
-        else { title.innerText = "DERROTA"; title.style.color = '#FF453A'; icon.innerText = '💀'; }
+        if(iWon) { title.innerText = "¡VICTORIA!"; title.style.color = '#00E055'; icon.innerText = '🏆'; } 
+        else { title.innerText = "DERROTA"; title.style.color = '#FF4D4D'; icon.innerText = '💀'; }
         
         sub.innerText = citizensWon ? "Victoria Ciudadana." : "Victoria Impostora.";
 
