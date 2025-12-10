@@ -16,139 +16,162 @@ const CATEGORIES_DATA = [
     { id: 'lugares', icon: '📍', name: 'Lugares' },
     { id: 'comidas', icon: '🍔', name: 'Comidas' },
     { id: 'objetos', icon: '🛠️', name: 'Objetos' },
-    { id: 'animales', icon: '🦁', name: 'Animales' },
-    { id: 'profesiones', icon: '👮', name: 'Profesiones' },
-    { id: 'cine', icon: '🎬', name: 'Cine' }
+    { id: 'animales', icon: '🐾', name: 'Animales' },
+    { id: 'profesiones', icon: '💼', name: 'Profesiones' },
+    { id: 'deportes', icon: '🏆', name: 'Deportes' },
+    { id: 'tecnologia', icon: '💻', name: 'Tecnología' },
+    { id: 'fantasia', icon: '🧙‍♂️', name: 'Fantasía' }
 ];
 
-let myId = null; 
-let isHost = false; 
-let isMyPlayerDead = false; 
-let localTimer = null; 
-let selectedVoteId = null;
-let selectedCategories = new Set(['lugares', 'comidas', 'objetos', 'animales', 'profesiones']);
+let selectedCategories = new Set(['lugares', 'comidas', 'objetos']);
+
+let myId = null;
+let isHost = false;
+let currentRoom = null;
+let currentPhase = 'lobby';
+let hasSeenCard = false;
+let voteLocked = false;
 
 // ==========================================
-// 2. INICIALIZACIÓN (IMPORTANTISIMO)
+// 2. UTILIDADES DE UI
 // ==========================================
-document.addEventListener("DOMContentLoaded", () => {
-    
-    // Generar Grid Categorías (Corrección: se genera al cargar)
-    const catGrid = document.getElementById('categoriesGrid');
-    if(catGrid) {
-        catGrid.innerHTML = ''; // Limpiar
-        CATEGORIES_DATA.forEach(cat => {
-            const el = document.createElement('div');
-            el.className = 'cat-card selected'; 
-            el.innerHTML = `<div class="cat-icon">${cat.icon}</div><div class="cat-name">${cat.name}</div>`;
-            el.onclick = () => {
-                playSound('click');
-                if(selectedCategories.has(cat.id)) { 
-                    selectedCategories.delete(cat.id); 
-                    el.classList.remove('selected'); 
-                } else { 
-                    selectedCategories.add(cat.id); 
-                    el.classList.add('selected'); 
-                }
-            };
-            catGrid.appendChild(el);
-        });
+function qs(id) { return document.getElementById(id); }
+
+function bindClick(id, handler) {
+    const el = qs(id);
+    if (el) el.addEventListener('click', handler);
+}
+
+function showScreen(screenId) {
+    const screens = ['screenHome', 'screenCreate', 'screenJoin'];
+    screens.forEach(id => { qs(id).style.display = (id === screenId ? 'flex' : 'none'); });
+}
+
+function adjustValue(inputId, delta) {
+    const hidden = qs(inputId);
+    if (!hidden) return;
+    let val = parseInt(hidden.value) || 0;
+
+    if (inputId === 'maxPlayers') {
+        val = Math.min(15, Math.max(3, val + delta));
+        hidden.value = val;
+        qs('displayPlayers').innerText = val;
+    } else if (inputId === 'impostors') {
+        val = Math.min(4, Math.max(1, val + delta));
+        hidden.value = val;
+        qs('displayImpostors').innerText = val;
+    } else if (inputId === 'timeVote') {
+        val = Math.min(300, Math.max(60, val + delta));
+        hidden.value = val;
+        qs('displayVoteTime').innerText = val;
     }
+}
 
-    // Navegación
-    bindClick('btnGoCreate', () => showScreen('screenCreate'));
-    bindClick('btnGoJoin', () => showScreen('screenJoin'));
-    bindClick('backFromCreate', () => showScreen('screenHome'));
-    bindClick('backFromJoin', () => showScreen('screenHome'));
-    bindClick('backFromCategories', () => showScreen('screenCreate'));
-    bindClick('btnGoCategories', () => showScreen('screenCategories'));
-    bindClick('btnConfirmCategories', () => { 
-        showScreen('screenCreate'); 
-        document.getElementById('catCountDisplay').innerText = selectedCategories.size; 
+// ==========================================
+// 3. CATEGORÍAS
+// ==========================================
+function renderCategories() {
+    const grid = qs('categoriesGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    CATEGORIES_DATA.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = 'category-pill' + (selectedCategories.has(cat.id) ? ' active' : '');
+        btn.innerHTML = `<span class="icon">${cat.icon}</span><span>${cat.name}</span>`;
+        btn.onclick = () => {
+            if (selectedCategories.has(cat.id)) {
+                selectedCategories.delete(cat.id);
+            } else {
+                selectedCategories.add(cat.id);
+            }
+            if (selectedCategories.size === 0) {
+                // Siempre al menos una
+                selectedCategories.add(cat.id);
+            }
+            renderCategories();
+        };
+        grid.appendChild(btn);
     });
+}
+
+// ==========================================
+// 4. EVENTOS INICIALES
+// ==========================================
+window.addEventListener('load', () => {
+    renderCategories();
+
+    bindClick('btnGoCreate', () => { showScreen('screenCreate'); playSound('click'); });
+    bindClick('btnGoJoin', () => { showScreen('screenJoin'); playSound('click'); });
+    bindClick('backFromCreate', () => { showScreen('screenHome'); playSound('click'); });
+    bindClick('backFromJoin', () => { showScreen('screenHome'); playSound('click'); });
+    
     bindClick('btnDiscordGlobal', () => window.open('https://discord.com', '_blank')); // Pon tu link real
     bindClick('btnExit', () => location.reload());
-    bindClick('btnCopyCode', () => navigator.clipboard.writeText(document.getElementById('roomCodeDisplay').innerText));
+    bindClick('btnCopyCode', () => navigator.clipboard.writeText(qs('roomCodeDisplay').innerText));
 
     // Acciones de Juego
     bindClick('btnCreateRoom', createRoom);
     bindClick('btnJoinRoom', joinRoom);
-    bindClick('btnStartRound', () => { playSound('click'); socket.emit('startRound'); });
-    bindClick('btnFinishTurn', () => { playSound('click'); socket.emit('finishTurn'); });
-    bindClick('btnSkipVote', () => { 
-        if(!isMyPlayerDead) { 
-            socket.emit('submitVote', {targetId:null}); 
-            document.getElementById('btnSkipVote').innerText="ESPERANDO..."; 
-            document.getElementById('btnSkipVote').disabled=true; 
-        } 
+    bindClick('btnStartRound', () => {
+        if (!isHost) return;
+        playSound('click');
+        socket.emit('startRound');
+    });
+    bindClick('btnBackToLobby', () => {
+        qs('ejectionOverlay').style.display = 'none';
+        updateGameView(currentRoom);
     });
 
-    // Tarjeta Secreta
-    const cardContainer = document.getElementById('secretCardContainer');
-    if(cardContainer) {
-        cardContainer.onclick = function() { playSound('click'); this.classList.toggle('revealed'); };
+    const secretCard = qs('secretCard');
+    if (secretCard) {
+        secretCard.addEventListener('click', () => {
+            if (!currentRoom || currentPhase !== 'word') return;
+            secretCard.classList.add('revealed');
+            hasSeenCard = true;
+        });
     }
 });
 
-function bindClick(id, fn) {
-    const el = document.getElementById(id);
-    if(el) el.onclick = fn;
-}
-
-function showScreen(id) {
-    playSound('click');
-    document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
-    document.getElementById(id).style.display = 'flex';
-}
-
-// Contadores (+/-)
-window.adjustValue = function(inputId, delta) {
-    playSound('click');
-    const input = document.getElementById(inputId);
-    let val = parseInt(input.value);
-    if(inputId === 'maxPlayers') { val = Math.min(15, Math.max(3, val + delta)); document.getElementById('displayPlayers').innerText = val; }
-    if(inputId === 'impostors') { val = Math.min(4, Math.max(1, val + delta)); document.getElementById('displayImpostors').innerText = val; }
-    if(inputId === 'timeVote') { val = Math.min(300, Math.max(30, val + delta)); document.getElementById('displayVote').innerText = val; }
-    input.value = val;
-};
-
 // ==========================================
-// 3. SOCKET LOGIC
+// 5. CONEXIÓN / ROOM
 // ==========================================
 function createRoom() {
-    if(selectedCategories.size === 0) return alert("Elige al menos una categoría.");
+    if (selectedCategories.size === 0) return alert("Elige al menos una categoría.");
     playSound('click');
     socket.emit('createRoom', {
-        name: document.getElementById('hostName').value || 'Agente X',
-        maxPlayers: document.getElementById('maxPlayers').value,
-        impostors: document.getElementById('impostors').value,
+        name: qs('hostName').value || 'Agente X',
+        maxPlayers: qs('maxPlayers').value,
+        impostors: qs('impostors').value,
         categories: Array.from(selectedCategories),
         turnTime: 15, // Fijo en 15 para simplificar UI
-        voteTime: document.getElementById('timeVote').value
+        voteTime: qs('timeVote').value
     }, handleConnection);
 }
 
 function joinRoom() {
     playSound('click');
     socket.emit('joinRoom', {
-        name: document.getElementById('joinName').value || 'Agente Y',
-        roomCode: document.getElementById('joinCode').value
+        name: qs('joinName').value || 'Agente Y',
+        roomCode: qs('joinCode').value
     }, handleConnection);
 }
 
 function handleConnection(res) {
-    if(res.ok) {
+    if (res.ok) {
         playSound('join');
-        document.getElementById('lobbyOverlay').style.display = 'none';
-        document.getElementById('mainContent').style.display = 'block';
+        qs('lobbyOverlay').style.display = 'none';
+        qs('mainContent').style.display = 'block';
         
         myId = res.me.id; 
         isHost = res.isHost;
-        document.getElementById('roomCodeDisplay').innerText = res.roomCode;
+        qs('roomCodeDisplay').innerText = res.roomCode;
         
-        if(res.discordLink) {
-            document.getElementById('btnDiscordManual').style.display = 'flex';
-            document.getElementById('btnDiscordManual').onclick = () => window.open(res.discordLink, '_blank');
+        if (res.discordLink) {
+            const btn = qs('btnDiscordManual');
+            if (btn) {
+                btn.style.display = 'flex';
+                btn.onclick = () => window.open(res.discordLink, '_blank');
+            }
         }
         
         updateGameView({ phase: 'lobby', players: [] });
@@ -159,181 +182,185 @@ function handleConnection(res) {
 
 // --- RECEPCIÓN DE ESTADO ---
 socket.on('roomState', (room) => {
-    const me = room.players.find(p => p.id === myId);
-    isMyPlayerDead = me ? me.isDead : false;
-    
-    // Actualizar sidebar count
-    document.getElementById('playersCountHtml').innerText = room.players.length;
-
-    const btnStart = document.getElementById('btnStartRound');
-    const btnSkip = document.getElementById('btnSkipVote');
-    
-    if(room.phase === 'lobby') { 
-        btnStart.style.display = 'block'; 
-        btnStart.disabled = !(isHost && room.players.length >= 2); 
-        btnSkip.style.display = 'none'; 
-    } else if(room.phase === 'votacion') { 
-        btnStart.style.display = 'none'; 
-        btnSkip.style.display = 'block'; 
-        btnSkip.innerText = "SALTAR VOTO";
-        if(room.votes[myId]) { btnSkip.innerText = "VOTO ENVIADO"; btnSkip.disabled=true; }
-        if(isMyPlayerDead) btnSkip.disabled = true;
-    } else { 
-        btnStart.style.display = 'none'; 
-        btnSkip.style.display = 'none'; 
-    }
-
-    renderPlayers(room); 
+    currentRoom = room;
     updateGameView(room);
 });
 
-socket.on('yourRole', (data) => {
-    playSound('start');
-    const cardWrap = document.getElementById('secretCardContainer'); 
-    cardWrap.classList.remove('revealed'); 
-    cardWrap.style.display = 'block';
-    
-    document.getElementById('instructionsPanel').style.display = 'none';
-    document.getElementById('ejectionOverlay').style.display = 'none';
+// --- RESULTADO FINAL ---
+socket.on('roundResult', (data) => {
+    // data: { result, winners, impostors }
+    const overlay = qs('ejectionOverlay');
+    const titleEl = qs('resultTitle');
+    const subtitleEl = qs('resultSubtitle');
+    const winnersEl = qs('finalWinners');
+    const impsEl = qs('finalImpostors');
+    const detailsBox = qs('finalDetailsBox');
+    const iconEl = qs('resultIcon');
 
-    const back = document.getElementById('cardBackContent'); 
-    const icon = document.getElementById('roleIconDisplay'); 
-    const title = document.getElementById('roleTitleDisplay'); 
-    const word = document.getElementById('wordDisplay'); 
-    const teamBox = document.getElementById('teammateBox');
-    
-    back.className = 'card-back'; 
-    
-    if(data.role === 'impostor') {
-        back.classList.add('impostor-theme'); 
-        icon.innerText = '👺'; 
-        title.innerText = 'IMPOSTOR'; 
-        word.innerText = 'DESCONOCIDO'; 
-        
-        if(data.teammates && data.teammates.length > 0) { 
-            teamBox.style.display = 'block'; 
-            document.getElementById('teammateNames').innerText = data.teammates.join(', '); 
-        } else { teamBox.style.display = 'none'; }
-    } else { 
-        icon.innerText = '🕵️'; 
-        title.innerText = 'AGENTE'; 
-        word.innerText = data.word; 
-        teamBox.style.display = 'none'; 
-    }
-    localStorage.setItem('myRole', data.role);
-});
+    overlay.style.display = 'flex';
+    detailsBox.style.display = 'block';
 
-socket.on('votingResults', (data) => {
-    const overlay = document.getElementById('ejectionOverlay'); 
-    const title = document.getElementById('resultTitle'); 
-    const sub = document.getElementById('resultSubtitle'); 
-    const detailsBox = document.getElementById('finalDetailsBox'); 
-    const rWord = document.getElementById('resultWord'); 
-    const rImp = document.getElementById('resultImpostorName'); 
-    const btnBack = document.getElementById('btnBackToLobby');
-    
-    const myRole = localStorage.getItem('myRole');
+    winnersEl.innerText = (data.winners || []).join(', ') || '---';
+    impsEl.innerText = (data.impostors || []).join(', ') || '---';
 
-    if(data.gameResult) {
-        playSound('win'); 
-        overlay.style.display = 'flex'; 
-        detailsBox.style.display = 'block';
-        rWord.innerText = data.secretWord || "---"; 
-        rImp.innerText = data.realImpostorName || "---";
-
-        const citizensWon = (data.gameResult === 'citizensWin');
-        let iWon = false;
-        if(citizensWon && myRole === 'ciudadano') iWon = true;
-        if(!citizensWon && myRole === 'impostor') iWon = true;
-
-        title.innerText = iWon ? "¡VICTORIA!" : "DERROTA";
-        title.style.color = iWon ? "#00E055" : "#FF4D4D";
-        sub.innerText = citizensWon ? "El sistema está seguro." : "Infiltración exitosa.";
-        btnBack.innerText = "NUEVA MISIÓN";
-        btnBack.onclick = () => { 
-            overlay.style.display = 'none'; 
-            document.getElementById('secretCardContainer').style.display = 'none'; 
-            document.getElementById('instructionsPanel').style.display = 'block'; 
-        };
+    if (data.result === 'crew') {
+        iconEl.textContent = '✅';
+        titleEl.textContent = 'GANÓ LA TRIPULACIÓN';
+        subtitleEl.textContent = 'Descubrieron al impostor.';
+        playSound('win');
+    } else if (data.result === 'impostor') {
+        iconEl.textContent = '🚨';
+        titleEl.textContent = 'GANÓ EL IMPOSTOR';
+        subtitleEl.textContent = 'Logró engañar a la tripulación.';
+        playSound('eject');
     } else {
-        playSound('eject'); 
-        overlay.style.display = 'flex'; 
-        detailsBox.style.display = 'none';
-        title.innerText = "EXPULSIÓN"; 
-        title.style.color = '#fff'; 
-        sub.innerText = data.kickedPlayer ? `${data.kickedPlayer.name} ha sido eliminado.` : "Nadie fue eliminado.";
-        btnBack.innerText = "CONTINUAR"; 
-        btnBack.onclick = () => { overlay.style.display = 'none'; };
+        iconEl.textContent = '⚖️';
+        titleEl.textContent = 'RONDA TERMINADA';
+        subtitleEl.textContent = 'Sin resultado claro.';
     }
 });
 
-function renderPlayers(room) { 
-    const list = document.getElementById('playersList'); 
-    list.innerHTML = ''; 
-    room.players.forEach(p => { 
-        const row = document.createElement('div'); 
-        row.className = 'player-row'; 
-        if(p.isDead) row.style.opacity = '0.5'; 
-        row.innerHTML = `<div class="p-dot" style="background:${p.color}"></div><span>${p.name} ${p.id===myId?'(Tú)':''} ${p.isDead?'(💀)':''}</span>`; 
-        list.appendChild(row); 
-    }); 
-}
-
+// ==========================================
+// 6. UPDATE GENERAL DE UI
+// ==========================================
 function updateGameView(room) {
-    const vCard = document.getElementById('viewCard'); 
-    const vTurn = document.getElementById('viewTurn'); 
-    const vVote = document.getElementById('viewVoting');
-    
-    [vCard, vTurn, vVote].forEach(el => el.style.display = 'none'); 
-    stopTimer();
+    if (!room) return;
+    currentRoom = room;
+    currentPhase = room.phase || 'lobby';
 
-    if(room.phase === 'lobby' || room.phase === 'lectura') { 
-        vCard.style.display = 'flex'; 
-        if(room.phase === 'lectura') {
-            document.getElementById('instructionsPanel').innerHTML = `<h3>¡MISIÓN INICIADA!</h3><p style="color:#00E055">Toca el candado para ver tu rol</p>`;
-        } else {
-            // Restore waiting message
-             document.getElementById('instructionsPanel').innerHTML = `<h3>ESPERANDO AGENTES...</h3><div class="rules-text"><p><strong>1. ROLES:</strong> Uno de ustedes es el Impostor.</p><p><strong>2. PALABRA:</strong> Todos recibirán la misma palabra clave, menos el impostor.</p><p><strong>3. OBJETIVO:</strong> Descubran quién miente sin revelar la palabra secreta.</p></div><div class="loading-bar"><div class="bar-fill"></div></div>`;
+    const phaseLabel = qs('phaseLabel');
+    const statusText = qs('statusText');
+    const playersList = qs('playersList');
+    const voteGrid = qs('votePlayersGrid');
+    const turnTitle = qs('turnTitle');
+    const turnInstruction = qs('turnInstruction');
+    const currentTurnPlayer = qs('currentTurnPlayer');
+    const timerLabel = qs('timerLabel');
+
+    // Fase
+    if (phaseLabel) {
+        if (currentPhase === 'lobby') phaseLabel.innerText = 'LOBBY';
+        else if (currentPhase === 'word') phaseLabel.innerText = 'PALABRA';
+        else if (currentPhase === 'turn') phaseLabel.innerText = 'TURNOS';
+        else if (currentPhase === 'vote') phaseLabel.innerText = 'VOTACIÓN';
+        else phaseLabel.innerText = currentPhase.toUpperCase();
+    }
+
+    // Timer
+    if (timerLabel) {
+        timerLabel.innerText = room.timerText || '--';
+    }
+
+    // Lista de jugadores
+    if (playersList) {
+        playersList.innerHTML = '';
+        (room.players || []).forEach(p => {
+            const row = document.createElement('div');
+            row.className = 'player-row';
+            if (p.isDead) row.style.opacity = 0.5;
+
+            const avatar = document.createElement('div');
+            avatar.className = 'p-avatar';
+            const ini = (p.name || '?').charAt(0).toUpperCase();
+            avatar.textContent = ini;
+
+            const nameEl = document.createElement('div');
+            nameEl.className = 'p-name';
+            nameEl.textContent = p.name;
+
+            const tag = document.createElement('div');
+            tag.className = 'p-tag';
+            if (room.hostId === p.id) tag.textContent = 'HOST';
+            else if (p.id === myId) tag.textContent = 'TÚ';
+            else tag.textContent = '';
+
+            row.appendChild(avatar);
+            row.appendChild(nameEl);
+            row.appendChild(tag);
+            playersList.appendChild(row);
+        });
+
+        qs('currentPlayersCount').innerText = (room.players || []).length;
+        qs('currentImpostorsCount').innerText = room.impostors || 1;
+    }
+
+    // Estado (texto)
+    if (statusText) {
+        if (currentPhase === 'lobby') statusText.innerText = 'Esperando que el host inicie la ronda.';
+        else if (currentPhase === 'word') statusText.innerText = 'Todos viendo su palabra/rol.';
+        else if (currentPhase === 'turn') statusText.innerText = 'Turnos de pistas en curso.';
+        else if (currentPhase === 'vote') statusText.innerText = 'Momento de votar al posible impostor.';
+    }
+
+    // Vistas principales
+    const viewLobby = qs('viewLobby');
+    const viewWord = qs('viewWord');
+    const viewTurn = qs('viewTurn');
+    const viewVote = qs('viewVote');
+
+    if (viewLobby) viewLobby.style.display = (currentPhase === 'lobby' ? 'block' : 'none');
+    if (viewWord) viewWord.style.display = (currentPhase === 'word' ? 'block' : 'none');
+    if (viewTurn) viewTurn.style.display = (currentPhase === 'turn' ? 'block' : 'none');
+    if (viewVote) viewVote.style.display = (currentPhase === 'vote' ? 'block' : 'none');
+
+    // Reset de tarjeta de palabra cuando se entra a fase word
+    if (currentPhase === 'word') {
+        const secretCard = qs('secretCard');
+        if (secretCard) {
+            secretCard.classList.remove('revealed');
         }
-    } 
-    else if(room.phase === 'palabras') {
-        vTurn.style.display = 'flex'; 
-        const ap = room.players[room.turnIndex];
-        if(ap) { 
-            document.getElementById('turnPlayerName').innerText = ap.name; 
-            document.getElementById('turnAvatarInitial').innerText = ap.name.charAt(0).toUpperCase(); 
-            document.querySelector('.turn-avatar').style.borderColor = ap.color; 
-            const btn = document.getElementById('btnFinishTurn'); 
-            btn.style.display = (ap.id === myId) ? 'block' : 'none'; 
-            startTimer(room.timeLeft, document.getElementById('turnTimerDisplay')); 
+        hasSeenCard = false;
+        if (qs('roleTitle')) qs('roleTitle').innerText = room.myRole || 'ROL';
+        if (qs('secretWordDisplay')) qs('secretWordDisplay').innerText = room.myWord || '---';
+        if (qs('wordHint')) qs('wordHint').innerText = room.myHint || 'No reveles la palabra exacta, solo da pistas.';
+    }
+
+    // Fase turnos
+    if (currentPhase === 'turn') {
+        if (turnTitle) turnTitle.innerText = 'Turno de pistas';
+        if (turnInstruction) {
+            if (room.currentTurnId === myId) {
+                turnInstruction.innerText = 'Es tu turno: di una pista sin revelar la palabra.';
+            } else {
+                turnInstruction.innerText = 'Escucha las pistas de los demás jugadores.';
+            }
         }
-    } 
-    else if(room.phase === 'votacion') {
-        vVote.style.display = 'flex'; 
-        startTimer(room.timeLeft, document.getElementById('votingTimer')); 
-        const grid = document.getElementById('votingGrid'); 
-        grid.innerHTML = '';
-        room.players.forEach(p => { 
-            if(p.isDead || p.id === myId) return; 
-            const card = document.createElement('div'); 
-            card.className = 'vote-card'; 
-            if(selectedVoteId === p.id) card.classList.add('selected'); 
-            card.innerHTML = `<div class="vote-avatar" style="color:${p.color}">👤</div><div style="font-weight:bold; font-size:0.9rem">${p.name}</div>`; 
-            card.onclick = () => { 
-                if(isMyPlayerDead) return; 
-                playSound('click'); 
-                document.querySelectorAll('.vote-card').forEach(c => c.classList.remove('selected')); 
-                card.classList.add('selected'); 
-                selectedVoteId = p.id; 
-                socket.emit('submitVote', {targetId: p.id}); 
-            }; 
-            grid.appendChild(card); 
+        if (currentTurnPlayer) {
+            const turnPlayer = (room.players || []).find(p => p.id === room.currentTurnId);
+            currentTurnPlayer.innerText = turnPlayer ? turnPlayer.name : 'Esperando...';
+        }
+    }
+
+    // Fase voto
+    if (currentPhase === 'vote' && voteGrid) {
+        voteGrid.innerHTML = '';
+        voteLocked = !!room.votes && room.votes[myId];
+        (room.players || []).filter(p => !p.isDead).forEach(p => {
+            const card = document.createElement('div');
+            card.className = 'vote-card';
+            if (voteLocked && room.votes[myId] === p.id) {
+                card.style.borderColor = 'var(--accent-cyan)';
+                card.style.boxShadow = '0 0 14px rgba(0,240,255,0.7)';
+            }
+
+            card.innerHTML = `
+                <div class="vote-avatar">🛰️</div>
+                <div>${p.name}</div>
+            `;
+            card.onclick = () => {
+                if (voteLocked) return;
+                playSound('click');
+                socket.emit('submitVote', { targetId: p.id });
+                voteLocked = true;
+            };
+            voteGrid.appendChild(card);
         });
     }
 }
 
-function startTimer(s, el) { 
-    if(el) el.innerText = s; 
-    localTimer = setInterval(() => { s--; if(s<0) s=0; if(el) el.innerText=s; if(s===0) stopTimer(); }, 1000); 
-}
-function stopTimer() { if(localTimer) clearInterval(localTimer); }
+// ==========================================
+// 7. ERRORES
+// ==========================================
+socket.on('connect_error', () => {
+    alert('Error de conexión con el servidor.');
+});
