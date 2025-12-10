@@ -316,6 +316,11 @@ function updateGameView(room) {
       row.className = 'player-row';
       if (p.isDead) row.style.opacity = 0.5;
 
+      // resaltar jugador de turno activo
+      if (room.currentTurnId && room.currentTurnId === p.id && currentPhase === 'turn') {
+        row.classList.add('player-row-active');
+      }
+
       const avatar = document.createElement('div');
       avatar.className = 'p-avatar';
       avatar.style.backgroundColor = p.color || '#020617';

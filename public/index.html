@@ -2,18 +2,14 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Incognito</title>
   <link rel="icon" type="image/png" href="images/favicon.png">
   <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
 </head>
 <body>
-
-  <!-- Logo fijo global -->
-  <div class="corner-logo">
-    <img src="images/logo.png" alt="Incognito">
-  </div>
 
   <!-- Overlay RESULTADO -->
   <div id="ejectionOverlay" class="full-overlay" style="display: none;">
@@ -197,6 +193,12 @@
 
   <!-- MAIN GAME -->
   <main id="mainContent" style="display:none;">
+
+    <!-- Logo fijo global SOLO en juego -->
+    <div class="corner-logo">
+      <img src="images/logo.png" alt="Incognito">
+    </div>
+
     <div class="main-layout">
       <div class="top-bar">
         <div class="room-code-pill">
