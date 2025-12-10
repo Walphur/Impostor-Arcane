@@ -155,9 +155,12 @@ socket.on('votingResults', (data) => {
 
     if(data.gameResult) {
         playSound('win'); overlay.style.display = 'flex'; detailsBox.style.display = 'block';
-        rWord.innerText = "CONFIDENCIAL"; 
         
-        // Logica Victoria/Derrota corregida
+        // --- CORRECCIÓN: Usar datos reales enviados por el servidor ---
+        rWord.innerText = data.secretWord || "---"; 
+        rImp.innerText = data.realImpostorName || "---";
+        // ---------------------------------------------------------------
+
         const citizensWon = (data.gameResult === 'citizensWin');
         let iWon = false;
         if(citizensWon && myRole === 'ciudadano') iWon = true;
@@ -167,7 +170,6 @@ socket.on('votingResults', (data) => {
         else { title.innerText = "DERROTA"; title.style.color = '#FF453A'; icon.innerText = '💀'; }
         
         sub.innerText = citizensWon ? "Victoria Ciudadana." : "Victoria Impostora.";
-        rImp.innerText = data.kickedPlayer ? data.kickedPlayer.name : "Infiltrado";
 
         btnBack.innerText = "NUEVA MISIÓN";
         btnBack.onclick = () => { overlay.style.display = 'none'; document.getElementById('secretCardContainer').style.display = 'none'; document.getElementById('instructionsPanel').style.display = 'block'; };

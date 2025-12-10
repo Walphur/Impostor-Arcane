@@ -10,8 +10,6 @@
 </head>
 <body>
 
-  <div class="bg-grid"></div>
-
   <div id="ejectionOverlay" class="overlay-full" style="display: none;">
     <div class="result-container">
       <div id="resultIcon" class="result-icon">⚖️</div>
@@ -52,13 +50,13 @@
         <h2>CONFIGURAR PARTIDA</h2>
       </div>
       <div class="scroll-content config-width">
-        <div class="config-card">
-            <label>TU NOMBRE</label>
+        <div class="config-card glass-card">
+            <label><span class="label-icon">👤</span> TU NOMBRE</label>
             <input type="text" id="hostName" class="input-clean" maxlength="12" placeholder="Ej: Agente 007">
         </div>
         <div class="config-grid">
-            <div class="setting-card">
-                <label>JUGADORES</label>
+            <div class="setting-card glass-card">
+                <label><span class="label-icon">👥</span> JUGADORES</label>
                 <div class="counter-control">
                     <button class="btn-count" onclick="adjustValue('maxPlayers', -1)">-</button>
                     <span id="displayPlayers">10</span>
@@ -66,8 +64,8 @@
                 </div>
                 <input type="hidden" id="maxPlayers" value="10">
             </div>
-            <div class="setting-card">
-                <label>IMPOSTORES</label>
+            <div class="setting-card glass-card">
+                <label><span class="label-icon">🕵️</span> IMPOSTORES</label>
                 <div class="counter-control">
                     <button class="btn-count" onclick="adjustValue('impostors', -1)">-</button>
                     <span id="displayImpostors">2</span>
@@ -75,8 +73,8 @@
                 </div>
                 <input type="hidden" id="impostors" value="2">
             </div>
-            <div class="setting-card">
-                <label>TURNO (s)</label>
+            <div class="setting-card glass-card">
+                <label><span class="label-icon">⏱️</span> TURNO (s)</label>
                  <div class="counter-control">
                     <button class="btn-count" onclick="adjustValue('timeTurn', -5)">-</button>
                     <span id="displayTurn">15</span>
@@ -84,8 +82,8 @@
                 </div>
                 <input type="hidden" id="timeTurn" value="15">
             </div>
-             <div class="setting-card">
-                <label>VOTACIÓN (s)</label>
+             <div class="setting-card glass-card">
+                <label><span class="label-icon">🗳️</span> VOTACIÓN (s)</label>
                  <div class="counter-control">
                     <button class="btn-count" onclick="adjustValue('timeVote', -10)">-</button>
                     <span id="displayVote">120</span>
@@ -94,9 +92,9 @@
                 <input type="hidden" id="timeVote" value="120">
             </div>
         </div>
-        <div class="config-card toggle-row" id="toggleLocalMode">
+        <div class="config-card toggle-row glass-card" id="toggleLocalMode">
             <div class="toggle-info">
-                <label style="margin:0; font-size: 0.9rem;">MODO GRUPAL</label>
+                <label style="margin:0; font-size: 0.9rem;"><span class="label-icon">🏠</span> MODO GRUPAL</label>
                 <span class="sub-label">Sin Discord / Presencial</span>
             </div>
             <div class="toggle-switch"><div class="knob"></div></div>
@@ -112,7 +110,9 @@
             <button id="backFromCategories" class="btn-icon-back"><img src="images/arrow.png" alt="Volver"></button>
             <h2>PAQUETES DE DATOS</h2>
         </div>
-        <div class="scroll-content config-width"><div class="categories-grid" id="categoriesGrid"></div></div>
+        <div class="scroll-content config-width">
+            <div class="categories-grid" id="categoriesGrid"></div>
+        </div>
         <div class="bottom-dock config-width"><button id="btnConfirmCategories" class="btn-main btn-primary">CONFIRMAR</button></div>
     </div>
 
@@ -122,13 +122,13 @@
         <h2>ACCESO REMOTO</h2>
       </div>
       <div class="center-content config-width">
-          <div class="input-card">
-            <label>JUGADOR</label>
+          <div class="input-card glass-card">
+            <label><span class="label-icon">👤</span> JUGADOR</label>
             <input type="text" id="joinName" class="input-clean" maxlength="12" placeholder="Nombre...">
           </div>
-          <div class="input-card">
-            <label>CÓDIGO DE SALA</label>
-            <input type="text" id="joinCode" class="input-code" placeholder="A B C D">
+          <div class="input-card glass-card">
+            <label><span class="label-icon">🔑</span> CÓDIGO DE SALA</label>
+            <input type="text" id="joinCode" class="input-clean code-style" placeholder="Ej: ABCD">
           </div>
       </div>
       <div class="bottom-dock config-width"><button id="btnJoinRoom" class="btn-main btn-primary">CONECTAR</button></div>

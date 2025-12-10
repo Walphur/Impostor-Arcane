@@ -156,7 +156,21 @@ function finishVoting(room, reason) {
         else if(livImp >= livCit) gameResult = 'impostorsWin';
     }
 
-    io.to(room.code).emit('votingResults', { reason, kickedPlayer: kicked?{name:kicked.name}:null, isImpostor, gameResult });
+    // --- CORRECCIÓN: Enviar datos reales ---
+    // Buscar quiénes son los verdaderos impostores para mostrarlos al final
+    const realImpostorsList = room.players.filter(p => room.roles[p.id] === 'impostor').map(p => p.name);
+    const realImpostorNameStr = realImpostorsList.length > 0 ? realImpostorsList.join(', ') : 'N/A';
+
+    io.to(room.code).emit('votingResults', { 
+        reason, 
+        kickedPlayer: kicked?{name:kicked.name}:null, 
+        isImpostor, 
+        gameResult,
+        // NUEVOS DATOS: Palabra real y nombre real del impostor
+        secretWord: room.secretWord,
+        realImpostorName: realImpostorNameStr
+    });
+    // ---------------------------------------
     
     if(gameResult) {
         room.phase = 'lobby'; 
@@ -184,7 +198,8 @@ io.on('connection', (socket) => {
             config: { turnTime: (parseInt(data.turnTime)||15)*1000, voteTime: (parseInt(data.voteTime)||120)*1000 },
             players: [{ id: socket.id, name: data.name||'Host', color: PLAYER_COLORS[0], isDead: false }],
             phase: 'lobby', turnIndex: -1, roles: {}, spoken: {}, votes: {},
-            discordVoiceChannel: discordData.voiceId, discordLink: discordData.inviteLink
+            discordVoiceChannel: discordData.voiceId, discordLink: discordData.inviteLink,
+            secretWord: null // Inicializar
         };
         rooms[code] = room; socketRoom[socket.id] = code; socket.join(code);
         cb({ok: true, roomCode: code, me: {id:socket.id}, isHost: true, discordLink: discordData.inviteLink});
@@ -211,9 +226,19 @@ io.on('connection', (socket) => {
         if(room && room.hostId === socket.id) {
             room.players.forEach(p => p.isDead = false);
             room.votes = {}; room.spoken = {}; room.turnIndex = -1;
-            const shuffled = shuffleArray([...room.players]);
-            const impIds = shuffled.slice(0, room.impostors).map(p=>p.id);
+
+            // --- CORRECCIÓN: El Host (índice 0) no puede ser impostor ---
+            const hostPlayer = room.players[0];
+            const otherPlayers = room.players.slice(1);
+            
+            // Mezclamos solo a los demás jugadores
+            const shuffledOthers = shuffleArray([...otherPlayers]);
+            // Elegimos los IDs de los impostores de esa lista mezclada
+            const impIds = shuffledOthers.slice(0, room.impostors).map(p => p.id);
+            
             const word = getRandomWord(room.categories);
+            room.secretWord = word; // Guardamos la palabra en la sala
+
             const impNames = room.players.filter(p => impIds.includes(p.id)).map(p => p.name);
 
             room.roles = {};
