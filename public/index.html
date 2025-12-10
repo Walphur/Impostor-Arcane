@@ -10,112 +10,159 @@
 </head>
 <body>
 
-  <div class="corner-logo"><img src="images/logo.png" alt="Incognito"></div>
+  <!-- Logo fijo global -->
+  <div class="corner-logo">
+    <img src="images/logo.png" alt="Incognito">
+  </div>
 
-  <div id="ejectionOverlay" class="lobby-overlay" style="display: none;">
+  <!-- Overlay RESULTADO -->
+  <div id="ejectionOverlay" class="full-overlay" style="display: none;">
     <div class="result-card">
-      <div id="resultIcon" style="font-size: 4rem; margin-bottom: 10px;">⚖️</div>
-      <h1 id="resultTitle" class="result-title">RESULTADO</h1>
-      <p id="resultSubtitle" style="color:#888; margin-bottom:20px;">...</p>
-      <div id="finalDetailsBox" style="background:rgba(255,255,255,0.03); padding:15px; border-radius:10px; margin-bottom:20px; display:none;">
-        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.95rem;">
-          <span style="color:#aaa;">Ganadores:</span>
-          <span id="finalWinners" style="color:var(--primary); font-weight:bold;">---</span>
+      <div id="resultIcon" style="font-size: 3rem; margin-bottom: 10px;">✅</div>
+      <h1 id="resultTitle" class="result-title">GANÓ LA TRIPULACIÓN</h1>
+      <p id="resultSubtitle" class="result-subtitle">Descubrieron al impostor.</p>
+
+      <div id="finalDetailsBox" class="result-details">
+        <div class="result-row">
+          <span>Palabra secreta:</span>
+          <span id="finalSecretWord" class="result-value">---</span>
         </div>
-        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.95rem;">
-          <span style="color:#aaa;">Impostores:</span>
-          <span id="finalImpostors" style="color:var(--accent-red); font-weight:bold;">---</span>
+        <div class="result-row">
+          <span>Impostores:</span>
+          <span id="finalImpostors" class="result-value highlight">---</span>
         </div>
       </div>
+
       <button id="btnBackToLobby" class="btn-main btn-primary">CONTINUAR</button>
     </div>
   </div>
 
+  <!-- Overlay CÓMO JUGAR -->
+  <div id="howToPlayOverlay" class="full-overlay" style="display:none;">
+    <div class="howto-card">
+      <h2>Cómo jugar Incognito</h2>
+      <p>Incognito es un juego de deducción social. Cada jugador recibe una palabra secreta… excepto el impostor.</p>
+      <ol>
+        <li><strong>Todos</strong> reciben la misma palabra, menos el impostor.</li>
+        <li>Cada uno dice una <strong>pista</strong> sin revelar la palabra exacta.</li>
+        <li>El impostor debe improvisar sin saber la palabra.</li>
+        <li>Después de las pistas, todos <strong>votan</strong> quién creen que es el impostor.</li>
+        <li>Si lo descubren, gana la tripulación. Si no, gana el impostor.</li>
+      </ol>
+      <button id="btnCloseHowToPlay" class="btn-main btn-primary">ENTENDIDO</button>
+    </div>
+  </div>
+
+  <!-- OVERLAY HOME / CONFIG / JOIN / CATEGORÍAS -->
   <div id="lobbyOverlay" class="lobby-overlay">
-    
-    <div id="screenHome" class="screen fade-in center-layout">
-      <div class="brand-header"><img src="images/logo.png" alt="Incognito" class="logo-img"></div>
+
+    <!-- Botón de ayuda "?" arriba a la derecha -->
+    <button id="btnHowToPlay" class="help-icon">?</button>
+
+    <!-- Pantalla HOME -->
+    <div id="screenHome" class="screen center-layout">
+      <div class="brand-header">
+        <img src="images/logo.png" alt="Incognito" class="logo-img">
+      </div>
+
       <div class="home-menu-panel">
         <button id="btnGoCreate" class="btn-big btn-primary">CREAR SALA</button>
         <button id="btnGoJoin" class="btn-big btn-secondary">UNIRSE A SALA</button>
-        <button id="btnDiscordGlobal" class="btn-big" style="background:rgba(15,23,42,0.9); border:1px solid rgba(88,101,242,0.7); color:#E8FFFF; display:flex; align-items:center; justify-content:center; gap:10px;">
-             <img src="https://assets-global.website-files.com/6257adef93867e56f84d3092/639cf127bf92de1e2_icon_clyde_blurple_RGB.png" width="24" style="filter: brightness(100);"> COMUNIDAD
-        </button>
       </div>
     </div>
 
-    <div id="screenCreate" class="screen fade-in center-layout" style="display: none;">
+    <!-- Pantalla CREAR -->
+    <div id="screenCreate" class="screen center-layout" style="display:none;">
       <div class="screen-header">
-        <button id="backFromCreate" class="btn-icon-back"><img src="images/arrow.png" alt="Volver"></button>
-        <h2>CONFIGURAR</h2>
+        <button id="backFromCreate" class="btn-icon-back">
+          <span class="arrow-icon">&larr;</span>
+        </button>
+        <h2>Configurar sala</h2>
       </div>
-      <div class="config-width" style="flex:1; overflow-y:auto;">
+
+      <div class="config-column">
         <div class="app-card">
           <label>TU NOMBRE</label>
           <input type="text" id="hostName" class="input-modern" maxlength="12" placeholder="Agente...">
         </div>
 
-        <div class="config-grid">
-          <div class="app-card" style="text-align:center;">
-            <label>JUGADORES</label>
-            <div class="inline-center">
-              <button class="btn-circle" onclick="adjustValue('maxPlayers', -1)">-</button>
+        <div class="config-counters">
+          <div class="mini-card">
+            <div class="mini-label">JUGADORES</div>
+            <div class="mini-controls">
+              <button class="btn-circle" onclick="adjustValue('maxPlayers', -1)">−</button>
               <div class="value-display" id="displayPlayers">10</div>
               <button class="btn-circle" onclick="adjustValue('maxPlayers', 1)">+</button>
             </div>
-            <small class="hint">Máx. 15 jugadores</small>
+            <div class="mini-hint">Máx. 15 jugadores</div>
             <input type="hidden" id="maxPlayers" value="10">
           </div>
 
-          <div class="app-card" style="text-align:center;">
-            <label>IMPOSTORES</label>
-            <div class="inline-center">
-              <button class="btn-circle" onclick="adjustValue('impostors', -1)">-</button>
+          <div class="mini-card">
+            <div class="mini-label">IMPOSTORES</div>
+            <div class="mini-controls">
+              <button class="btn-circle" onclick="adjustValue('impostors', -1)">−</button>
               <div class="value-display" id="displayImpostors">2</div>
               <button class="btn-circle" onclick="adjustValue('impostors', 1)">+</button>
             </div>
-            <small class="hint">Entre 1 y 4, siempre menos que los jugadores</small>
+            <div class="mini-hint">Entre 1 y 4, siempre menos que los jugadores</div>
             <input type="hidden" id="impostors" value="2">
           </div>
 
-          <div class="app-card">
-            <label>TIEMPO DE VOTACIÓN (segundos)</label>
-            <div class="inline-center">
-              <button class="btn-circle" onclick="adjustValue('timeVote', -15)">-</button>
+          <div class="mini-card">
+            <div class="mini-label">TIEMPO VOTACIÓN</div>
+            <div class="mini-controls">
+              <button class="btn-circle" onclick="adjustValue('timeVote', -15)">−</button>
               <div class="value-display" id="displayVoteTime">120</div>
               <button class="btn-circle" onclick="adjustValue('timeVote', 15)">+</button>
             </div>
-            <small class="hint">Entre 60 y 300 segundos</small>
+            <div class="mini-hint">Entre 60 y 300 segundos</div>
             <input type="hidden" id="timeVote" value="120">
           </div>
         </div>
 
-        <div class="app-card">
-          <label>CATEGORÍAS</label>
-          <div id="categoriesGrid" class="categories-grid">
-            <!-- Se llena por JS -->
+        <div class="app-card row-between">
+          <div>
+            <label>CATEGORÍAS</label>
+            <div id="categoriesSummary" class="categories-summary">Lugares, Comidas, Objetos</div>
+          </div>
+          <button id="btnOpenCategories" class="btn-ghost">Elegir</button>
+        </div>
+
+        <div class="app-card row-between">
+          <div>
+            <label>MODO GRUPAL</label>
+            <div class="mini-hint">Sin canal de voz en Discord, ideal para jugar todos juntos en persona.</div>
+          </div>
+          <div class="toggle-wrapper">
+            <input type="checkbox" id="groupModeToggle">
+            <span class="toggle-slider"></span>
           </div>
         </div>
 
-        <div class="app-card" style="margin-top:10px;">
+        <div class="app-card">
           <button id="btnCreateRoom" class="btn-main btn-primary">CREAR SALA</button>
         </div>
       </div>
     </div>
 
-    <div id="screenJoin" class="screen fade-in center-layout" style="display: none;">
+    <!-- Pantalla UNIRSE -->
+    <div id="screenJoin" class="screen center-layout" style="display:none;">
       <div class="screen-header">
-        <button id="backFromJoin" class="btn-icon-back"><img src="images/arrow.png" alt="Volver"></button>
-        <h2>UNIRSE</h2>
+        <button id="backFromJoin" class="btn-icon-back">
+          <span class="arrow-icon">&larr;</span>
+        </button>
+        <h2>Unirse a sala</h2>
       </div>
-      <div class="config-width" style="flex:1; overflow-y:auto;">
+
+      <div class="config-column">
         <div class="app-card">
           <label>TU NOMBRE</label>
           <input type="text" id="joinName" class="input-modern" maxlength="12" placeholder="Agente...">
         </div>
         <div class="app-card">
           <label>CÓDIGO DE SALA</label>
-          <input type="text" id="joinCode" class="input-modern" maxlength="6" placeholder="ABC123" style="text-align:center; letter-spacing:3px;">
+          <input type="text" id="joinCode" class="input-modern code-input" maxlength="6" placeholder="ABC123">
         </div>
         <div class="app-card">
           <button id="btnJoinRoom" class="btn-main btn-primary">UNIRSE A LA SALA</button>
@@ -123,60 +170,97 @@
       </div>
     </div>
 
+    <!-- Pantalla CATEGORÍAS -->
+    <div id="screenCategories" class="screen center-layout" style="display:none;">
+      <div class="screen-header">
+        <button id="backFromCategories" class="btn-icon-back">
+          <span class="arrow-icon">&larr;</span>
+        </button>
+        <h2>Categorías</h2>
+      </div>
+
+      <div class="config-column">
+        <div class="app-card">
+          <p class="mini-hint">Elige las categorías que querés usar en esta sala.</p>
+          <div id="categoriesGrid" class="categories-grid">
+            <!-- Renderizado por JS -->
+          </div>
+        </div>
+
+        <div class="app-card">
+          <button id="btnSaveCategories" class="btn-main btn-primary">GUARDAR CATEGORÍAS</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
+  <!-- MAIN GAME -->
   <main id="mainContent" style="display:none;">
     <div class="main-layout">
       <div class="top-bar">
         <div class="room-code-pill">
           <span>SALA</span>
-          <strong id="roomCodeDisplay">-----</strong>
-          <button id="btnCopyCode" class="btn-icon-simple" title="Copiar código">📋</button>
+          <strong id="roomCodeDisplay">------</strong>
+          <button id="btnCopyCode" class="copy-btn" title="Copiar código">
+            <span class="copy-icon"></span>
+          </button>
         </div>
+
         <div class="top-center-status">
           <span id="phaseLabel" class="phase-label">LOBBY</span>
-          <span id="timerLabel" class="timer-label">--</span>
+          <div id="timerCircle" class="timer-circle">
+            <span id="timerNumber">--</span>
+          </div>
         </div>
+
         <div class="header-actions">
-          <button id="btnDiscordManual" class="btn-discord">
+          <button id="btnDiscordManual" class="btn-discord" style="display:none;">
             <img src="images/discord.png" width="20" alt="Discord">
           </button>
-          <button id="btnExit" class="btn-icon-simple" style="background:rgba(148,27,44,0.15); border:1px solid rgba(248,113,113,0.6);">Salir</button>
+          <button id="btnExit" class="btn-exit">
+            <span class="arrow-icon">&larr;</span>
+            <span>&nbsp;Volver</span>
+          </button>
         </div>
       </div>
 
       <div class="main-grid">
         <section class="game-center">
           <div id="viewPanel" class="view-panel">
-            
+
+            <!-- LOBBY -->
             <div id="viewLobby" class="view-card">
               <h2>Esperando jugadores...</h2>
               <p class="subtitle">Comparte el código de sala para que tus amigos se unan.</p>
+
               <div class="lobby-info">
                 <div>
-                  <span class="label">Jugadores actuales</span>
+                  <span class="label">JUGADORES ACTUALES</span>
                   <span id="currentPlayersCount" class="value">1</span>
                 </div>
                 <div>
-                  <span class="label">Impostores</span>
-                  <span id="currentImpostorsCount" class="value">2</span>
+                  <span class="label">IMPOSTORES</span>
+                  <span id="currentImpostorsCount" class="value">1</span>
                 </div>
               </div>
+
               <div class="status-box">
                 <h3>Cómo funciona</h3>
-                <div class="rules-text">
-                  <p><strong>1.</strong> Todos reciben una palabra secreta, menos el impostor.</p>
-                  <p><strong>2.</strong> Cada uno debe decir una pista sin revelar la palabra.</p>
-                  <p><strong>3.</strong> Se vota quién se cree que es el impostor.</p>
-                  <p><strong>4.</strong> Si lo descubren, gana la tripulación. Si no, gana el impostor.</p>
-                </div>
-                <div class="loading-bar"><div class="bar-fill"></div></div>
+                <ol class="rules-list">
+                  <li>Todos reciben una palabra secreta, menos el impostor.</li>
+                  <li>Cada jugador da una pista sin decir la palabra exacta.</li>
+                  <li>El impostor intenta pasar desapercibido improvisando.</li>
+                  <li>Luego se vota quién se cree que es el impostor.</li>
+                </ol>
               </div>
+
               <div class="lobby-actions">
                 <button id="btnStartRound" class="btn-main btn-primary">INICIAR RONDA</button>
               </div>
             </div>
 
+            <!-- PALABRA / ROL -->
             <div id="viewWord" class="view-card" style="display:none;">
               <div class="secret-card-wrapper" id="secretCard">
                 <div class="secret-card-inner">
@@ -186,8 +270,8 @@
                     <p class="lock-subtitle">Tu rol y pista aparecerán aquí.</p>
                   </div>
                   <div class="secret-card back">
-                    <div id="roleTitle" class="role-title">TRIPULANTE</div>
-                    <div id="secretWordDisplay" class="secret-word">PALABRA</div>
+                    <div id="roleTitle" class="role-title">ROL</div>
+                    <div id="secretWordDisplay" class="secret-word">-----</div>
                     <p id="wordHint" class="word-hint">No reveles la palabra exacta, solo da pistas.</p>
                   </div>
                 </div>
@@ -195,26 +279,39 @@
               <p class="hint" style="margin-top:20px;">Cuando todos hayan visto su rol, comenzará el turno de pistas.</p>
             </div>
 
+            <!-- TURNOS -->
             <div id="viewTurn" class="view-card" style="display:none;">
-              <h2 id="turnTitle">Tu turno</h2>
-              <p id="turnInstruction" class="subtitle">Di una pista relacionada con la palabra.</p>
-              <div id="turnStatus" class="status-box small">
+              <h2 id="turnTitle">Turno de pistas</h2>
+              <p id="turnInstruction" class="subtitle">Es tu turno: di una pista sin revelar la palabra.</p>
+
+              <div class="status-box small">
                 <h3>Turno actual</h3>
                 <p id="currentTurnPlayer">Esperando...</p>
               </div>
+
+              <div id="turnActions" class="turn-actions" style="display:none;">
+                <button id="btnEndTurn" class="btn-main btn-secondary">Terminé mi pista</button>
+              </div>
             </div>
 
+            <!-- VOTACIÓN -->
             <div id="viewVote" class="view-card" style="display:none;">
               <h2>VOTACIÓN</h2>
-              <p class="subtitle" id="voteSubtitle">Elige quién crees que es el impostor.</p>
+              <p class="subtitle" id="voteSubtitle">Elige quién crees que es el impostor o salta el voto.</p>
+
               <div id="votePlayersGrid" class="vote-grid">
-                <!-- Llenado por JS -->
+                <!-- Jugadores -->
+              </div>
+
+              <div class="skip-container">
+                <button id="btnSkipVote" class="btn-main btn-secondary">SALTAR VOTO (NADIE)</button>
               </div>
             </div>
 
           </div>
         </section>
 
+        <!-- PANEL DERECHA -->
         <aside class="players-panel">
           <div class="players-card">
             <div class="sidebar-header">TRIPULACIÓN</div>
@@ -222,9 +319,10 @@
               <!-- Jugadores -->
             </div>
           </div>
-          <div class="players-card" style="margin-top:10px;">
+
+          <div class="players-card">
             <div class="sidebar-header">ESTADO</div>
-            <p id="statusText" style="font-size:0.85rem; color:#9ca3af;">Esperando ronda...</p>
+            <p id="statusText" class="status-text">Esperando que el host inicie la ronda.</p>
           </div>
         </aside>
       </div>
