@@ -3,9 +3,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-// const { Client, ... } = require('discord.js'); // Descomentar si usas el bot real
 
-// Si no usas el bot de discord real por ahora, dejalo comentado o configúralo
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN; 
 
 const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#f97316', '#a855f7', '#ec4899', '#06b6d4', '#84cc16', '#78716c', '#f43f5e', '#6366f1', '#14b8a6', '#d946ef', '#64748b'];
@@ -38,8 +36,8 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' }, pingTimeout: 60000 });
 
-const CLIENT_DIR = path.join(__dirname, 'public');
-app.use(express.static(CLIENT_DIR));
+const CLIENT_DIR = path.join(__dirname, 'public'); // Asegurate que tus archivos HTML/CSS/JS estan en una carpeta llamada 'public' o ajusta esto
+app.use(express.static(__dirname)); // USAR ESTO SI ESTAN EN LA RAIZ
 
 const rooms = {};
 const socketRoom = {};
@@ -125,15 +123,22 @@ function finishVoting(room, reason) {
         secretWord: room.secretWord, realImpostorName: realImpostorNameStr
     });
     
-    if(gameResult) { room.phase = 'lobby'; setTimeout(() => emitRoomState(room), 5000); } 
-    else { room.phase = 'palabras'; room.turnIndex = -1; room.spoken = {}; room.votes = {}; setTimeout(() => { if(rooms[room.code]) nextTurn(room); }, 4000); }
+    if(gameResult) { 
+        room.phase = 'lobby'; 
+        // Reiniciar para siguiente ronda
+        room.players.forEach(p => p.isDead = false);
+        setTimeout(() => emitRoomState(room), 5000); 
+    } else { 
+        room.phase = 'palabras'; room.turnIndex = -1; room.spoken = {}; room.votes = {}; 
+        setTimeout(() => { if(rooms[room.code]) nextTurn(room); }, 4000); 
+    }
 }
 
 io.on('connection', (socket) => {
     socket.on('createRoom', (data, cb) => {
         const code = generateCode();
         let maxP = Math.min(parseInt(data.maxPlayers)||10, 15);
-        let discordLink = null; // Simulado si no hay token
+        let discordLink = null; 
         const room = {
             code, hostId: socket.id, maxPlayers: maxP, impostors: parseInt(data.impostors)||2,
             categories: data.categories || [],
@@ -166,7 +171,6 @@ io.on('connection', (socket) => {
             room.players.forEach(p => p.isDead = false);
             room.votes = {}; room.spoken = {}; room.turnIndex = -1;
 
-            // --- LÓGICA IMPOSTOR ALEATORIO ---
             const allPlayers = [...room.players];
             const shuffled = shuffleArray(allPlayers);
             const impIds = shuffled.slice(0, room.impostors).map(p => p.id);
@@ -183,9 +187,9 @@ io.on('connection', (socket) => {
                 room.spoken[p.id] = false;
             });
             
-            room.phase = 'lectura'; emitRoomState(room);
+            room.phase = 'lectura'; 
+            emitRoomState(room);
             
-            // --- INICIO PRIMER TURNO (CIUDADANO GARANTIZADO) ---
             setTimeout(()=>{ 
                 if(rooms[room.code]){ 
                     room.phase='palabras'; 

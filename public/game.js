@@ -77,7 +77,7 @@ document.getElementById('toggleLocalMode').onclick = function() {
 const catGrid = document.getElementById('categoriesGrid');
 CATEGORIES_DATA.forEach(cat => {
     const el = document.createElement('div');
-    el.className = 'cat-card selected'; // Por defecto seleccionadas
+    el.className = 'cat-card selected'; 
     el.innerHTML = `<div class="cat-icon">${cat.icon}</div><div class="cat-name">${cat.name}</div>`;
     el.onclick = () => {
         playSound('click');
@@ -127,7 +127,6 @@ function handleConnection(res) {
         isHost = res.isHost;
         document.getElementById('roomCodeDisplay').innerText = res.roomCode;
         
-        // Botón Discord
         if(res.discordLink) {
             document.getElementById('btnDiscordManual').style.display = 'flex';
             document.getElementById('btnDiscordManual').onclick = () => window.open(res.discordLink, '_blank');
@@ -141,7 +140,6 @@ function handleConnection(res) {
     }
 }
 
-// Botones Generales
 document.getElementById('btnExit').onclick = () => location.reload();
 document.getElementById('btnCopyCode').onclick = () => { navigator.clipboard.writeText(document.getElementById('roomCodeDisplay').innerText); };
 
@@ -159,7 +157,7 @@ document.getElementById('btnSkipVote').onclick = () => {
     } 
 };
 
-// --- RECEPCIÓN DE ESTADO (Room State) ---
+// --- RECEPCIÓN DE ESTADO ---
 socket.on('roomState', (room) => {
     const me = room.players.find(p => p.id === myId);
     isMyPlayerDead = me ? me.isDead : false;
@@ -167,14 +165,16 @@ socket.on('roomState', (room) => {
     const btnStart = document.getElementById('btnStartRound');
     const btnSkip = document.getElementById('btnSkipVote');
     
+    // CORRECCIÓN: Permitir iniciar con 2 jugadores para pruebas
     if(room.phase === 'lobby') { 
         btnStart.style.display = 'block'; 
-        btnStart.disabled = !(isHost && room.players.length >= 3); 
+        btnStart.disabled = !(isHost && room.players.length >= 2); 
         btnSkip.style.display = 'none'; 
     } else if(room.phase === 'votacion') { 
         btnStart.style.display = 'none'; 
         btnSkip.style.display = 'block'; 
-        if(isMyPlayerDead) btnSkip.disabled = true; 
+        btnSkip.innerText = "SALTAR VOTO";
+        btnSkip.disabled = isMyPlayerDead || !!room.votes[myId];
     } else { 
         btnStart.style.display = 'none'; 
         btnSkip.style.display = 'none'; 
@@ -184,10 +184,8 @@ socket.on('roomState', (room) => {
     updateGameView(room);
 });
 
-// --- ROL ASIGNADO ---
 socket.on('yourRole', (data) => {
     playSound('start');
-    // Resetear UI
     const cardWrap = document.getElementById('secretCardContainer'); 
     cardWrap.classList.remove('revealed'); 
     cardWrap.style.display = 'block';
@@ -196,7 +194,6 @@ socket.on('yourRole', (data) => {
     document.getElementById('ejectionOverlay').style.display = 'none';
     document.getElementById('finalDetailsBox').style.display = 'none';
 
-    // Rellenar datos tarjeta
     const back = document.getElementById('cardBackContent'); 
     const icon = document.getElementById('roleIconDisplay'); 
     const title = document.getElementById('roleTitleDisplay'); 
@@ -209,7 +206,7 @@ socket.on('yourRole', (data) => {
         back.classList.add('impostor-theme'); 
         icon.innerText = '👺'; 
         title.innerText = 'IMPOSTOR'; 
-        word.innerText = 'ERROR 404'; // O "???"
+        word.innerText = 'ERROR 404'; 
         
         if(data.teammates && data.teammates.length > 0) { 
             teamBox.style.display = 'block'; 
@@ -227,7 +224,6 @@ socket.on('yourRole', (data) => {
     localStorage.setItem('myRole', data.role);
 });
 
-// --- RESULTADOS VOTACIÓN ---
 socket.on('votingResults', (data) => {
     const overlay = document.getElementById('ejectionOverlay'); 
     const title = document.getElementById('resultTitle'); 
@@ -245,7 +241,6 @@ socket.on('votingResults', (data) => {
         overlay.style.display = 'flex'; 
         detailsBox.style.display = 'block';
         
-        // Datos reales del servidor
         rWord.innerText = data.secretWord || "---"; 
         rImp.innerText = data.realImpostorName || "---";
 
@@ -263,29 +258,22 @@ socket.on('votingResults', (data) => {
             title.style.color = '#FF4D4D'; 
             icon.innerText = '💀'; 
         }
-        
         sub.innerText = citizensWon ? "El sistema está seguro." : "Infiltración exitosa.";
-
         btnBack.innerText = "NUEVA MISIÓN";
         btnBack.onclick = () => { 
             overlay.style.display = 'none'; 
             document.getElementById('secretCardContainer').style.display = 'none'; 
-            document.getElementById('instructionsPanel').style.display = 'flex'; // Volver al panel de espera
+            document.getElementById('instructionsPanel').style.display = 'flex'; 
         };
     } else {
         playSound('eject'); 
         overlay.style.display = 'flex'; 
         detailsBox.style.display = 'none';
-        
         title.innerText = "EXPULSIÓN"; 
         title.style.color = '#fff'; 
         icon.innerText = '🥾';
-        
-        if(data.kickedPlayer) {
-            sub.innerText = `${data.kickedPlayer.name} ha sido eliminado.`; 
-        } else { 
-            sub.innerText = "Nadie fue eliminado."; 
-        }
+        if(data.kickedPlayer) { sub.innerText = `${data.kickedPlayer.name} ha sido eliminado.`; } 
+        else { sub.innerText = "Nadie fue eliminado."; }
         
         btnBack.innerText = "CONTINUAR"; 
         btnBack.onclick = () => { overlay.style.display = 'none'; };
@@ -316,20 +304,31 @@ function updateGameView(room) {
     [vCard, vTurn, vVote].forEach(el => el.style.display = 'none'); 
     stopTimer();
 
+    // FASE: LECTURA DE ROL (Inicio)
     if(room.phase === 'lobby' || room.phase === 'lectura') { 
         vCard.style.display = 'block'; 
+        // Feedback visual crítico para que el jugador sepa qué hacer
+        if(room.phase === 'lectura') {
+            document.getElementById('instructionsPanel').style.display = 'block';
+            document.getElementById('instructionsPanel').innerHTML = `<h3>¡MISIÓN INICIADA!</h3><p style="color:#00E055">Toca el candado para ver tu rol</p>`;
+        } else {
+             document.getElementById('instructionsPanel').innerHTML = `<h3>ESPERANDO AGENTES...</h3><div class="loading-bar"><div class="bar-fill"></div></div>`;
+        }
     } 
+    // FASE: PALABRAS (Turnos)
     else if(room.phase === 'palabras') {
         vTurn.style.display = 'block'; 
         const ap = room.players[room.turnIndex];
         if(ap) { 
             document.getElementById('turnPlayerName').innerText = ap.name; 
+            document.querySelector('.turn-avatar').innerText = ap.name.charAt(0).toUpperCase(); // Mostrar Inicial
             document.querySelector('.turn-avatar').style.borderColor = ap.color; 
             const btn = document.getElementById('btnFinishTurn'); 
             btn.style.display = (ap.id === myId) ? 'block' : 'none'; 
             startTimer(room.timeLeft, document.getElementById('turnTimerDisplay')); 
         }
     } 
+    // FASE: VOTACION
     else if(room.phase === 'votacion') {
         vVote.style.display = 'block'; 
         startTimer(room.timeLeft, document.getElementById('votingTimer')); 
@@ -342,7 +341,10 @@ function updateGameView(room) {
             const card = document.createElement('div'); 
             card.className = 'vote-card'; 
             if(selectedVoteId === p.id) card.classList.add('selected'); 
-            card.innerHTML = `<div class="vote-avatar" style="color:${p.color}; font-size:1.5rem;">👤</div><div class="vote-name" style="font-size:0.8rem; font-weight:bold;">${p.name}</div>`; 
+            
+            // Aquí usamos la clase .vote-avatar que agregamos al CSS
+            card.innerHTML = `<div class="vote-avatar" style="color:${p.color}">👤</div><div class="vote-name">${p.name}</div>`; 
+            
             card.onclick = () => { 
                 if(isMyPlayerDead) return; 
                 playSound('click'); 
