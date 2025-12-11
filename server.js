@@ -5,18 +5,19 @@ const { Server } = require('socket.io');
 const { Client, GatewayIntentBits, ChannelType, PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 
-// Colores para jugadores
+// Colores
 const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#f97316', '#a855f7', '#ec4899', '#0ea5e9', '#22d3ee', '#4ade80', '#facc15', '#fb7185', '#8b5cf6', '#14b8a6', '#64748b'];
 
 // ----------- DISCORD ----------- //
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID;
-const DISCORD_CATEGORY_ID = process.env.DISCORD_CATEGORY_ID;
+const DISCORD_CATEGORY_ID = process.env.DISCORD_CATEGORY_ID; // Opcional
 let discordClient = null; let discordReady = false;
+
 if (DISCORD_TOKEN && DISCORD_GUILD_ID) {
   discordClient = new Client({ intents: [GatewayIntentBits.Guilds] });
-  discordClient.once('clientReady', () => { console.log(`✅ Discord: ${discordClient.user.tag}`); discordReady = true; });
-  discordClient.login(DISCORD_TOKEN).catch(err => console.error('❌ Discord Error:', err));
+  discordClient.once('clientReady', () => { console.log(`✅ Discord conectado: ${discordClient.user.tag}`); discordReady = true; });
+  discordClient.login(DISCORD_TOKEN).catch(err => console.error('❌ Error Discord:', err));
 }
 
 async function createDiscordChannelForRoom(code) {
@@ -28,10 +29,10 @@ async function createDiscordChannelForRoom(code) {
       permissionOverwrites: [{ id: guild.roles.everyone.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect] }]
     });
     return { url: `https://discord.com/channels/${guild.id}/${channel.id}`, channelId: channel.id };
-  } catch (err) { console.error('❌ Discord Channel Error:', err); return null; }
+  } catch (err) { console.error('❌ Error creando canal:', err); return null; }
 }
 
-// ----------- PALABRAS (LISTA EXTENDIDA) ----------- //
+// ----------- PALABRAS ----------- //
 const WORD_DB = {
   lugares: ['CINE', 'PLAYA', 'HOSPITAL', 'ESCUELA', 'AEROPUERTO', 'RESTAURANTE', 'GIMNASIO', 'PARQUE', 'MUSEO', 'SUPERMERCADO', 'PLAZA', 'ESTADIO', 'TEATRO', 'OFICINA', 'BIBLIOTECA', 'BANCO', 'HOTEL', 'DISCOTECA', 'ESTACIÓN DE TREN', 'GRANJA', 'PISCINA', 'FÁBRICA', 'ZOO', 'IGLESIA', 'MONTE', 'RIO', 'LAGO', 'DESIERTO', 'SUBMARINO', 'NAVE ESPACIAL', 'CUEVA', 'VOLCÁN', 'ISLA DESIERTA', 'CEMENTERIO', 'LABORATORIO', 'CÁRCEL', 'CASTILLO', 'BOSQUE', 'GARAJE', 'ÁTICO', 'SÓTANO', 'CASINO', 'CRUCERO', 'SPA', 'PELUQUERÍA', 'FARMACIA'],
   comidas: ['PIZZA', 'HAMBURGUESA', 'SUSHI', 'PASTA', 'ENSALADA', 'SOPA', 'EMPANADAS', 'ASADO', 'TACO', 'HELADO', 'CHOCOLATE', 'SÁNDWICH', 'MILANESA', 'ARROZ', 'PAELLA', 'TARTA', 'PANQUEQUES', 'HUEVO FRITO', 'POLLO ASADO', 'BIFE', 'POCHOCLOS', 'LASAÑA', 'CEREAL', 'GALLETITAS', 'TORTILLA', 'GUISO', 'MANDARINA', 'BANANA', 'MANZANA', 'FRUTILLAS', 'QUESO', 'SALAME', 'MATE', 'CAFÉ', 'TE', 'DONA', 'HOT DOG'],
@@ -47,7 +48,7 @@ function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Mat
 function generateCode() { let res = ''; const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; for (let i = 0; i < 6; i++) res += chars[Math.floor(Math.random() * chars.length)]; return res; }
 function pickWord(cats) { const pool = []; (cats.length ? cats : ['lugares']).forEach(c => { if (WORD_DB[c]) pool.push(...WORD_DB[c]); }); return pool[Math.floor(Math.random() * pool.length)]; }
 
-// ----------- SERVER ----------- //
+// ----------- APP ----------- //
 const app = express(); const httpServer = http.createServer(app); const io = new Server(httpServer);
 app.use(express.static(path.join(__dirname, 'public')));
 const rooms = {}; const socketRoom = {};
@@ -73,22 +74,22 @@ function serializeRoom(room) {
 }
 function emitRoomState(room) { if (room) io.to(room.code).emit('roomState', serializeRoom(room)); }
 
-// ----------- SOCKET LÓGICA ----------- //
+// ----------- SOCKETS ----------- //
 io.on('connection', (socket) => {
   socket.on('createRoom', async (data, cb) => {
     const code = generateCode();
     const maxP = Math.min(15, Math.max(3, parseInt(data.maxPlayers) || 10));
     const imps = Math.min(maxP - 1, Math.max(1, parseInt(data.impostors) || 2));
-    let discordLink = null, discordChannelId = null;
+    let discordLink = null;
     if (!data.groupMode && discordClient && discordReady) {
       const info = await createDiscordChannelForRoom(code);
-      if (info) { discordLink = info.url; discordChannelId = info.channelId; }
+      if (info) discordLink = info.url;
     }
     rooms[code] = {
       code, hostId: socket.id, maxPlayers: maxP, impostors: imps, categories: data.categories,
       config: { turnTime: 20000, voteTime: (parseInt(data.voteTime) || 120) * 1000 },
       players: [{ id: socket.id, name: data.name || 'Host', color: assignColor({players:[]}), isDead: false }],
-      phase: 'lobby', roles: {}, votes: {}, spoken: {}, discordLink, discordChannelId, timerText: '--'
+      phase: 'lobby', roles: {}, votes: {}, spoken: {}, discordLink, timerText: '--'
     };
     socketRoom[socket.id] = code; socket.join(code);
     cb({ ok: true, roomCode: code, me: { id: socket.id }, isHost: true, discordLink });
@@ -111,7 +112,7 @@ io.on('connection', (socket) => {
 
   socket.on('startRound', () => {
     const room = getRoom(socket.id); if (!room || room.hostId !== socket.id || room.phase !== 'lobby') return;
-    if (room.players.length < 3) return; // Mínimo 3 jugadores
+    if (room.players.length < 3) return; 
     clearRoomTimer(room);
     room.players.forEach(p => p.isDead = false); room.votes = {}; room.spoken = {};
     const shuffled = shuffle([...room.players]);
@@ -123,7 +124,7 @@ io.on('connection', (socket) => {
       const isImp = room.roles[p.id] === 'impostor';
       io.to(p.id).emit('privateRole', {
         role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', word: isImp ? '???' : room.secretWord,
-        hint: isImp ? 'Finge que sabes la palabra. Adáptate a las pistas.' : 'Di una pista sutil. No digas la palabra exacta.'
+        hint: isImp ? 'Finge que sabes. Adáptate a las pistas.' : 'Di una pista sutil. No la palabra exacta.'
       });
     });
     emitRoomState(room);
@@ -142,17 +143,11 @@ io.on('connection', (socket) => {
     clearRoomTimer(room); avanzarDesdeTurno(room);
   });
 
-  socket.on('disconnect', async () => {
+  socket.on('disconnect', () => {
     const room = getRoom(socket.id); if (room) {
       room.players = room.players.filter(p => p.id !== socket.id); delete socketRoom[socket.id];
-      if (room.players.length === 0) {
-        clearRoomTimer(room);
-        if (room.discordChannelId && discordClient) try { (await discordClient.channels.fetch(room.discordChannelId))?.delete(); } catch(e){}
-        delete rooms[room.code];
-      } else {
-        if (room.hostId === socket.id) room.hostId = room.players[0].id;
-        emitRoomState(room);
-      }
+      if (room.players.length === 0) delete rooms[room.code];
+      else { if (room.hostId === socket.id) room.hostId = room.players[0].id; emitRoomState(room); }
     }
   });
 });
@@ -168,8 +163,7 @@ function nextTurn(room) {
   }
   room.turnIndex = living[nextIdx].i;
   room.currentTurnId = room.players[room.turnIndex].id;
-  room.phase = 'turn';
-  emitRoomState(room);
+  room.phase = 'turn'; emitRoomState(room);
   startTimer(room, room.config.turnTime / 1000, (r) => avanzarDesdeTurno(r));
 }
 
@@ -179,15 +173,14 @@ function avanzarDesdeTurno(room) {
   if (pending.length > 0) nextTurn(room);
   else {
     room.phase = 'vote'; room.votes = {}; emitRoomState(room);
-    startTimer(room, room.config.voteTime / 1000, (r) => finishVoting(r, 'Tiempo de votación agotado'));
+    startTimer(room, room.config.voteTime / 1000, (r) => finishVoting(r, 'Tiempo agotado'));
   }
 }
 
-// LOGICA DE VICTORIA CORREGIDA
 function finishVoting(room, reason) {
   clearRoomTimer(room); room.phase = 'result';
   const counts = {}; let maxV = 0;
-  Object.values(room.votes).forEach(id => { if(id) { counts[id] = (counts[id]||0)+1; if(counts[id] > maxV) maxV = counts[id]; }});
+  Object.values(room.votes).forEach(id => { if(id) { counts[id] = (counts[id]||0)+1; if(counts[id]>maxV) maxV=counts[id]; }});
   const candidates = Object.keys(counts).filter(id => counts[id] === maxV);
   let elimId = (candidates.length === 1 && candidates[0] !== 'skip') ? candidates[0] : null;
 
@@ -202,8 +195,8 @@ function finishVoting(room, reason) {
   if (result === 'none') {
     const impsAlive = room.players.filter(p => !p.isDead && room.roles[p.id] === 'impostor').length;
     const crewAlive = room.players.filter(p => !p.isDead && room.roles[p.id] === 'crew').length;
-    if (impsAlive === 0) { result = 'crew'; resReason = "¡Todos los impostores eliminados!"; }
-    else if (impsAlive >= crewAlive) { result = 'impostor'; resReason = "¡Los impostores dominan la nave!"; }
+    if (impsAlive === 0) { result = 'crew'; resReason = "¡Impostores eliminados!"; }
+    else if (impsAlive >= crewAlive) { result = 'impostor'; resReason = "¡Impostores dominan la nave!"; }
   }
 
   io.to(room.code).emit('roundResult', { result, secretWord: room.secretWord, reason: resReason, impostors: room.players.filter(p=>room.roles[p.id]==='impostor').map(p=>p.name) });
@@ -214,4 +207,4 @@ function finishVoting(room, reason) {
 }
 
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => console.log(`🚀 Servidor listo en puerto ${PORT}`));
+httpServer.listen(PORT, () => console.log(`🚀 Server en puerto ${PORT}`));

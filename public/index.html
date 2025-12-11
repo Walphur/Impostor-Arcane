@@ -8,7 +8,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
-
   <audio id="soundClick" src="sounds/click.mp3" preload="auto"></audio>
   <audio id="soundFlip" src="sounds/flip.mp3" preload="auto"></audio>
   <audio id="soundWin" src="sounds/win.mp3" preload="auto"></audio>
@@ -16,19 +15,12 @@
 
   <div id="ejectionOverlay" class="full-overlay" style="display: none;">
     <div class="result-card">
-      <div id="resultIcon" style="font-size: 4rem; margin-bottom: 10px;"></div>
+      <div id="resultIcon" style="font-size: 4rem;"></div>
       <h1 id="resultTitle" class="result-title">---</h1>
-      <p id="resultSubtitle" class="result-subtitle">---</p>
-
-      <div class="result-details">
-        <div class="result-row">
-          <span>Palabra secreta:</span>
-          <span id="finalSecretWord" class="result-value">---</span>
-        </div>
-        <div class="result-row">
-          <span>Impostores:</span>
-          <span id="finalImpostors" class="result-value highlight">---</span>
-        </div>
+      <p id="resultSubtitle">---</p>
+      <div style="background:#0f172a; padding:15px; border-radius:10px; margin:20px 0;">
+        <div class="result-row"><span>Palabra:</span><span id="finalSecretWord" class="result-value">---</span></div>
+        <div class="result-row"><span>Impostores:</span><span id="finalImpostors" class="result-value highlight">---</span></div>
       </div>
       <button id="btnBackToLobby" class="btn-main btn-primary" style="width:100%">CONTINUAR</button>
     </div>
@@ -36,26 +28,19 @@
 
   <div id="howToPlayOverlay" class="full-overlay" style="display:none;">
     <div class="howto-card">
-      <div style="text-align:center; margin-bottom:15px;"><span style="font-size:3rem;">🕵️</span></div>
-      <h2>Archivo de Misión</h2>
-      <div class="mission-box"><p><strong>OBJETIVO:</strong> Descubrir al espía infiltrado o sobrevivir sin ser detectado.</p></div>
-      <p><strong style="color:#60a5fa">FASE 1: LA PALABRA.</strong> Todos reciben la misma palabra secreta, excepto el Impostor.</p>
-      <p><strong style="color:#60a5fa">FASE 2: EL INTERROGATORIO.</strong> Por turnos, den una pista sutil. Ni muy obvia, ni muy difícil.</p>
-      <p><strong style="color:#60a5fa">FASE 3: LA VOTACIÓN.</strong> Si alguien no sabe de qué habla o repite pistas, ¡es el Impostor! Vótenlo.</p>
-      <div style="margin-top:25px; text-align:center;">
-        <button id="btnCloseHowToPlay" class="btn-main btn-primary" style="width:100%;">ENTENDIDO, AGENTE</button>
-      </div>
+      <span style="font-size:3rem;">🕵️</span>
+      <h2>Misión</h2>
+      <p style="margin:10px 0; color:#cbd5e1;">Todos saben la palabra secreta menos el Impostor. Den pistas sutiles y descubran al mentiroso.</p>
+      <button id="btnCloseHowToPlay" class="btn-main btn-primary" style="width:100%;">ENTENDIDO</button>
     </div>
   </div>
 
   <div id="lobbyOverlay" class="lobby-overlay">
-    <button id="btnHowToPlay" class="help-icon">?</button>
+    <button id="btnHowToPlay" style="position:absolute; top:20px; right:20px; background:#334155; border:none; color:white; width:30px; height:30px; border-radius:50%; cursor:pointer;">?</button>
 
-    <div id="screenHome" class="screen center-layout">
-      <div class="brand-header">
-        <img src="images/logo.png" alt="Incognito" class="logo-img">
-      </div>
-      <div class="home-menu-panel">
+    <div id="screenHome" class="screen-wrapper-home">
+      <div class="big-logo-container"><img src="images/logo.png" alt="Incognito" class="logo-img-home"></div>
+      <div class="home-card-buttons">
         <button id="btnGoCreate" class="btn-big btn-main btn-primary">CREAR SALA</button>
         <button id="btnGoJoin" class="btn-big btn-main btn-secondary">UNIRSE A SALA</button>
       </div>
@@ -63,221 +48,89 @@
 
     <div id="screenCreate" class="screen" style="display:none;">
       <div class="screen-header">
-        <button id="backFromCreate" class="btn-icon-back">
-          <img src="images/arrow.png" alt="Volver" class="arrow-img">
-        </button>
-        <h2>Configurar sala</h2>
+        <button id="backFromCreate" class="btn-icon-back"><img src="images/arrow.png" class="arrow-icon-img" alt="Volver"></button>
+        <h2>Crear Sala</h2>
       </div>
-
-      <div class="config-column">
-        <div class="app-card">
-          <label>TU NOMBRE</label>
-          <input type="text" id="hostName" class="input-modern" maxlength="12" placeholder="Agente...">
-        </div>
-
-        <div class="config-counters">
-          <div class="mini-card">
-            <div class="mini-label">JUGADORES</div>
-            <div class="mini-controls">
-              <button class="btn-circle" onclick="adjustValue('maxPlayers', -1)">−</button>
-              <div class="value-display" id="displayPlayers">10</div>
-              <button class="btn-circle" onclick="adjustValue('maxPlayers', 1)">+</button>
-            </div>
-            <div class="mini-hint-simple">Máx. 15 personas</div>
-            <input type="hidden" id="maxPlayers" value="10">
-          </div>
-          <div class="mini-card">
-            <div class="mini-label">IMPOSTORES</div>
-            <div class="mini-controls">
-              <button class="btn-circle" onclick="adjustValue('impostors', -1)">−</button>
-              <div class="value-display" id="displayImpostors">2</div>
-              <button class="btn-circle" onclick="adjustValue('impostors', 1)">+</button>
-            </div>
-            <div class="mini-hint-simple">Entre 1 y 4</div>
-            <input type="hidden" id="impostors" value="2">
-          </div>
-          <div class="mini-card">
-            <div class="mini-label">TIEMPO VOTO</div>
-            <div class="mini-controls">
-              <button class="btn-circle" onclick="adjustValue('timeVote', -15)">−</button>
-              <div class="value-display" id="displayVoteTime">120</div>
-              <button class="btn-circle" onclick="adjustValue('timeVote', 15)">+</button>
-            </div>
-            <div class="mini-hint-simple">60s a 300s</div>
-            <input type="hidden" id="timeVote" value="120">
-          </div>
-        </div>
-
-        <div class="app-card row-between">
-          <div style="overflow:hidden;">
-            <label>CATEGORÍAS</label>
-            <div id="categoriesSummary" class="categories-summary">...</div>
-          </div>
-          <button id="btnOpenCategories" class="btn-ghost">Elegir</button>
-        </div>
-
-        <div class="app-card row-between">
-          <div>
-            <label>MODO GRUPAL (Sin Discord)</label>
-          </div>
-          <div class="toggle-wrapper">
-            <input type="checkbox" id="groupModeToggle">
-            <span class="toggle-slider"></span>
-          </div>
-        </div>
-
-        <button id="btnCreateRoom" class="btn-big btn-main btn-primary">CREAR SALA</button>
+      <div class="app-card">
+        <input type="text" id="hostName" class="input-modern" maxlength="12" placeholder="Tu Nombre...">
       </div>
+      <div class="config-counters">
+        <div class="mini-card"><span class="mini-label">JUGADORES</span><div class="mini-controls"><button class="btn-circle" onclick="adjustValue('maxPlayers', -1)">-</button><div class="value-display" id="displayPlayers">10</div><button class="btn-circle" onclick="adjustValue('maxPlayers', 1)">+</button></div><span class="mini-hint-simple">Máx. 15</span><input type="hidden" id="maxPlayers" value="10"></div>
+        <div class="mini-card"><span class="mini-label">IMPOSTORES</span><div class="mini-controls"><button class="btn-circle" onclick="adjustValue('impostors', -1)">-</button><div class="value-display" id="displayImpostors">2</div><button class="btn-circle" onclick="adjustValue('impostors', 1)">+</button></div><span class="mini-hint-simple">1 - 4</span><input type="hidden" id="impostors" value="2"></div>
+        <div class="mini-card"><span class="mini-label">TIEMPO</span><div class="mini-controls"><button class="btn-circle" onclick="adjustValue('timeVote', -15)">-</button><div class="value-display" id="displayVoteTime">120</div><button class="btn-circle" onclick="adjustValue('timeVote', 15)">+</button></div><span class="mini-hint-simple">Segundos</span><input type="hidden" id="timeVote" value="120"></div>
+      </div>
+      <div class="app-card row-between"><div style="overflow:hidden;"><span class="mini-label">CATEGORÍAS</span><div id="categoriesSummary" style="font-size:0.8rem; color:#cbd5e1;">...</div></div><button id="btnOpenCategories" style="background:none; border:1px solid #3b82f6; color:#3b82f6; padding:5px 10px; border-radius:5px; cursor:pointer;">Elegir</button></div>
+      <div class="app-card row-between"><span class="mini-label">MODO GRUPAL (Sin Discord)</span><div class="toggle-wrapper"><input type="checkbox" id="groupModeToggle"><span class="toggle-slider"></span></div></div>
+      <button id="btnCreateRoom" class="btn-big btn-main btn-primary">CREAR SALA</button>
     </div>
 
-    <div id="screenJoin" class="screen center-layout" style="display:none;">
+    <div id="screenJoin" class="screen" style="display:none;">
       <div class="screen-header">
-        <button id="backFromJoin" class="btn-icon-back">
-          <img src="images/arrow.png" alt="Volver" class="arrow-img">
-        </button>
-        <h2>Unirse a sala</h2>
+        <button id="backFromJoin" class="btn-icon-back"><img src="images/arrow.png" class="arrow-icon-img" alt="Volver"></button>
+        <h2>Unirse</h2>
       </div>
-      <div class="config-column">
-        <div class="app-card">
-          <label>TU NOMBRE</label>
-          <input type="text" id="joinName" class="input-modern" maxlength="12" placeholder="Agente...">
-        </div>
-        <div class="app-card">
-          <label>CÓDIGO DE SALA</label>
-          <input type="text" id="joinCode" class="input-modern code-input" maxlength="6" placeholder="ABC123">
-        </div>
-        <button id="btnJoinRoom" class="btn-big btn-main btn-primary">ENTRAR</button>
-      </div>
+      <div class="app-card"><input type="text" id="joinName" class="input-modern" maxlength="12" placeholder="Tu Nombre..."></div>
+      <div class="app-card"><input type="text" id="joinCode" class="input-modern" maxlength="6" placeholder="CÓDIGO (Ej: ABC123)" style="text-transform:uppercase; letter-spacing:2px; text-align:center;"></div>
+      <button id="btnJoinRoom" class="btn-big btn-main btn-primary">ENTRAR</button>
     </div>
 
     <div id="screenCategories" class="screen" style="display:none;">
       <div class="screen-header">
-        <button id="backFromCategories" class="btn-icon-back">
-          <img src="images/arrow.png" alt="Volver" class="arrow-img">
-        </button>
+        <button id="backFromCategories" class="btn-icon-back"><img src="images/arrow.png" class="arrow-icon-img" alt="Volver"></button>
         <h2>Categorías</h2>
       </div>
-      <div class="config-column" style="flex:1;">
-        <div class="app-card" style="flex:1;">
-          <p class="mini-hint-simple" style="text-align:center; margin-bottom:15px; font-size:0.8rem;">Elige las categorías para la palabra secreta.</p>
-          <div id="categoriesGrid" class="categories-grid"></div>
-        </div>
-        <button id="btnSaveCategories" class="btn-big btn-main btn-primary">GUARDAR</button>
-      </div>
+      <div id="categoriesGrid" class="categories-grid" style="flex:1;"></div>
+      <button id="btnSaveCategories" class="btn-big btn-main btn-primary">GUARDAR</button>
     </div>
   </div>
 
   <main id="mainContent" style="display:none;">
     <div class="main-layout">
       <div class="top-bar">
-        <div class="room-info-group">
-          <span class="room-label">SALA</span>
-          <span id="roomCodeDisplay" class="room-code-display">------</span>
-          <button id="btnCopyCode" class="copy-btn-icon" title="Copiar código">
-            <svg class="copy-svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-          </button>
-        </div>
-
-        <div class="phase-display">
-          <span id="phaseLabel" class="phase-badge">LOBBY</span>
-        </div>
-
-        <div class="header-actions">
-          <button id="btnExit" class="btn-exit-game">
-            <img src="images/arrow.png" class="btn-exit-arrow" alt="Salir">
-            <span>Salir</span>
-          </button>
-        </div>
+        <div style="display:flex; align-items:center;"><span style="font-size:0.7rem; color:#94a3b8; font-weight:bold; margin-right:5px;">SALA</span><span id="roomCodeDisplay" class="room-code-display">------</span><button id="btnCopyCode" class="copy-btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>
+        <span id="phaseLabel" style="background:#1e293b; color:#60a5fa; padding:5px 10px; border-radius:5px; font-weight:bold; font-size:0.8rem;">LOBBY</span>
+        <button id="btnExit" class="btn-exit-game"><img src="images/arrow.png" class="btn-exit-arrow">Salir</button>
       </div>
 
       <div class="main-grid">
         <section class="view-panel">
-
           <div id="viewLobby" class="view-card">
-            <div style="font-size:3rem;">⏳</div>
-            <h2>Esperando agentes...</h2>
-            <p class="subtitle">Comparte el código rojo para que se unan.</p>
-            <div class="stats-row">
-              <div class="stat-item">
-                <span id="currentPlayersCount" class="stat-value">1</span>
-                <span class="stat-label">Jugadores</span>
-              </div>
-              <div class="stat-item">
-                <span id="currentImpostorsCount" class="stat-value">1</span>
-                <span class="stat-label">Impostores</span>
-              </div>
-            </div>
-            <div style="margin-top:20px;">
-              <button id="btnStartRound" class="btn-main btn-primary" style="display:none; width:100%; max-width:300px;">INICIAR MISIÓN</button>
-            </div>
+            <h2>Esperando...</h2>
+            <div class="stats-row"><div class="stat-item"><span id="currentPlayersCount" class="stat-value">1</span><span class="stat-label">Jugadores</span></div><div class="stat-item"><span id="currentImpostorsCount" class="stat-value">1</span><span class="stat-label">Impostores</span></div></div>
+            <button id="btnStartRound" class="btn-main btn-primary" style="display:none; width:100%; margin-top:20px;">INICIAR PARTIDA</button>
           </div>
-
           <div id="viewWord" class="view-card" style="display:none;">
             <div class="secret-card-container" onclick="toggleSecretCard()">
               <div id="secretCardInner" class="secret-card-inner">
-                <div class="secret-card-face front">
-                  <div class="lock-icon-big">🔒</div>
-                  <div class="tap-hint">TOCA PARA REVELAR</div>
-                  <div class="card-title">Tu identidad secreta</div>
-                </div>
-                <div class="secret-card-face back">
-                  <div id="roleTitle" class="role-badge">ROL</div>
-                  <div id="secretWordDisplay" class="secret-word-reveal">-----</div>
-                  <p id="wordHint" class="secret-hint-text">...</p>
-                </div>
+                <div class="secret-card-face front"><span style="font-size:3rem;">🔒</span><div style="margin-top:10px; font-size:0.8rem; color:#94a3b8;">TOCA PARA VER</div></div>
+                <div class="secret-card-face back"><div id="roleTitle" class="role-badge">ROL</div><div id="secretWordDisplay" class="secret-word-reveal">---</div><p id="wordHint" style="font-size:0.8rem; color:#94a3b8;">...</p></div>
               </div>
             </div>
-            <p class="subtitle" style="margin-top:20px;">Memoriza tu palabra. La ronda comenzará pronto.</p>
+            <p style="margin-top:20px; color:#94a3b8;">Memoriza tu rol.</p>
           </div>
-
           <div id="viewTurn" class="view-card" style="display:none;">
-            <div style="font-size:3rem;">🗣️</div>
-            <h2 id="turnTitle">Ronda de Pistas</h2>
-            <p id="turnInstruction" class="subtitle">Escucha atentamente.</p>
-            <div class="app-card" style="margin: 20px auto; max-width:400px;">
-              <span style="color:#64748b; font-size:0.8rem; text-transform:uppercase;">TURNO ACTUAL</span>
-              <div id="currentTurnPlayer" style="font-size:1.5rem; font-weight:800;">Esperando...</div>
-            </div>
-            <div id="turnActions" style="display:none; margin-top:20px;">
-              <button id="btnEndTurn" class="btn-main btn-primary">TERMINÉ MI PISTA</button>
-            </div>
+            <h2 id="turnTitle">Pistas</h2>
+            <div class="app-card" style="text-align:center; margin:20px 0;"><span class="mini-label">TURNO DE</span><div id="currentTurnPlayer" style="font-size:1.5rem; font-weight:bold;">...</div></div>
+            <div id="turnActions" style="display:none;"><button id="btnEndTurn" class="btn-main btn-primary">TERMINAR TURNO</button></div>
           </div>
-
           <div id="viewVote" class="view-card" style="display:none;">
-            <div style="font-size:3rem;">🗳️</div>
             <h2>Votación</h2>
-            <p class="subtitle" id="voteSubtitle">¿Quién es el impostor? Toca para votar.</p>
-            <div id="votePlayersGrid" class="vote-grid"></div>
-            <div style="margin-top:20px;">
-              <button id="btnSkipVote" class="btn-secondary btn-main" style="width:100%; max-width:300px;">SALTAR VOTO (Skip)</button>
-            </div>
+            <p id="voteSubtitle" style="color:#94a3b8; margin-bottom:15px;">Elige al impostor</p>
+            <div id="votePlayersGrid" class="categories-grid"></div>
+            <button id="btnSkipVote" class="btn-secondary btn-main" style="width:100%; margin-top:20px;">SALTAR (SKIP)</button>
           </div>
         </section>
 
-        <aside class="sidebar-panel">
-          <div class="sidebar-card">
-            <div class="sidebar-header">
-              <span>TIEMPO RESTANTE</span>
-              <span style="font-size:1.2rem;">⏱️</span>
-            </div>
-            <div id="timerNumber" class="timer-display-sidebar">--</div>
-          </div>
-
-          <div class="sidebar-card" style="flex:1;">
-            <div class="sidebar-header">TRIPULACIÓN</div>
-            <div id="playersList" class="players-list"></div>
-          </div>
-
-          <div class="sidebar-card">
-            <div class="sidebar-header">ESTADO</div>
-            <p id="statusText" class="status-message">Esperando inicio.</p>
-          </div>
+        <aside class="sidebar-panel" style="display:flex; flex-direction:column; gap:10px;">
+          <div class="sidebar-card"><div class="mini-label">TIEMPO</div><div id="timerNumber" class="timer-display-sidebar">--</div></div>
+          <div class="sidebar-card" style="flex:1;"><div class="mini-label">AGENTES</div><div id="playersList" class="players-list"></div></div>
+          <div class="sidebar-card"><div class="mini-label">ESTADO</div><p id="statusText" style="font-size:0.8rem; color:#94a3b8;">...</p></div>
         </aside>
       </div>
     </div>
   </main>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="index.js"></script>
+  <script src="game.js"></script>
 </body>
 </html>
