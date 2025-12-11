@@ -7,16 +7,25 @@ let myId = null;
 let isHost = false;
 let currentRoom = null;
 let currentPhase = 'lobby';
-
 let selectedCategories = new Set(['lugares', 'comidas', 'objetos']);
-let myRole = null;   // "IMPOSTOR" / "TRIPULANTE"
+let myRole = null; // "IMPOSTOR" / "TRIPULANTE"
 let myWord = null;
 let myHint = null;
-
 let voteLocked = false;
 
 // =========================
-// UTILIDADES
+// SONIDOS
+// =========================
+function playSound(id) {
+  const audio = document.getElementById(id);
+  if (audio) {
+    audio.currentTime = 0;
+    audio.play().catch(() => {}); // Ignorar errores de autoplay
+  }
+}
+
+// =========================
+// UTILIDADES BÁSICAS
 // =========================
 const CATEGORIES_DATA = [
   { id: 'lugares', icon: '📍', name: 'Lugares' },
@@ -30,87 +39,80 @@ const CATEGORIES_DATA = [
 ];
 
 function qs(id) { return document.getElementById(id); }
-
 function bindClick(id, handler) {
   const el = qs(id);
-  if (el) el.addEventListener('click', handler);
+  if (el) el.addEventListener('click', (e) => {
+    playSound('soundClick'); // Sonido en todos los clicks
+    handler(e);
+  });
 }
 
+// Ajustar contadores (+/-)
 function adjustValue(inputId, delta) {
   const hidden = qs(inputId);
   if (!hidden) return;
   let val = parseInt(hidden.value) || 0;
-
   if (inputId === 'maxPlayers') {
     val = Math.min(15, Math.max(3, val + delta));
-    hidden.value = val;
-    qs('displayPlayers').innerText = val;
+    hidden.value = val; qs('displayPlayers').innerText = val;
   } else if (inputId === 'impostors') {
     val = Math.min(4, Math.max(1, val + delta));
-    hidden.value = val;
-    qs('displayImpostors').innerText = val;
+    hidden.value = val; qs('displayImpostors').innerText = val;
   } else if (inputId === 'timeVote') {
     val = Math.min(300, Math.max(60, val + delta));
-    hidden.value = val;
-    qs('displayVoteTime').innerText = val;
+    hidden.value = val; qs('displayVoteTime').innerText = val;
   }
 }
 
+// Actualizar resumen y grid de categorías
 function updateCategoriesSummary() {
   const summaryEl = qs('categoriesSummary');
-  if (!summaryEl) return;
-  const names = CATEGORIES_DATA
-    .filter(c => selectedCategories.has(c.id))
-    .map(c => c.name);
-  if (names.length === 0) {
-    summaryEl.innerText = 'Selecciona al menos una categoría';
-  } else {
-    summaryEl.innerText = names.join(', ');
-  }
+  const names = CATEGORIES_DATA.filter(c => selectedCategories.has(c.id)).map(c => c.name);
+  summaryEl.innerText = names.length === 0 ? 'Selecciona alguna' : names.join(', ');
 }
-
 function renderCategoriesGrid() {
   const grid = qs('categoriesGrid');
-  if (!grid) return;
   grid.innerHTML = '';
   CATEGORIES_DATA.forEach(cat => {
     const btn = document.createElement('button');
     btn.className = 'category-pill' + (selectedCategories.has(cat.id) ? ' active' : '');
-    btn.innerHTML = `<span class="icon">${cat.icon}</span><span>${cat.name}</span>`;
+    btn.innerHTML = `<span>${cat.icon}</span><span>${cat.name}</span>`;
     btn.onclick = () => {
-      if (selectedCategories.has(cat.id)) {
-        selectedCategories.delete(cat.id);
-      } else {
-        selectedCategories.add(cat.id);
-      }
-      if (selectedCategories.size === 0) {
-        selectedCategories.add(cat.id); // no permitir vacío
-      }
+      playSound('soundClick');
+      if (selectedCategories.has(cat.id)) selectedCategories.delete(cat.id);
+      else selectedCategories.add(cat.id);
+      if (selectedCategories.size === 0) selectedCategories.add(cat.id);
       renderCategoriesGrid();
     };
     grid.appendChild(btn);
   });
 }
 
-// =========================
-// NAV PANTALLAS LOBBY
-// =========================
+// Navegación en el Lobby
 function showScreen(screenId) {
-  const screens = ['screenHome', 'screenCreate', 'screenJoin', 'screenCategories'];
-  screens.forEach(id => {
-    const el = qs(id);
-    if (el) el.style.display = (id === screenId ? 'flex' : 'none');
+  ['screenHome', 'screenCreate', 'screenJoin', 'screenCategories'].forEach(id => {
+    qs(id).style.display = (id === screenId ? 'flex' : 'none');
   });
 }
 
 // =========================
-// EVENTOS INICIALES
+// FUNCIÓN GLOBAL PARA REVELAR CARTA (FIX BUG)
+// =========================
+window.toggleSecretCard = function() {
+  if (!currentRoom || currentPhase !== 'word') return;
+  playSound('soundFlip');
+  const inner = qs('secretCardInner');
+  if (inner) inner.classList.toggle('flipped');
+};
+
+// =========================
+// EVENTOS INICIALES (ON LOAD)
 // =========================
 window.addEventListener('load', () => {
   renderCategoriesGrid();
   updateCategoriesSummary();
 
-  // navegación
+  // Navegación
   bindClick('btnGoCreate', () => showScreen('screenCreate'));
   bindClick('btnGoJoin', () => showScreen('screenJoin'));
   bindClick('backFromCreate', () => showScreen('screenHome'));
@@ -119,72 +121,52 @@ window.addEventListener('load', () => {
   bindClick('backFromCategories', () => showScreen('screenCreate'));
   bindClick('btnSaveCategories', () => { updateCategoriesSummary(); showScreen('screenCreate'); });
 
-  // ayuda
+  // Ayuda
   bindClick('btnHowToPlay', () => qs('howToPlayOverlay').style.display = 'flex');
   bindClick('btnCloseHowToPlay', () => qs('howToPlayOverlay').style.display = 'none');
 
-  // creación / unión
+  // Acciones Principales
   bindClick('btnCreateRoom', createRoom);
   bindClick('btnJoinRoom', joinRoom);
-
-  // juego
-  bindClick('btnStartRound', () => {
-    if (!isHost) return;
-    socket.emit('startRound');
-  });
-
+  bindClick('btnStartRound', () => { if (isHost) socket.emit('startRound'); });
   bindClick('btnBackToLobby', () => {
     qs('ejectionOverlay').style.display = 'none';
     if (currentRoom) updateGameView(currentRoom);
   });
+  bindClick('btnExit', () => location.reload());
 
-  bindClick('btnExit', () => {
-    // volver al home y recargar para limpiar socket
-    location.reload();
-  });
-
+  // Copiar Código
   bindClick('btnCopyCode', () => {
     const code = qs('roomCodeDisplay').innerText.trim();
-    if (!code) return;
-    navigator.clipboard.writeText(code).catch(() => {});
+    if (code && code !== '------') navigator.clipboard.writeText(code);
   });
 
+  // Acciones de Juego
   bindClick('btnSkipVote', () => {
     if (!currentRoom || currentPhase !== 'vote' || voteLocked) return;
     voteLocked = true;
     socket.emit('submitVote', { targetId: 'skip' });
+    qs('voteSubtitle').innerText = 'Has votado saltar. Esperando a los demás...';
   });
-
   bindClick('btnEndTurn', () => {
     if (!currentRoom || currentPhase !== 'turn') return;
-    socket.emit('endTurnNow');
+    socket.emit('endTurnEarly');
   });
-
-  const secretCard = qs('secretCard');
-  if (secretCard) {
-    secretCard.addEventListener('click', () => {
-      if (!currentRoom || currentPhase !== 'word') return;
-      secretCard.classList.add('revealed');
-    });
-  }
 });
 
 // =========================
 // SOCKET: CREAR / UNIRSE
 // =========================
 function createRoom() {
-  if (selectedCategories.size === 0) {
-    alert('Debes elegir al menos una categoría.');
-    return;
-  }
+  if (selectedCategories.size === 0) return alert('Elige al menos una categoría.');
   socket.emit('createRoom', {
     name: qs('hostName').value || 'Agente',
     maxPlayers: qs('maxPlayers').value,
     impostors: qs('impostors').value,
     categories: Array.from(selectedCategories),
-    turnTime: 15,
+    turnTime: 20, // Fijo en 20s por ahora
     voteTime: qs('timeVote').value,
-    groupMode: qs('groupModeToggle').checked
+    groupMode: qs('groupModeToggle').checked // El toggle ahora sí funciona
   }, handleConnection);
 }
 
@@ -196,11 +178,7 @@ function joinRoom() {
 }
 
 function handleConnection(res) {
-  if (!res.ok) {
-    alert(res.error || 'No se pudo entrar a la sala.');
-    return;
-  }
-
+  if (!res.ok) return alert(res.error || 'Error al conectar.');
   myId = res.me.id;
   isHost = res.isHost;
 
@@ -208,63 +186,55 @@ function handleConnection(res) {
   qs('mainContent').style.display = 'block';
   qs('roomCodeDisplay').innerText = res.roomCode;
 
-  if (res.discordLink) {
-    const btn = qs('btnDiscordManual');
-    if (btn) {
-      btn.style.display = 'flex';
-      btn.onclick = () => window.open(res.discordLink, '_blank');
-    }
+  // AUTO-ABRIR DISCORD si hay link y no soy el host (el host ya lo tiene)
+  if (res.discordLink && !isHost) {
+    window.open(res.discordLink, '_blank');
   }
 
-  updateGameView({ phase: 'lobby', players: [] });
+  updateGameView({ phase: 'lobby', players: [], hostId: isHost ? myId : null });
 }
 
 // =========================
-// SOCKET: ESTADO SALA
+// SOCKET: ESTADO DEL JUEGO
 // =========================
 socket.on('roomState', (room) => {
   currentRoom = room;
-  currentPhase = room.phase || 'lobby';
   updateGameView(room);
 });
 
-// Info privada de rol / palabra
 socket.on('privateRole', (data) => {
-  myRole = data.role;
+  myRole = data.role; // "IMPOSTOR" o "TRIPULANTE"
   myWord = data.word;
   myHint = data.hint;
-  if (currentPhase === 'word') {
-    updateWordCard();
-  }
+  if (currentPhase === 'word') updateWordCard();
 });
 
-// Resultado ronda
+// RESULTADO FINAL (CORREGIDO VICTORIA/DERROTA)
 socket.on('roundResult', (data) => {
   const overlay = qs('ejectionOverlay');
   const titleEl = qs('resultTitle');
   const subtitleEl = qs('resultSubtitle');
-  const secretWordEl = qs('finalSecretWord');
-  const impsEl = qs('finalImpostors');
-  const iconEl = qs('resultIcon');
-
+  qs('finalSecretWord').innerText = data.secretWord || '---';
+  qs('finalImpostors').innerText = (data.impostors || []).join(', ') || '---';
   overlay.style.display = 'flex';
 
-  secretWordEl.innerText = data.secretWord || '---';
-  impsEl.innerText = (data.impostors || []).join(', ') || '---';
+  // Determinar si YO gané
+  const iWon = (data.result === 'crew' && myRole === 'TRIPULANTE') ||
+               (data.result === 'impostor' && myRole === 'IMPOSTOR');
 
-  if (data.result === 'crew') {
-    iconEl.textContent = '✅';
-    titleEl.textContent = 'GANÓ LA TRIPULACIÓN';
-    subtitleEl.textContent = 'Descubrieron al impostor.';
-  } else if (data.result === 'impostor') {
-    iconEl.textContent = '🚨';
-    titleEl.textContent = 'GANÓ EL IMPOSTOR';
-    subtitleEl.textContent = 'El impostor logró pasar desapercibido.';
+  if (data.result === 'none') {
+    qs('resultIcon').textContent = '⚖️';
+    titleEl.textContent = 'RONDA NULA'; titleEl.style.color = '#94a3b8';
+  } else if (iWon) {
+    playSound('soundWin');
+    qs('resultIcon').textContent = '🏆';
+    titleEl.textContent = '¡VICTORIA!'; titleEl.style.color = '#4ade80';
   } else {
-    iconEl.textContent = '⚖️';
-    titleEl.textContent = 'RONDA TERMINADA';
-    subtitleEl.textContent = 'Sin resultado claro.';
+    playSound('soundLose');
+    qs('resultIcon').textContent = '💀';
+    titleEl.textContent = 'DERROTA'; titleEl.style.color = '#ef4444';
   }
+  subtitleEl.textContent = data.reason;
 });
 
 // =========================
@@ -272,188 +242,91 @@ socket.on('roundResult', (data) => {
 // =========================
 function updateGameView(room) {
   if (!room) return;
-  currentRoom = room;
   currentPhase = room.phase || 'lobby';
+  isHost = (room.hostId === myId);
 
-  const phaseLabel = qs('phaseLabel');
-  const playersList = qs('playersList');
-  const statusText = qs('statusText');
-  const timerCircle = qs('timerCircle');
-  const timerNumber = qs('timerNumber');
+  // Actualizar fase y timer
+  qs('phaseLabel').innerText = currentPhase === 'word' ? 'MEMORIZAR' : currentPhase === 'turn' ? 'PISTAS' : currentPhase === 'vote' ? 'VOTACIÓN' : 'LOBBY';
+  const timerEl = qs('timerNumber');
+  timerEl.innerText = room.timerText || '--';
+  timerEl.classList.toggle('urgent', room.remaining > 0 && room.remaining <= 5);
 
-  // fase
-  if (phaseLabel) {
-    let txt = 'LOBBY';
-    if (currentPhase === 'word') txt = 'PALABRA';
-    else if (currentPhase === 'turn') txt = 'TURNOS';
-    else if (currentPhase === 'vote') txt = 'VOTACIÓN';
-    else if (currentPhase === 'result') txt = 'RESULT';
-    phaseLabel.innerText = txt;
-  }
+  // Actualizar lista de jugadores
+  const pList = qs('playersList');
+  pList.innerHTML = '';
+  (room.players || []).forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'player-row' + (p.isDead ? ' dead' : '') + (room.currentTurnId === p.id ? ' active-turn' : '');
+    row.innerHTML = `
+      <div class="p-avatar-small" style="background:${p.color}">${p.name.charAt(0)}</div>
+      <div class="p-name-list">${p.name}</div>
+      ${room.hostId === p.id ? '<span class="p-tag-host">HOST</span>' : ''}
+    `;
+    pList.appendChild(row);
+  });
+  qs('currentPlayersCount').innerText = room.players.length;
+  qs('currentImpostorsCount').innerText = room.impostors;
 
-  // timer circular
-  if (timerCircle && timerNumber) {
-    const seconds = room.remaining || 0;
-    if (!seconds) {
-      timerNumber.innerText = '--';
-      timerCircle.classList.remove('cyan', 'urgent');
-    } else {
-      timerNumber.innerText = seconds;
-      timerCircle.classList.remove('cyan', 'urgent');
-      if (seconds <= 3) {
-        timerCircle.classList.add('urgent');
-      } else {
-        timerCircle.classList.add('cyan');
-      }
-    }
-  }
+  // Mostrar/Ocultar botón de inicio (solo host en lobby)
+  qs('btnStartRound').style.display = (isHost && currentPhase === 'lobby') ? 'block' : 'none';
 
-  // lista de jugadores
-  if (playersList) {
-    playersList.innerHTML = '';
-    (room.players || []).forEach(p => {
-      const row = document.createElement('div');
-      row.className = 'player-row';
-      if (p.isDead) row.style.opacity = 0.5;
+  // Texto de estado
+  const status = qs('statusText');
+  if (currentPhase === 'lobby') status.innerText = isHost ? 'Configura y arranca la partida.' : 'Esperando al anfitrión...';
+  else if (currentPhase === 'word') status.innerText = 'Memoricen su palabra secreta.';
+  else if (currentPhase === 'turn') status.innerText = 'Presten atención a las pistas.';
+  else if (currentPhase === 'vote') status.innerText = 'Decidan quién es el impostor.';
 
-      // resaltar jugador de turno activo
-      if (room.currentTurnId && room.currentTurnId === p.id && currentPhase === 'turn') {
-        row.classList.add('player-row-active');
-      }
+  // Cambiar vistas principales
+  qs('viewLobby').style.display = currentPhase === 'lobby' ? 'flex' : 'none';
+  qs('viewWord').style.display = currentPhase === 'word' ? 'flex' : 'none';
+  qs('viewTurn').style.display = currentPhase === 'turn' ? 'flex' : 'none';
+  qs('viewVote').style.display = currentPhase === 'vote' ? 'flex' : 'none';
 
-      const avatar = document.createElement('div');
-      avatar.className = 'p-avatar';
-      avatar.style.backgroundColor = p.color || '#020617';
-      avatar.textContent = (p.name || '?').charAt(0).toUpperCase();
-
-      const nameEl = document.createElement('div');
-      nameEl.className = 'p-name';
-      nameEl.textContent = p.name;
-
-      const tag = document.createElement('div');
-      tag.className = 'p-tag';
-      if (room.hostId === p.id) tag.textContent = 'HOST';
-      else if (p.id === myId) tag.textContent = 'TÚ';
-      else tag.textContent = '';
-
-      row.appendChild(avatar);
-      row.appendChild(nameEl);
-      row.appendChild(tag);
-      playersList.appendChild(row);
-    });
-
-    qs('currentPlayersCount').innerText = (room.players || []).length;
-    qs('currentImpostorsCount').innerText = room.impostors || 1;
-  }
-
-  // texto estado
-  if (statusText) {
-    if (currentPhase === 'lobby') statusText.innerText = 'Esperando que el host inicie la ronda.';
-    else if (currentPhase === 'word') statusText.innerText = 'Todos viendo su palabra y rol.';
-    else if (currentPhase === 'turn') statusText.innerText = 'Turnos de pistas en curso.';
-    else if (currentPhase === 'vote') statusText.innerText = 'Momento de votar al posible impostor.';
-    else if (currentPhase === 'result') statusText.innerText = 'Mostrando resultado de la ronda.';
-  }
-
-  // cambiar vistas
-  const viewLobby = qs('viewLobby');
-  const viewWord = qs('viewWord');
-  const viewTurn = qs('viewTurn');
-  const viewVote = qs('viewVote');
-
-  if (viewLobby) viewLobby.style.display = (currentPhase === 'lobby' ? 'block' : 'none');
-  if (viewWord) viewWord.style.display = (currentPhase === 'word' ? 'block' : 'none');
-  if (viewTurn) viewTurn.style.display = (currentPhase === 'turn' ? 'block' : 'none');
-  if (viewVote) viewVote.style.display = (currentPhase === 'vote' ? 'block' : 'none');
-
-  // palabra / rol
+  // Lógica específica de fases
   if (currentPhase === 'word') {
-    const secretCard = qs('secretCard');
-    if (secretCard) secretCard.classList.remove('revealed');
+    qs('secretCardInner').classList.remove('flipped'); // Resetear carta al entrar
     updateWordCard();
   }
-
-  // turnos
-  const turnInstruction = qs('turnInstruction');
-  const currentTurnPlayer = qs('currentTurnPlayer');
-  const turnActions = qs('turnActions');
-
   if (currentPhase === 'turn') {
-    const turnPlayer = (room.players || []).find(p => p.id === room.currentTurnId);
-    if (currentTurnPlayer) currentTurnPlayer.innerText = turnPlayer ? turnPlayer.name : 'Esperando...';
-
-    if (turnInstruction) {
-      if (room.currentTurnId === myId) {
-        turnInstruction.innerText = 'Es tu turno: di una pista sin revelar la palabra.';
-      } else {
-        turnInstruction.innerText = 'Escucha las pistas de los demás jugadores.';
-      }
-    }
-
-    if (turnActions) {
-      turnActions.style.display = (room.currentTurnId === myId ? 'block' : 'none');
-    }
-  } else if (turnActions) {
-    turnActions.style.display = 'none';
+    const turnPlayer = room.players.find(p => p.id === room.currentTurnId);
+    qs('currentTurnPlayer').innerText = turnPlayer ? turnPlayer.name : '---';
+    qs('turnActions').style.display = (room.currentTurnId === myId) ? 'block' : 'none';
+    qs('turnInstruction').innerText = (room.currentTurnId === myId) ? '¡Tu turno! Di tu pista.' : `Escucha la pista de ${turnPlayer?.name}.`;
   }
-
-  // votación
   if (currentPhase === 'vote') {
     renderVoteGrid(room);
+    qs('voteSubtitle').innerText = voteLocked ? 'Voto enviado.' : 'Toca a un jugador para votar.';
   }
 }
 
-// =========================
-// Tarjeta palabra / rol
-// =========================
+// Actualizar contenido de la carta secreta
 function updateWordCard() {
-  const roleEl = qs('roleTitle');
-  const wordEl = qs('secretWordDisplay');
-  const hintEl = qs('wordHint');
-
-  if (!roleEl || !wordEl || !hintEl) return;
-
-  roleEl.innerText = myRole || 'ROL';
-  if (myRole === 'IMPOSTOR') {
-    wordEl.innerText = '???';
-    hintEl.innerText = 'Eres el impostor. Finge que conoces la palabra y copia el estilo de las pistas.';
-  } else {
-    wordEl.innerText = myWord || '-----';
-    hintEl.innerText = myHint || 'No reveles la palabra exacta, solo da pistas.';
-  }
+  qs('roleTitle').innerText = myRole || 'ROL';
+  qs('secretWordDisplay').innerText = myWord || '-----';
+  qs('wordHint').innerText = myHint || '...';
+  if(myRole === 'IMPOSTOR') qs('roleTitle').style.borderColor = '#ef4444'; // Rojo para impostor
 }
 
-// =========================
-// VOTACIÓN
-// =========================
+// Renderizar grilla de votación
 function renderVoteGrid(room) {
   const grid = qs('votePlayersGrid');
-  if (!grid) return;
   grid.innerHTML = '';
-  voteLocked = !!(room.myVote);
+  voteLocked = !!(room.votes && room.votes[myId]);
 
-  (room.players || []).filter(p => !p.isDead).forEach(p => {
+  room.players.filter(p => !p.isDead && p.id !== myId).forEach(p => {
     const card = document.createElement('div');
-    card.className = 'vote-card';
-
-    card.innerHTML = `
-      <div class="vote-avatar">🛰️</div>
-      <div>${p.name}</div>
-    `;
-
+    card.className = 'vote-card' + (room.votes && room.votes[myId] === p.id ? ' selected' : '');
+    card.innerHTML = `<div class="vote-avatar-box" style="background:${p.color}">👤</div><div class="vote-name">${p.name}</div>`;
     card.onclick = () => {
-      if (voteLocked) return;
+      if (voteLocked || currentPhase !== 'vote') return;
+      playSound('soundClick');
       voteLocked = true;
       socket.emit('submitVote', { targetId: p.id });
+      qs('voteSubtitle').innerText = `Has votado a ${p.name}.`;
     };
-
     grid.appendChild(card);
   });
 }
 
-// =========================
-// ERRORES
-// =========================
-socket.on('connect_error', () => {
-  alert('Error de conexión con el servidor.');
-});
+socket.on('connect_error', () => alert('Error de conexión con el servidor.'));
