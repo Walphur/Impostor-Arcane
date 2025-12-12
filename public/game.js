@@ -13,7 +13,6 @@ let voteLocked = false;
 
 const qs = (id) => document.getElementById(id);
 
-// SONIDOS
 function playSound(id) {
   const audio = qs(id);
   if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); }
@@ -57,23 +56,15 @@ function setupEventListeners() {
   qs('btnJoinRoom').onclick = () => { playSound('soundClick'); joinRoom(); };
   qs('btnStartRound').onclick = () => { if(isHost) socket.emit('startRound'); };
   qs('btnExit').onclick = () => location.reload();
-  qs('btnBackToLobby').onclick = () => { 
-      qs('ejectionOverlay').style.display = 'none'; 
-      // Al volver del overlay, si el estado es lobby, actualizamos la vista.
-      if(currentRoom && currentRoom.phase === 'lobby') {
-          updateGameView(currentRoom);
-      }
-  };
+  qs('btnBackToLobby').onclick = () => { qs('ejectionOverlay').style.display = 'none'; if(currentRoom) updateGameView(currentRoom); };
   
-  // LOGICA COPIAR CON NUEVO ICONO
   const copyBtn = qs('btnCopyCode');
   copyBtn.onclick = () => { 
     const code = qs('roomCodeDisplay').innerText; 
     if(code !== '------') {
         navigator.clipboard.writeText(code);
         const originalHtml = copyBtn.innerHTML;
-        // Icono de copiado (dos rectángulos superpuestos)
-        copyBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+        copyBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
         setTimeout(() => { copyBtn.innerHTML = originalHtml; }, 2000);
     }
   };
@@ -114,7 +105,7 @@ window.adjustValue = function(id, delta) {
   if(id === 'timeVote') qs('displayVoteTime').innerText = val;
 };
 
-// CARTA MANUAL: CLIC PARA MOSTRAR/OCULTAR
+// CARTA MANUAL
 window.toggleSecretCard = function() { 
     if(currentPhase !== 'word') return; 
     const cardInner = qs('secretCardInner');
@@ -140,9 +131,7 @@ function handleJoin(res) {
   if(!res.ok) return alert(res.error || 'Error');
   myId = res.me.id; isHost = res.isHost;
   qs('lobbyOverlay').style.display = 'none'; qs('mainContent').style.display = 'block'; qs('roomCodeDisplay').innerText = res.roomCode;
-  
   if(res.discordLink && !isHost) setTimeout(() => window.open(res.discordLink, '_blank'), 500); 
-  
   if(res.room) { currentRoom = res.room; updateGameView(res.room); }
 }
 
@@ -162,13 +151,13 @@ socket.on('roundResult', (data) => {
   const finalImpostorsRow = qs('finalImpostors').parentElement;
 
   if (data.result === 'tie') {
-      playSound('soundLose'); // O un sonido neutro si tienes
+      playSound('soundLose'); 
       resultTitle.innerText = "EMPATE";
-      resultTitle.style.color = "#facc15"; // Amarillo para empate
+      resultTitle.style.color = "#facc15"; 
       resultSubtitle.innerText = data.reason;
-      resultIcon.innerHTML = '⚖️'; // Icono de balanza para empate
-      finalWordRow.style.display = 'none'; // No mostrar palabra en empate
-      finalImpostorsRow.style.display = 'none'; // No mostrar impostores en empate
+      resultIcon.innerHTML = '⚖️'; 
+      finalWordRow.style.display = 'none'; 
+      finalImpostorsRow.style.display = 'none'; 
   } else {
       qs('finalSecretWord').innerText = data.secretWord;
       qs('finalImpostors').innerText = data.impostors.join(', ');
@@ -192,54 +181,74 @@ socket.on('roundResult', (data) => {
   qs('ejectionOverlay').style.display = 'flex';
 });
 
-// FUNCION UPDATE BLINDADA
 function updateGameView(room) {
+  if (!room) return;
   currentPhase = room.phase; isHost = (room.hostId === myId);
-  const phaseLabel = qs('phaseLabel'); if(phaseLabel) phaseLabel.innerText = currentPhase.toUpperCase();
-  const timer = qs('timerNumber'); if(timer) timer.innerText = room.timerText || '--';
-  
-  const list = qs('playersList');
-  if(list) {
+
+  const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
+  const setDisplay = (id, show) => { const el = document.getElementById(id); if (el) el.style.display = show ? 'block' : 'none'; };
+
+  setTxt('phaseLabel', currentPhase.toUpperCase());
+  setTxt('timerNumber', room.timerText || '--');
+  setTxt('currentPlayersCount', room.players.length);
+  setTxt('currentImpostorsCount', room.impostors);
+
+  const list = document.getElementById('playersList');
+  if (list) {
       list.innerHTML = '';
       (room.players || []).forEach(p => {
-        const row = document.createElement('div'); row.className = 'player-row';
+        const row = document.createElement('div'); 
+        row.className = 'player-row';
         if(p.isDead) row.style.opacity = '0.5';
         if(room.currentTurnId === p.id) row.style.border = '1px solid #3b82f6';
-        row.innerHTML = `<div style="width:24px;height:24px;background:${p.color};border-radius:50%;text-align:center;font-weight:bold;color:#000;">${p.name[0]}</div><div style="flex:1;">${p.name}</div>${p.id === room.hostId ? '<span style="font-size:0.7rem;opacity:0.7;">HOST</span>' : ''}`;
+        
+        const badge = p.id === room.hostId ? '<span style="font-size:0.6rem; background:#ffffff20; padding:2px 6px; border-radius:4px; margin-left:auto;">HOST</span>' : '';
+        
+        row.innerHTML = `
+           <div style="width:28px;height:28px;background:${p.color};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#000;font-size:0.8rem;">${p.name.charAt(0).toUpperCase()}</div>
+           <div style="font-weight:600; font-size:0.9rem; margin-left:10px;">${p.name}</div>
+           ${badge}
+        `;
         list.appendChild(row);
       });
   }
 
-  const pCount = qs('currentPlayersCount'); if(pCount) pCount.innerText = room.players.length;
-  const iCount = qs('currentImpostorsCount'); if(iCount) iCount.innerText = room.impostors;
-  
-  const btnStart = qs('btnStartRound');
-  if(btnStart) btnStart.style.display = (isHost && currentPhase === 'lobby' && room.players.length >= 2) ? 'block' : 'none';
-  
-  const btnDisc = qs('btnDiscord');
-  if(btnDisc) btnDisc.style.display = room.discordLink ? 'flex' : 'none';
-  
-  ['viewLobby', 'viewWord', 'viewTurn', 'viewVote'].forEach(v => { const el = qs(v); if(el) el.style.display = 'none'; });
-  
-  if(currentPhase === 'lobby') { 
-      const vl = qs('viewLobby'); if(vl) vl.style.display = 'block'; 
-      const st = qs('statusText'); if(st) st.innerHTML = isHost ? "Inicia cuando estén listos." : `Esperando<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>`; 
+  const btnStart = document.getElementById('btnStartRound');
+  if (btnStart) {
+      btnStart.style.display = (isHost && currentPhase === 'lobby' && room.players.length >= 2) ? 'block' : 'none';
   }
-  else if(currentPhase === 'word') { 
-      const vw = qs('viewWord'); if(vw) vw.style.display = 'block'; 
-      qs('secretCardInner').classList.remove('flipped'); updateWordCard(); 
-      qs('statusText').innerText = "Viendo roles..."; 
-  }
-  else if(currentPhase === 'turn') { 
-      const vt = qs('viewTurn'); if(vt) vt.style.display = 'block'; 
-      const turnP = room.players.find(p => p.id === room.currentTurnId); 
-      qs('currentTurnPlayer').innerText = turnP ? turnP.name : '...'; 
-      qs('turnActions').style.display = (room.currentTurnId === myId) ? 'block' : 'none'; 
-      qs('statusText').innerText = "Ronda de pistas."; 
-  }
-  else if(currentPhase === 'vote') { 
-      const vv = qs('viewVote'); if(vv) vv.style.display = 'block'; 
-      renderVoteGrid(room); qs('statusText').innerText = "Votación en curso."; 
+
+  const btnDiscord = document.getElementById('btnDiscord');
+  if (btnDiscord) btnDiscord.style.display = room.discordLink ? 'flex' : 'none';
+
+  ['viewLobby', 'viewWord', 'viewTurn', 'viewVote'].forEach(v => setDisplay(v, false));
+
+  if (currentPhase === 'lobby') { 
+      setDisplay('viewLobby', true);
+      const st = document.getElementById('statusText');
+      if(st) st.innerHTML = isHost ? "Inicia cuando estén listos." : `Esperando<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>`;
+  } 
+  else if (currentPhase === 'word') { 
+      setDisplay('viewWord', true);
+      const card = document.getElementById('secretCardInner');
+      if(card) card.classList.remove('flipped'); 
+      updateWordCard();
+      setTxt('statusText', "Memorizando roles...");
+  } 
+  else if (currentPhase === 'turn') { 
+      setDisplay('viewTurn', true);
+      const turnP = room.players.find(p => p.id === room.currentTurnId);
+      setTxt('currentTurnPlayer', turnP ? turnP.name : '...');
+      
+      const turnActions = document.getElementById('turnActions');
+      if(turnActions) turnActions.style.display = (room.currentTurnId === myId) ? 'block' : 'none';
+      
+      setTxt('statusText', "Ronda de pistas.");
+  } 
+  else if (currentPhase === 'vote') { 
+      setDisplay('viewVote', true);
+      renderVoteGrid(room);
+      setTxt('statusText', "Votación en curso.");
   }
 }
 
