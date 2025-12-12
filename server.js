@@ -5,13 +5,29 @@ const { Server } = require('socket.io');
 const { Client, GatewayIntentBits, ChannelType, PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 
-const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#f97316', '#a855f7', '#ec4899', '#0ea5e9', '#22d3ee', '#4ade80', '#facc15', '#fb7185', '#8b5cf6', '#14b8a6', '#64748b'];
+// --- 1. CONFIGURACIÓN DEL SERVIDOR ---
+const app = express();
+const httpServer = http.createServer(app);
+const io = new Server(httpServer);
 
-// --- DISCORD ---
+// Variables Globales del Juego
+const rooms = {};
+const socketRoom = {};
+
+// --- 2. SERVIR ARCHIVOS ESTÁTICOS (LA WEB) ---
+// Esto conecta la carpeta 'www' con el servidor
+app.use(express.static(path.join(__dirname, 'www')));
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'www', 'index.html'));
+});
+
+// --- 3. CONFIGURACIÓN DE DISCORD ---
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID;
 const DISCORD_CATEGORY_ID = process.env.DISCORD_CATEGORY_ID; 
-let discordClient = null; let discordReady = false;
+let discordClient = null; 
+let discordReady = false;
 
 if (DISCORD_TOKEN && DISCORD_GUILD_ID) {
   discordClient = new Client({ intents: [GatewayIntentBits.Guilds] });
@@ -31,7 +47,9 @@ async function createDiscordChannelForRoom(code) {
   } catch (err) { console.error('Error creando canal:', err); return null; }
 }
 
-// --- PALABRAS ---
+// --- 4. DATOS DEL JUEGO (CONSTANTES) ---
+const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#f97316', '#a855f7', '#ec4899', '#0ea5e9', '#22d3ee', '#4ade80', '#facc15', '#fb7185', '#8b5cf6', '#14b8a6', '#64748b'];
+
 const WORD_DB = {
   lugares: ['CINE', 'PLAYA', 'HOSPITAL', 'ESCUELA', 'AEROPUERTO', 'RESTAURANTE', 'GIMNASIO', 'PARQUE', 'MUSEO', 'SUPERMERCADO', 'PLAZA', 'ESTADIO', 'TEATRO', 'OFICINA', 'BIBLIOTECA', 'BANCO', 'HOTEL', 'DISCOTECA', 'ESTACIÓN DE TREN', 'GRANJA', 'PISCINA', 'FÁBRICA', 'ZOO', 'IGLESIA', 'MONTE', 'RIO', 'LAGO', 'DESIERTO', 'SUBMARINO', 'NAVE ESPACIAL', 'CUEVA', 'VOLCÁN', 'ISLA DESIERTA', 'CEMENTERIO', 'LABORATORIO', 'CÁRCEL', 'CASTILLO', 'BOSQUE', 'GARAJE', 'ÁTICO', 'SÓTANO', 'CASINO', 'CRUCERO', 'SPA', 'PELUQUERÍA', 'FARMACIA'],
   comidas: ['PIZZA', 'HAMBURGUESA', 'SUSHI', 'PASTA', 'ENSALADA', 'SOPA', 'EMPANADAS', 'ASADO', 'TACO', 'HELADO', 'CHOCOLATE', 'SÁNDWICH', 'MILANESA', 'ARROZ', 'PAELLA', 'TARTA', 'PANQUEQUES', 'HUEVO FRITO', 'POLLO ASADO', 'BIFE', 'POCHOCLOS', 'LASAÑA', 'CEREAL', 'GALLETITAS', 'TORTILLA', 'GUISO', 'MANDARINA', 'BANANA', 'MANZANA', 'FRUTILLAS', 'QUESO', 'SALAME', 'MATE', 'CAFÉ', 'TE', 'DONA', 'HOT DOG'],
@@ -43,18 +61,10 @@ const WORD_DB = {
   fantasia: ['DRAGÓN', 'HADA', 'BRUJO', 'ELFO', 'VAMPIRO', 'HOMBRE LOBO', 'UNICORNIO', 'FÉNIX', 'OGRO', 'GIGANTE', 'DUENDE', 'SIRENA', 'ZOMBIE', 'FANTASMA', 'ALIENÍGENA', 'SUPERHÉROE', 'VILLANO', 'MAGO', 'HECHICERO']
 };
 
+// --- 5. FUNCIONES AUXILIARES ---
 function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
 function generateCode() { let res = ''; const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; for (let i = 0; i < 6; i++) res += chars[Math.floor(Math.random() * chars.length)]; return res; }
 function pickWord(cats) { const pool = []; (cats.length ? cats : ['lugares']).forEach(c => { if (WORD_DB[c]) pool.push(...WORD_DB[c]); }); return pool[Math.floor(Math.random() * pool.length)]; }
-
-
-// Le decimos que busque el HTML y los estilos dentro de la carpeta 'www'
-app.use(express.static(path.join(__dirname, 'www')));
-
-// Para que cuando entren a la web, les sirva el index.html correcto
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'www', 'index.html'));
-});
 
 function clearRoomTimer(room) { if (room._timer) { clearInterval(room._timer); room._timer = null; } }
 function startTimer(room, seconds, onEnd) {
@@ -77,6 +87,7 @@ function serializeRoom(room) {
 }
 function emitRoomState(room) { if (room) io.to(room.code).emit('roomState', serializeRoom(room)); }
 
+// --- 6. LÓGICA DE JUEGO (SOCKET.IO) ---
 io.on('connection', (socket) => {
   socket.on('createRoom', async (data, cb) => {
     const code = generateCode();
@@ -126,7 +137,7 @@ io.on('connection', (socket) => {
     const shuffled = shuffle([...room.players]);
     room.players = shuffled;
 
-    // 2. ASIGNAR ROLES: EL PRIMERO (índice 0) NUNCA ES IMPOSTOR
+    // 2. ASIGNAR ROLES
     const totalPlayers = room.players.length;
     const possibleImpostorIndices = [];
     for(let i = 1; i < totalPlayers; i++) possibleImpostorIndices.push(i);
@@ -179,6 +190,7 @@ io.on('connection', (socket) => {
   });
 });
 
+// --- 7. FUNCIONES DE FLUJO DE JUEGO ---
 function nextTurn(room) {
   clearRoomTimer(room);
   const living = room.players.map((p, i) => ({p, i})).filter(o => !o.p.isDead);
@@ -218,12 +230,10 @@ function finishVoting(room, reason) {
     if (room.roles[elimId] === 'impostor') { result = 'crew'; resReason = `¡Atraparon al impostor (${victim.name})!`; }
     else resReason = `Expulsaron a un inocente (${victim.name}).`;
   } else {
-      // Empate o Skip, nadie es expulsado.
       resReason = "Nadie fue expulsado (Empate o Skip).";
-      result = 'tie'; // Nuevo estado de empate
+      result = 'tie'; // EMPATE
   }
 
-  // Verificar condiciones de victoria solo si alguien fue expulsado
   if (result !== 'tie') {
     const impsAlive = room.players.filter(p => !p.isDead && room.roles[p.id] === 'impostor').length;
     const crewAlive = room.players.filter(p => !p.isDead && room.roles[p.id] === 'crew').length;
@@ -238,9 +248,8 @@ function finishVoting(room, reason) {
     clearRoomTimer(room);
     
     if (result === 'tie') {
-        // Si es empate, nueva ronda de pistas
+        // Lógica de empate: nueva ronda
         room.votes = {}; room.spoken = {}; 
-        // Elegir un nuevo jugador inicial aleatorio de los vivos
         const living = room.players.filter(p => !p.isDead);
         if (living.length > 0) {
             const nextStartPlayer = living[Math.floor(Math.random() * living.length)];
@@ -250,15 +259,15 @@ function finishVoting(room, reason) {
             emitRoomState(room);
             startTimer(room, room.config.turnTime / 1000, (r) => avanzarDesdeTurno(r));
         } else {
-            // Caso raro: todos muertos
             room.phase = 'lobby'; room.timerText = '--'; room.votes = {}; room.spoken = {}; room.turnIndex = -1; room.currentTurnId = null; emitRoomState(room);
         }
     } else {
-        // Victoria o derrota, volver al lobby
+        // Victoria/Derrota: volver al lobby
         room.phase = 'lobby'; room.timerText = '--'; room.votes = {}; room.spoken = {}; room.turnIndex = -1; room.currentTurnId = null; emitRoomState(room);
     }
   }, 8000);
 }
 
+// --- 8. INICIAR SERVIDOR ---
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => console.log(`🚀 Server en puerto ${PORT}`));
