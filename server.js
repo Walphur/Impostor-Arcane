@@ -16,7 +16,7 @@ let discordClient = null; let discordReady = false;
 
 if (DISCORD_TOKEN && DISCORD_GUILD_ID) {
   discordClient = new Client({ intents: [GatewayIntentBits.Guilds] });
-  discordClient.once('clientReady', () => { console.log(`✅ Discord: ${discordClient.user.tag}`); discordReady = true; });
+  discordClient.once('clientReady', () => { console.log(`✅ Discord conectado: ${discordClient.user.tag}`); discordReady = true; });
   discordClient.login(DISCORD_TOKEN).catch(err => console.error('❌ Error Discord:', err));
 }
 
@@ -76,13 +76,16 @@ function emitRoomState(room) { if (room) io.to(room.code).emit('roomState', seri
 
 // ----------- SOCKETS ----------- //
 io.on('connection', (socket) => {
+  console.log('Nuevo socket conectado:', socket.id);
+
   socket.on('createRoom', async (data, cb) => {
     const code = generateCode();
     const maxP = Math.min(15, Math.max(3, parseInt(data.maxPlayers) || 10));
     const imps = Math.min(maxP - 1, Math.max(1, parseInt(data.impostors) || 2));
     
     let discordLink = null; let discordChannelId = null;
-    // Si groupMode es FALSE (toggle apagado), creamos Discord
+    // IMPORTANTE: data.groupMode es TRUE si quieren "Modo Grupal" (SIN discord).
+    // Si data.groupMode es FALSE, quieren Discord.
     if (!data.groupMode && discordClient && discordReady) {
       const info = await createDiscordChannelForRoom(code);
       if (info) { discordLink = info.url; discordChannelId = info.channelId; }
@@ -98,15 +101,21 @@ io.on('connection', (socket) => {
     socketRoom[socket.id] = code; 
     socket.join(code);
     
-    cb({ ok: true, roomCode: code, me: { id: socket.id }, isHost: true, discordLink });
-    emitRoomState(rooms[code]); // Asegurar que el host vea su estado
+    console.log(`Sala creada ${code} por ${data.name}. Discord: ${discordLink ? 'SI' : 'NO'}`);
+
+    // Enviamos el room completo en el callback para carga inmediata
+    cb({ ok: true, roomCode: code, me: { id: socket.id }, isHost: true, discordLink, room: serializeRoom(rooms[code]) });
+    emitRoomState(rooms[code]);
   });
 
   socket.on('joinRoom', (data, cb) => {
     const code = (data.roomCode || '').trim().toUpperCase(); 
     const room = rooms[code];
     
-    if (!room) return cb({ ok: false, error: 'Sala no existe' });
+    if (!room) {
+        console.log(`Intento fallido de unirse a ${code}: Sala no existe`);
+        return cb({ ok: false, error: 'Sala no existe' });
+    }
     if (room.players.length >= room.maxPlayers) return cb({ ok: false, error: 'Sala llena' });
     if (room.phase !== 'lobby') return cb({ ok: false, error: 'Partida ya iniciada' });
     
@@ -118,9 +127,12 @@ io.on('connection', (socket) => {
     
     room.players.push({ id: socket.id, name, color: assignColor(room), isDead: false });
     
-    cb({ ok: true, roomCode: code, me: { id: socket.id }, isHost: false, discordLink: room.discordLink });
+    console.log(`Jugador ${name} se unió a sala ${code}`);
+
+    // FIX: Enviamos la sala completa en el callback para que el cliente renderice YA
+    cb({ ok: true, roomCode: code, me: { id: socket.id }, isHost: false, discordLink: room.discordLink, room: serializeRoom(room) });
     
-    // IMPORTANTE: Emitir a TODOS en la sala para que vean al nuevo jugador
+    // Y emitimos a todos los demás
     emitRoomState(room);
   });
 
@@ -157,12 +169,9 @@ io.on('connection', (socket) => {
     clearRoomTimer(room); avanzarDesdeTurno(room);
   });
 
-  // LOGICA PARA ELIMINAR CANAL DE DISCORD AL VACIARSE LA SALA
   socket.on('disconnect', async () => {
     const room = getRoom(socket.id); if (room) {
       room.players = room.players.filter(p => p.id !== socket.id); delete socketRoom[socket.id];
-      
-      // Si no quedan jugadores, borramos la sala y el canal de discord
       if (room.players.length === 0) {
         clearRoomTimer(room);
         if (room.discordChannelId && discordClient) {
@@ -170,12 +179,11 @@ io.on('connection', (socket) => {
                 const channel = await discordClient.channels.fetch(room.discordChannelId);
                 if (channel) await channel.delete();
                 console.log(`🗑️ Canal Discord eliminado: ${room.code}`);
-            } catch (e) { console.error("Error borrando canal discord:", e); }
+            } catch(e) { console.error("Error borrando canal:", e); }
         }
         delete rooms[room.code];
       } else { 
-        if (room.hostId === socket.id) room.hostId = room.players[0].id; // Nuevo host
-        emitRoomState(room); // Avisar a los que quedan
+        if (room.hostId === socket.id) room.hostId = room.players[0].id; emitRoomState(room); 
       }
     }
   });
