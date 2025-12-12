@@ -7,7 +7,7 @@ const path = require('path');
 
 const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#f97316', '#a855f7', '#ec4899', '#0ea5e9', '#22d3ee', '#4ade80', '#facc15', '#fb7185', '#8b5cf6', '#14b8a6', '#64748b'];
 
-// DISCORD CONFIG
+// DISCORD
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID;
 const DISCORD_CATEGORY_ID = process.env.DISCORD_CATEGORY_ID; 
@@ -15,7 +15,7 @@ let discordClient = null; let discordReady = false;
 
 if (DISCORD_TOKEN && DISCORD_GUILD_ID) {
   discordClient = new Client({ intents: [GatewayIntentBits.Guilds] });
-  discordClient.once('clientReady', () => { console.log(`✅ Discord Online: ${discordClient.user.tag}`); discordReady = true; });
+  discordClient.once('clientReady', () => { console.log(`✅ Discord: ${discordClient.user.tag}`); discordReady = true; });
   discordClient.login(DISCORD_TOKEN).catch(err => console.error('❌ Discord Error:', err));
 }
 
@@ -28,10 +28,10 @@ async function createDiscordChannelForRoom(code) {
       permissionOverwrites: [{ id: guild.roles.everyone.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect] }]
     });
     return { url: `https://discord.com/channels/${guild.id}/${channel.id}`, channelId: channel.id };
-  } catch (err) { console.error('Error creando canal:', err); return null; }
+  } catch (err) { console.error('Error canal:', err); return null; }
 }
 
-// WORDS DB
+// PALABRAS
 const WORD_DB = {
   lugares: ['CINE', 'PLAYA', 'HOSPITAL', 'ESCUELA', 'AEROPUERTO', 'RESTAURANTE', 'GIMNASIO', 'PARQUE', 'MUSEO', 'SUPERMERCADO', 'PLAZA', 'ESTADIO', 'TEATRO', 'OFICINA', 'BIBLIOTECA', 'BANCO', 'HOTEL', 'DISCOTECA', 'ESTACIÓN DE TREN', 'GRANJA', 'PISCINA', 'FÁBRICA', 'ZOO', 'IGLESIA', 'MONTE', 'RIO', 'LAGO', 'DESIERTO', 'SUBMARINO', 'NAVE ESPACIAL', 'CUEVA', 'VOLCÁN', 'ISLA DESIERTA', 'CEMENTERIO', 'LABORATORIO', 'CÁRCEL', 'CASTILLO', 'BOSQUE', 'GARAJE', 'ÁTICO', 'SÓTANO', 'CASINO', 'CRUCERO', 'SPA', 'PELUQUERÍA', 'FARMACIA'],
   comidas: ['PIZZA', 'HAMBURGUESA', 'SUSHI', 'PASTA', 'ENSALADA', 'SOPA', 'EMPANADAS', 'ASADO', 'TACO', 'HELADO', 'CHOCOLATE', 'SÁNDWICH', 'MILANESA', 'ARROZ', 'PAELLA', 'TARTA', 'PANQUEQUES', 'HUEVO FRITO', 'POLLO ASADO', 'BIFE', 'POCHOCLOS', 'LASAÑA', 'CEREAL', 'GALLETITAS', 'TORTILLA', 'GUISO', 'MANDARINA', 'BANANA', 'MANZANA', 'FRUTILLAS', 'QUESO', 'SALAME', 'MATE', 'CAFÉ', 'TE', 'DONA', 'HOT DOG'],
@@ -47,7 +47,7 @@ function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Mat
 function generateCode() { let res = ''; const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; for (let i = 0; i < 6; i++) res += chars[Math.floor(Math.random() * chars.length)]; return res; }
 function pickWord(cats) { const pool = []; (cats.length ? cats : ['lugares']).forEach(c => { if (WORD_DB[c]) pool.push(...WORD_DB[c]); }); return pool[Math.floor(Math.random() * pool.length)]; }
 
-// SERVER SETUP
+// SERVER
 const app = express(); const httpServer = http.createServer(app); const io = new Server(httpServer);
 app.use(express.static(path.join(__dirname, 'public')));
 const rooms = {}; const socketRoom = {};
@@ -78,20 +78,17 @@ io.on('connection', (socket) => {
     const code = generateCode();
     const maxP = Math.min(15, Math.max(3, parseInt(data.maxPlayers) || 10));
     const imps = Math.min(maxP - 1, Math.max(1, parseInt(data.impostors) || 2));
-    
     let discordLink = null; let discordChannelId = null;
     if (!data.groupMode && discordClient && discordReady) {
       const info = await createDiscordChannelForRoom(code);
       if (info) { discordLink = info.url; discordChannelId = info.channelId; }
     }
-
     rooms[code] = {
       code, hostId: socket.id, maxPlayers: maxP, impostors: imps, categories: data.categories,
       config: { turnTime: 20000, voteTime: (parseInt(data.voteTime) || 120) * 1000 },
       players: [{ id: socket.id, name: data.name || 'Host', color: assignColor({players:[]}), isDead: false }],
       phase: 'lobby', roles: {}, votes: {}, spoken: {}, discordLink, discordChannelId, timerText: '--'
     };
-    
     socketRoom[socket.id] = code; socket.join(code);
     cb({ ok: true, roomCode: code, me: { id: socket.id }, isHost: true, discordLink, room: serializeRoom(rooms[code]) });
     emitRoomState(rooms[code]);
@@ -102,27 +99,43 @@ io.on('connection', (socket) => {
     if (!room) return cb({ ok: false, error: 'Sala no existe' });
     if (room.players.length >= room.maxPlayers) return cb({ ok: false, error: 'Sala llena' });
     if (room.phase !== 'lobby') return cb({ ok: false, error: 'Partida ya iniciada' });
-    const name = (data.name || '').trim();
-    if (room.players.some(p => p.name.toUpperCase() === name.toUpperCase())) return cb({ ok: false, error: 'Nombre en uso' });
+    if (room.players.some(p => p.name.toUpperCase() === (data.name || '').toUpperCase())) return cb({ ok: false, error: 'Nombre en uso' });
 
     socket.join(code); socketRoom[socket.id] = code;
-    room.players.push({ id: socket.id, name, color: assignColor(room), isDead: false });
-    
-    // IMPORTANTE: Enviar estado inmediato a quien entra Y a todos los demás
+    room.players.push({ id: socket.id, name: data.name, color: assignColor(room), isDead: false });
     cb({ ok: true, roomCode: code, me: { id: socket.id }, isHost: false, discordLink: room.discordLink, room: serializeRoom(room) });
     emitRoomState(room);
   });
 
   socket.on('startRound', () => {
     const room = getRoom(socket.id); 
-    // Cambiado a 2 jugadores mínimo para que puedas probar
     if (!room || room.hostId !== socket.id || room.phase !== 'lobby' || room.players.length < 2) return;
     
     clearRoomTimer(room);
     room.players.forEach(p => p.isDead = false); room.votes = {}; room.spoken = {};
+    
+    // 1. MEZCLAR JUGADORES PARA EL ORDEN DE TURNO
     const shuffled = shuffle([...room.players]);
-    const impIds = shuffled.slice(0, room.impostors).map(p => p.id);
-    room.roles = {}; room.players.forEach(p => room.roles[p.id] = impIds.includes(p.id) ? 'impostor' : 'crew');
+    room.players = shuffled; // Actualizamos el array principal con el nuevo orden
+
+    // 2. ASIGNAR ROLES (EL PRIMERO NUNCA ES IMPOSTOR)
+    const totalPlayers = room.players.length;
+    // Creamos array de índices disponibles para ser impostor (del 1 al final)
+    // El índice 0 (el que empieza) se queda fuera de esta lista.
+    const possibleImpostorIndices = [];
+    for(let i = 1; i < totalPlayers; i++) possibleImpostorIndices.push(i);
+    
+    // Mezclamos los índices disponibles
+    const shuffledIndices = shuffle(possibleImpostorIndices);
+    // Tomamos los primeros X índices para ser impostores
+    const impostorIndices = shuffledIndices.slice(0, room.impostors);
+
+    room.roles = {};
+    room.players.forEach((p, index) => {
+      // Si el índice actual está en la lista de impostores, es impostor
+      room.roles[p.id] = impostorIndices.includes(index) ? 'impostor' : 'crew';
+    });
+
     room.secretWord = pickWord(room.categories);
     room.phase = 'word'; room.timerText = '10';
     
@@ -154,9 +167,7 @@ io.on('connection', (socket) => {
       room.players = room.players.filter(p => p.id !== socket.id); delete socketRoom[socket.id];
       if (room.players.length === 0) {
         clearRoomTimer(room);
-        if (room.discordChannelId && discordClient) {
-            try { (await discordClient.channels.fetch(room.discordChannelId))?.delete(); } catch(e){}
-        }
+        if (room.discordChannelId && discordClient) { try { (await discordClient.channels.fetch(room.discordChannelId))?.delete(); } catch(e){} }
         delete rooms[room.code];
       } else { 
         if (room.hostId === socket.id) room.hostId = room.players[0].id; 
