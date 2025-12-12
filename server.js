@@ -80,16 +80,17 @@ io.on('connection', (socket) => {
     const code = generateCode();
     const maxP = Math.min(15, Math.max(3, parseInt(data.maxPlayers) || 10));
     const imps = Math.min(maxP - 1, Math.max(1, parseInt(data.impostors) || 2));
-    let discordLink = null;
+    let discordLink = null; let discordChannelId = null;
+    // Corregido: Verifica si el toggle es FALSE (quieren discord)
     if (!data.groupMode && discordClient && discordReady) {
       const info = await createDiscordChannelForRoom(code);
-      if (info) discordLink = info.url;
+      if (info) { discordLink = info.url; discordChannelId = info.channelId; }
     }
     rooms[code] = {
       code, hostId: socket.id, maxPlayers: maxP, impostors: imps, categories: data.categories,
       config: { turnTime: 20000, voteTime: (parseInt(data.voteTime) || 120) * 1000 },
       players: [{ id: socket.id, name: data.name || 'Host', color: assignColor({players:[]}), isDead: false }],
-      phase: 'lobby', roles: {}, votes: {}, spoken: {}, discordLink, timerText: '--'
+      phase: 'lobby', roles: {}, votes: {}, spoken: {}, discordLink, discordChannelId, timerText: '--'
     };
     socketRoom[socket.id] = code; socket.join(code);
     cb({ ok: true, roomCode: code, me: { id: socket.id }, isHost: true, discordLink });
@@ -143,11 +144,23 @@ io.on('connection', (socket) => {
     clearRoomTimer(room); avanzarDesdeTurno(room);
   });
 
-  socket.on('disconnect', () => {
+  // FIX: BORRAR CANAL DE DISCORD AL VACÍARSE LA SALA
+  socket.on('disconnect', async () => {
     const room = getRoom(socket.id); if (room) {
       room.players = room.players.filter(p => p.id !== socket.id); delete socketRoom[socket.id];
-      if (room.players.length === 0) delete rooms[room.code];
-      else { if (room.hostId === socket.id) room.hostId = room.players[0].id; emitRoomState(room); }
+      if (room.players.length === 0) {
+        clearRoomTimer(room);
+        if (room.discordChannelId && discordClient) {
+            try {
+                const channel = await discordClient.channels.fetch(room.discordChannelId);
+                if (channel) await channel.delete();
+                console.log(`🗑️ Canal de Discord eliminado: ${room.code}`);
+            } catch(e){ console.error("Error borrando canal discord:", e); }
+        }
+        delete rooms[room.code];
+      } else { 
+        if (room.hostId === socket.id) room.hostId = room.players[0].id; emitRoomState(room); 
+      }
     }
   });
 });
