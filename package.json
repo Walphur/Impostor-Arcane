@@ -6,9 +6,25 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@capacitor-community/admob": "^7.2.0",
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
     "discord.js": "^14.25.1",
     "dotenv": "^17.2.3",
     "express": "^4.19.2",
     "socket.io": "^4.8.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Walphur/Impostor-Arcane.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Walphur/Impostor-Arcane/issues"
+  },
+  "homepage": "https://github.com/Walphur/Impostor-Arcane#readme",
+  "description": ""
 }
