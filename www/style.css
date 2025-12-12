@@ -10,6 +10,24 @@ body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at
 .btn-secondary:hover { border-color: #94a3b8; color: #fff; }
 .btn-big { width: 100%; font-size: 1.1rem; padding: 16px; display: block; }
 
+/* Botón Dorado (Premium) */
+.btn-gold {
+    background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
+    color: #fff;
+    font-weight: 800;
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 0 #92400e;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.1s;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.btn-gold:active {
+    transform: translateY(4px);
+    box-shadow: 0 0 0 #92400e;
+}
+
 /* Botones Header */
 .btn-discord { background: #5865F2; color: #fff; padding: 8px 14px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; font-size: 0.9rem; border: none; font-weight: 700; transition: background 0.2s; white-space: nowrap; }
 .btn-discord:hover { background: #4752C4; }
@@ -118,25 +136,9 @@ input:checked + .toggle-slider:before { transform: translateX(22px); }
 /* ------- RESPONSIVE FIX (CELULAR) ------- */
 @media (max-width: 768px) {
   .main-grid { grid-template-columns: 1fr; } 
-  
-  /* CONFIGURACIÓN: Cards una abajo de la otra */
   .config-counters { grid-template-columns: 1fr; }
-  
-  /* HEADER: Botones solo icono */
   .btn-discord span, .btn-exit-red span, .btn-exit-text { display: none; }
   .btn-discord, .btn-exit-red { padding: 10px; }
   .btn-exit-arrow, .discord-icon-svg { margin: 0; width: 24px; height: 24px; }
-  
-  /* INPUT: Texto más chico en el código */
   .app-card input[placeholder*="CÓDIGO"] { font-size: 1rem; letter-spacing: 1px; }
-}
-
-.btn-gold {
-    background: #fbbf24;
-    color: #1e1b4b; /* Texto oscuro para contraste */
-    font-weight: 800;
-    box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4);
-}
-.btn-gold:active {
-    transform: scale(0.98);
 }

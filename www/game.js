@@ -50,14 +50,11 @@ async function initAdMob() {
 }
 
 async function showRewardForCategory(catId) {
-    // 1. Verificar límite de videos (Máximo 2)
     if (unlockedCategories.size >= MAX_VIDEO_UNLOCKS) {
         alert(`❌ Límite alcanzado.\nSolo puedes desbloquear ${MAX_VIDEO_UNLOCKS} categorías gratis viendo anuncios.\n\n¡Hazte Premium para desbloquear todo sin límites!`);
         return;
     }
-
     if(!AdMob) {
-        // [MODO WEB/PC]
         alert("[MODO WEB] Simulando video... Categoría desbloqueada.");
         unlockedCategories.add(catId);
         selectedCategories.add(catId);
@@ -84,15 +81,21 @@ async function showInterstitialEndGame() {
     } catch(e) {}
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  initAdMob();
+document.addEventListener('DOMContentLoaded', async () => {
+  await initAdMob();
   renderCategoriesGrid();
   updateCategoriesSummary();
   setupEventListeners();
+
+  // --- ANUNCIO AL INICIAR LA APP (2 Segundos después de abrir) ---
+  setTimeout(() => {
+      console.log("Mostrando anuncio de bienvenida...");
+      showInterstitialEndGame(); 
+  }, 2000);
 });
 
 function setupEventListeners() {
-  const screens = ['screenHome', 'screenCreate', 'screenJoin', 'screenCategories'];
+  const screens = ['screenHome', 'screenCreate', 'screenJoin', 'screenCategories', 'screenPremium'];
   const show = (id) => screens.forEach(s => {
       const el = qs(s);
       if(el) el.style.display = (s === id ? 'flex' : 'none');
@@ -114,9 +117,9 @@ function setupEventListeners() {
 
   // PREMIUM
   const btnPrem = qs('btnPremium');
-  if(btnPrem) btnPrem.onclick = () => { playSound('soundClick'); qs('premiumOverlay').style.display = 'flex'; };
-  const btnClosePrem = qs('btnClosePremium');
-  if(btnClosePrem) btnClosePrem.onclick = () => qs('premiumOverlay').style.display = 'none';
+  if(btnPrem) btnPrem.onclick = () => { playSound('soundClick'); show('screenPremium'); };
+  const btnBackPrem = qs('btnBackFromPremium');
+  if(btnBackPrem) btnBackPrem.onclick = () => { playSound('soundClick'); show('screenHome'); };
 
   qs('btnCreateRoom').onclick = () => { playSound('soundClick'); createRoom(); };
   qs('btnJoinRoom').onclick = () => { playSound('soundClick'); joinRoom(); };

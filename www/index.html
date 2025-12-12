@@ -49,6 +49,37 @@
       </div>
     </div>
 
+    <div id="screenPremium" class="screen" style="display:none; flex-direction:column; align-items:center;">
+        <div class="screen-header">
+            <button id="btnBackFromPremium" class="btn-icon-back">
+                <img src="images/arrow.png" class="arrow-icon-img" alt="Volver">
+            </button>
+            <h2 style="color:#fbbf24; text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);">PREMIUM</h2>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; max-width:400px;">
+            <div style="background:rgba(0,0,0,0.4); border: 2px solid #fbbf24; border-radius:15px; padding:20px; width:90%; margin-bottom:20px; box-shadow: 0 0 20px rgba(251, 191, 36, 0.1);">
+                <p style="color:#fff; text-align:center; margin-bottom:20px; font-size:1rem; line-height:1.5;">
+                    <span style="font-size:1.5rem;">🚀</span><br>
+                    <b>Apoya a Incognito</b><br>
+                    Soy un estudiante desarrollando este juego por hobby. ¡Tu ayuda mantiene el servidor vivo!
+                </p>
+                <ul style="color:#e2e8f0; text-align:left; list-style:none; padding:0; font-size:0.95rem;">
+                    <li style="margin-bottom:10px; display:flex; align-items:center;">
+                        <span style="color:#fbbf24; margin-right:10px;">✔</span> Sin anuncios molestos.
+                    </li>
+                    <li style="margin-bottom:10px; display:flex; align-items:center;">
+                        <span style="color:#fbbf24; margin-right:10px;">✔</span> Todas las categorías desbloqueadas.
+                    </li>
+                    <li style="margin-bottom:10px; display:flex; align-items:center;">
+                        <span style="color:#fbbf24; margin-right:10px;">✔</span> Acceso a funciones futuras.
+                    </li>
+                </ul>
+            </div>
+            <button class="btn-big btn-gold" style="width:90%;">COMPRAR POR $3 USD</button>
+            <p style="color:#64748b; font-size:0.8rem; margin-top:20px;">Pago único. Sin suscripciones.</p>
+        </div>
+    </div>
+
     <div id="screenCreate" class="screen" style="display:none;">
       <div class="screen-header">
         <button id="backFromCreate" class="btn-icon-back"><img src="images/arrow.png" class="arrow-icon-img" alt="Volver"></button>
@@ -143,26 +174,5 @@
   
   <script src="/socket.io/socket.io.js"></script>
   <script src="game.js"></script>
-
-  <div id="premiumOverlay" class="overlay" style="display:none;">
-    <div class="overlay-content" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); border: 2px solid #fbbf24;">
-        <h2 style="color:#fbbf24; font-size:1.8rem; margin-bottom:10px;">⭐ PREMIUM</h2>
-        <p style="margin-bottom:20px; font-size:0.95rem; opacity:0.9;">
-            ¡Apoya el desarrollo de Incognito! <br>
-            Soy un estudiante de programación y hago esto por hobby. Tu ayuda vale mucho.
-        </p>
-
-        <ul style="text-align:left; margin-bottom:20px; list-style:none; padding:0;">
-            <li style="margin-bottom:8px;">✅ Sin anuncios molestos.</li>
-            <li style="margin-bottom:8px;">✅ Todas las categorías desbloqueadas.</li>
-            <li style="margin-bottom:8px;">✅ Acceso a funciones futuras.</li>
-            <li>❤️ Ayudas a mantener el servidor.</li>
-        </ul>
-
-        <button class="btn-big btn-gold">COMPRAR POR $3 USD</button>
-        <button id="btnClosePremium" class="btn-text" style="margin-top:15px; color:#fff;">Cerrar</button>
-    </div>
-</div>
-
 </body>
 </html>
