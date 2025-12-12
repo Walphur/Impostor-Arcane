@@ -19,7 +19,7 @@ function playSound(id) {
   if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); }
 }
 
-// DATA CON SVGs (ESTILO FLATICON)
+// DATA SVGs
 const CATEGORIES_DATA = [
   { id: 'lugares', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#38bdf8"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>', name: 'Lugares' },
   { id: 'comidas', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#fbbf24"><path d="M20.79 11.25c-1.28-3.7-4.71-6.3-8.79-6.3s-7.51 2.6-8.79 6.3c-.13.38.06.8.43.94.08.03.16.05.24.05.29 0 .56-.16.7-.43 1.07-2.18 3.2-3.61 5.65-3.8V10h3.54V7.99c2.45.19 4.58 1.62 5.65 3.8.15.29.48.46.8.4.37-.08.62-.43.57-.81zM12 2c-5.52 0-10 4.48-10 10s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8h16c0 4.41-3.59 8-8 8z"/></svg>', name: 'Comidas' },
@@ -125,9 +125,11 @@ function handleJoin(res) {
       setTimeout(() => window.open(res.discordLink, '_blank'), 500); 
   }
   
-  // FIX CRÍTICO: Usamos res.room para renderizar inmediatamente
-  currentRoom = res.room;
-  updateGameView(res.room);
+  // FIX: Recibimos la sala completa y actualizamos YA
+  if(res.room) {
+      currentRoom = res.room;
+      updateGameView(res.room);
+  }
 }
 
 socket.on('roomState', (room) => { currentRoom = room; updateGameView(room); });
@@ -157,14 +159,17 @@ function updateGameView(room) {
     list.appendChild(row);
   });
   qs('currentPlayersCount').innerText = room.players.length; qs('currentImpostorsCount').innerText = room.impostors;
-  qs('btnStartRound').style.display = (isHost && currentPhase === 'lobby') ? 'block' : 'none';
+  
+  // FIX: Mostrar botón Start si hay >= 2 jugadores (para probar)
+  qs('btnStartRound').style.display = (isHost && currentPhase === 'lobby' && room.players.length >= 2) ? 'block' : 'none';
+  
+  // MOSTRAR BOTÓN DISCORD
   qs('btnDiscord').style.display = room.discordLink ? 'flex' : 'none';
   
   ['viewLobby', 'viewWord', 'viewTurn', 'viewVote'].forEach(v => qs(v).style.display = 'none');
-  
   if(currentPhase === 'lobby') { 
       qs('viewLobby').style.display = 'block'; 
-      qs('statusText').innerHTML = isHost ? "Inicia cuando estén listos." : `Esperando<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>`; 
+      qs('statusText').innerHTML = isHost ? "Esperando jugadores..." : `Esperando<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>`; 
   }
   else if(currentPhase === 'word') { qs('viewWord').style.display = 'block'; qs('secretCardInner').classList.remove('flipped'); updateWordCard(); qs('statusText').innerText = "Viendo roles..."; }
   else if(currentPhase === 'turn') { qs('viewTurn').style.display = 'block'; const turnP = room.players.find(p => p.id === room.currentTurnId); qs('currentTurnPlayer').innerText = turnP ? turnP.name : '...'; qs('turnActions').style.display = (room.currentTurnId === myId) ? 'block' : 'none'; qs('statusText').innerText = "Ronda de pistas."; }

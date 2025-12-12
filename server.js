@@ -76,7 +76,7 @@ function emitRoomState(room) { if (room) io.to(room.code).emit('roomState', seri
 
 // ----------- SOCKETS ----------- //
 io.on('connection', (socket) => {
-  console.log('Nuevo socket conectado:', socket.id);
+  console.log(`🔌 Socket conectado: ${socket.id}`);
 
   socket.on('createRoom', async (data, cb) => {
     const code = generateCode();
@@ -84,8 +84,7 @@ io.on('connection', (socket) => {
     const imps = Math.min(maxP - 1, Math.max(1, parseInt(data.impostors) || 2));
     
     let discordLink = null; let discordChannelId = null;
-    // IMPORTANTE: data.groupMode es TRUE si quieren "Modo Grupal" (SIN discord).
-    // Si data.groupMode es FALSE, quieren Discord.
+    // Si groupMode es FALSE (desactivado), creamos Discord
     if (!data.groupMode && discordClient && discordReady) {
       const info = await createDiscordChannelForRoom(code);
       if (info) { discordLink = info.url; discordChannelId = info.channelId; }
@@ -101,9 +100,8 @@ io.on('connection', (socket) => {
     socketRoom[socket.id] = code; 
     socket.join(code);
     
-    console.log(`Sala creada ${code} por ${data.name}. Discord: ${discordLink ? 'SI' : 'NO'}`);
-
-    // Enviamos el room completo en el callback para carga inmediata
+    console.log(`✨ Sala creada: ${code} por ${data.name}`);
+    // Respondemos al creador con la data de la sala YA MISMO
     cb({ ok: true, roomCode: code, me: { id: socket.id }, isHost: true, discordLink, room: serializeRoom(rooms[code]) });
     emitRoomState(rooms[code]);
   });
@@ -113,7 +111,7 @@ io.on('connection', (socket) => {
     const room = rooms[code];
     
     if (!room) {
-        console.log(`Intento fallido de unirse a ${code}: Sala no existe`);
+        console.log(`❌ Intento unión fallida a ${code}`);
         return cb({ ok: false, error: 'Sala no existe' });
     }
     if (room.players.length >= room.maxPlayers) return cb({ ok: false, error: 'Sala llena' });
@@ -125,20 +123,26 @@ io.on('connection', (socket) => {
     socket.join(code); 
     socketRoom[socket.id] = code;
     
+    // Agregamos jugador
     room.players.push({ id: socket.id, name, color: assignColor(room), isDead: false });
     
-    console.log(`Jugador ${name} se unió a sala ${code}`);
+    console.log(`👤 ${name} se unió a sala ${code}. Total: ${room.players.length}`);
 
-    // FIX: Enviamos la sala completa en el callback para que el cliente renderice YA
+    // ¡CLAVE! Enviamos el estado de la sala al que se une inmediatamente
     cb({ ok: true, roomCode: code, me: { id: socket.id }, isHost: false, discordLink: room.discordLink, room: serializeRoom(room) });
     
-    // Y emitimos a todos los demás
+    // Y notificamos a todos los demás
     emitRoomState(room);
   });
 
   socket.on('startRound', () => {
-    const room = getRoom(socket.id); if (!room || room.hostId !== socket.id || room.phase !== 'lobby') return;
-    if (room.players.length < 3) return; 
+    const room = getRoom(socket.id); 
+    if (!room || room.hostId !== socket.id || room.phase !== 'lobby') return;
+    
+    // Mínimo para iniciar (Puse 2 para que puedas probarlo con un amigo, luego cámbialo a 3)
+    if (room.players.length < 2) return; 
+    
+    console.log(`🎮 Iniciando partida en sala ${room.code}`);
     clearRoomTimer(room);
     room.players.forEach(p => p.isDead = false); room.votes = {}; room.spoken = {};
     const shuffled = shuffle([...room.players]);
@@ -172,6 +176,8 @@ io.on('connection', (socket) => {
   socket.on('disconnect', async () => {
     const room = getRoom(socket.id); if (room) {
       room.players = room.players.filter(p => p.id !== socket.id); delete socketRoom[socket.id];
+      console.log(`👋 Socket desconectado. Quedan ${room.players.length} en sala ${room.code}`);
+      
       if (room.players.length === 0) {
         clearRoomTimer(room);
         if (room.discordChannelId && discordClient) {
@@ -183,7 +189,8 @@ io.on('connection', (socket) => {
         }
         delete rooms[room.code];
       } else { 
-        if (room.hostId === socket.id) room.hostId = room.players[0].id; emitRoomState(room); 
+        if (room.hostId === socket.id) room.hostId = room.players[0].id; 
+        emitRoomState(room); 
       }
     }
   });
