@@ -45,6 +45,7 @@
       <div class="home-card-buttons">
         <button id="btnGoCreate" class="btn-big btn-main btn-primary">CREAR SALA</button>
         <button id="btnGoJoin" class="btn-big btn-main btn-secondary">UNIRSE A SALA</button>
+        <button id="btnPremium" class="btn-big btn-gold" style="margin-top:15px;">HAZTE PREMIUM ⭐</button>
       </div>
     </div>
 
@@ -139,7 +140,29 @@
       </div>
     </div>
   </main>
+  
   <script src="/socket.io/socket.io.js"></script>
   <script src="game.js"></script>
+
+  <div id="premiumOverlay" class="overlay" style="display:none;">
+    <div class="overlay-content" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); border: 2px solid #fbbf24;">
+        <h2 style="color:#fbbf24; font-size:1.8rem; margin-bottom:10px;">⭐ PREMIUM</h2>
+        <p style="margin-bottom:20px; font-size:0.95rem; opacity:0.9;">
+            ¡Apoya el desarrollo de Incognito! <br>
+            Soy un estudiante de programación y hago esto por hobby. Tu ayuda vale mucho.
+        </p>
+
+        <ul style="text-align:left; margin-bottom:20px; list-style:none; padding:0;">
+            <li style="margin-bottom:8px;">✅ Sin anuncios molestos.</li>
+            <li style="margin-bottom:8px;">✅ Todas las categorías desbloqueadas.</li>
+            <li style="margin-bottom:8px;">✅ Acceso a funciones futuras.</li>
+            <li>❤️ Ayudas a mantener el servidor.</li>
+        </ul>
+
+        <button class="btn-big btn-gold">COMPRAR POR $3 USD</button>
+        <button id="btnClosePremium" class="btn-text" style="margin-top:15px; color:#fff;">Cerrar</button>
+    </div>
+</div>
+
 </body>
 </html>

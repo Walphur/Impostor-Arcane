@@ -130,3 +130,13 @@ input:checked + .toggle-slider:before { transform: translateX(22px); }
   /* INPUT: Texto más chico en el código */
   .app-card input[placeholder*="CÓDIGO"] { font-size: 1rem; letter-spacing: 1px; }
 }
+
+.btn-gold {
+    background: #fbbf24;
+    color: #1e1b4b; /* Texto oscuro para contraste */
+    font-weight: 800;
+    box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4);
+}
+.btn-gold:active {
+    transform: scale(0.98);
+}

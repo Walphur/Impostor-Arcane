@@ -3,7 +3,6 @@ const socket = io();
 // --- CONFIGURACIÓN DE ADMOB (PUBLICIDAD) ---
 const AdMob = window.Capacitor ? window.Capacitor.Plugins.AdMob : null;
 const ADMOB_IDS = {
-    // TUS IDs REALES (Los que me pasaste)
     intersticial: 'ca-app-pub-6788680373227341/8374567976', 
     bonificado: 'ca-app-pub-6788680373227341/4416794053'   
 };
@@ -14,11 +13,12 @@ let isHost = false;
 let currentRoom = null;
 let currentPhase = 'lobby';
 let selectedCategories = new Set(['lugares', 'comidas', 'objetos']);
-let unlockedCategories = new Set(); // Aquí guardamos las que desbloquea viendo videos
+let unlockedCategories = new Set(); 
 let myRole = null; 
 let myWord = null;
 let myHint = null;
 let voteLocked = false;
+const MAX_VIDEO_UNLOCKS = 2; // <--- LÍMITE DE VIDEOS
 
 const qs = (id) => document.getElementById(id);
 
@@ -27,14 +27,11 @@ function playSound(id) {
   if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); }
 }
 
-// --- DATOS DE CATEGORÍAS (He marcado algunas como PREMIUM) ---
+// --- DATOS DE CATEGORÍAS ---
 const CATEGORIES_DATA = [
-  // GRATIS (Básicas)
   { id: 'lugares', premium: false, icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#38bdf8"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>', name: 'Lugares' },
   { id: 'comidas', premium: false, icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#fbbf24"><path d="M20.79 11.25c-1.28-3.7-4.71-6.3-8.79-6.3s-7.51 2.6-8.79 6.3c-.13.38.06.8.43.94.08.03.16.05.24.05.29 0 .56-.16.7-.43 1.07-2.18 3.2-3.61 5.65-3.8V10h3.54V7.99c2.45.19 4.58 1.62 5.65 3.8.15.29.48.46.8.4.37-.08.62-.43.57-.81zM12 2c-5.52 0-10 4.48-10 10s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8h16c0 4.41-3.59 8-8 8z"/></svg>', name: 'Comidas' },
   { id: 'objetos', premium: false, icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#a78bfa"><path d="M21 11.5v-6c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v6c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2v-2c0-1.1-.9-2-2-2zM11 5h2v3h1V5h2v3h3v2H5V8h3V5h2v3h1V5zm10 12.5c0 .28-.22.5-.5.5h-17c-.28 0-.5-.22-.5-.5v-1c0-.28.22-.5.5-.5h17c.28 0 .5.22.5.5v1z"/></svg>', name: 'Objetos' },
-  
-  // PREMIUM (Requieren ver video)
   { id: 'animales', premium: true, icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#4ade80"><path d="M19.64 3.8c-.3-.62-1.26-.65-1.61-.05-.38.66-1.08 1.1-1.88 1.1H7.85c-.8 0-1.5-.44-1.88-1.1-.35-.6-1.31-.57-1.61.05C2.79 6.92 2 10.86 2 15c0 3.31 2.69 6 6 6 1.19 0 2.31-.35 3.26-.97.38-.24.7-.59 1.01-.95.27.36.62.71 1.01.95.94.62 2.06.97 3.26.97 3.31 0 6-2.69 6-6 0-4.14-.79-8.08-2.36-11.2zM8 15c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm8 0c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>', name: 'Animales' },
   { id: 'profesiones', premium: true, icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f472b6"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-2 .89-2 2v11c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-8-2h4v2h-4V4zm8 13H4V8h16v9z"/></svg>', name: 'Profesiones' },
   { id: 'deportes', premium: true, icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f87171"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.89-7.61L13 11V6h-2v5l-2.89 1.39c-.85.41-1.21 1.43-.8 2.29.41.85 1.43 1.21 2.29.8L12 14l2.41 1.46c.85.41 1.88.05 2.29-.8.41-.86.05-1.88-.81-2.27z"/></svg>', name: 'Deportes' },
@@ -47,30 +44,31 @@ async function initAdMob() {
     if(!AdMob) return;
     try {
         await AdMob.initialize({ requestTrackingAuthorization: true, initializeForTesting: true });
-        // Pre-cargar anuncio de video
         await AdMob.prepareRewardVideoAd({ adId: ADMOB_IDS.bonificado, isTesting: true });
-        // Pre-cargar intersticial
         await AdMob.prepareInterstitial({ adId: ADMOB_IDS.intersticial, isTesting: true });
-        console.log("AdMob Iniciado");
     } catch(e) { console.error("Error AdMob", e); }
 }
 
 async function showRewardForCategory(catId) {
+    // 1. Verificar límite de videos (Máximo 2)
+    if (unlockedCategories.size >= MAX_VIDEO_UNLOCKS) {
+        alert(`❌ Límite alcanzado.\nSolo puedes desbloquear ${MAX_VIDEO_UNLOCKS} categorías gratis viendo anuncios.\n\n¡Hazte Premium para desbloquear todo sin límites!`);
+        return;
+    }
+
     if(!AdMob) {
-        // Si está en PC, desbloquear directo para probar
-        alert("[MODO PC] Simulando video... Categoría desbloqueada.");
+        // [MODO WEB/PC]
+        alert("[MODO WEB] Simulando video... Categoría desbloqueada.");
         unlockedCategories.add(catId);
-        selectedCategories.add(catId); // La seleccionamos automáticamente
+        selectedCategories.add(catId);
         renderCategoriesGrid();
         return;
     }
     try {
-        const reward = await AdMob.showRewardVideoAd();
-        // Si llegó aquí, vio el video completo
+        await AdMob.showRewardVideoAd();
         unlockedCategories.add(catId);
         selectedCategories.add(catId);
         renderCategoriesGrid();
-        // Preparamos el siguiente video
         await AdMob.prepareRewardVideoAd({ adId: ADMOB_IDS.bonificado, isTesting: true });
     } catch(e) {
         alert("No se pudo cargar el anuncio. Intenta de nuevo.");
@@ -82,14 +80,12 @@ async function showInterstitialEndGame() {
     if(!AdMob) return;
     try {
         await AdMob.showInterstitial();
-        // Preparamos el siguiente para la próxima partida
         await AdMob.prepareInterstitial({ adId: ADMOB_IDS.intersticial, isTesting: true });
-    } catch(e) { console.log("No intersticial listo"); }
+    } catch(e) {}
 }
 
-
 document.addEventListener('DOMContentLoaded', () => {
-  initAdMob(); // Iniciar anuncios al cargar
+  initAdMob();
   renderCategoriesGrid();
   updateCategoriesSummary();
   setupEventListeners();
@@ -106,11 +102,21 @@ function setupEventListeners() {
   qs('btnGoJoin').onclick = () => { playSound('soundClick'); show('screenJoin'); };
   qs('backFromCreate').onclick = () => { playSound('soundClick'); show('screenHome'); };
   qs('backFromJoin').onclick = () => { playSound('soundClick'); show('screenHome'); };
+  
+  // Categorías
   qs('btnOpenCategories').onclick = () => { playSound('soundClick'); show('screenCategories'); };
   qs('backFromCategories').onclick = () => { playSound('soundClick'); show('screenCreate'); };
   qs('btnSaveCategories').onclick = () => { playSound('soundClick'); updateCategoriesSummary(); show('screenCreate'); };
+  
+  // Como Jugar
   qs('btnHowToPlay').onclick = () => qs('howToPlayOverlay').style.display = 'flex';
   qs('btnCloseHowToPlay').onclick = () => qs('howToPlayOverlay').style.display = 'none';
+
+  // PREMIUM
+  const btnPrem = qs('btnPremium');
+  if(btnPrem) btnPrem.onclick = () => { playSound('soundClick'); qs('premiumOverlay').style.display = 'flex'; };
+  const btnClosePrem = qs('btnClosePremium');
+  if(btnClosePrem) btnClosePrem.onclick = () => qs('premiumOverlay').style.display = 'none';
 
   qs('btnCreateRoom').onclick = () => { playSound('soundClick'); createRoom(); };
   qs('btnJoinRoom').onclick = () => { playSound('soundClick'); joinRoom(); };
@@ -134,7 +140,6 @@ function setupEventListeners() {
   qs('btnDiscord').onclick = () => { if(currentRoom?.discordLink) window.open(currentRoom.discordLink, '_blank'); };
 }
 
-// --- RENDERIZADO DE CATEGORÍAS CON CANDADOS ---
 function renderCategoriesGrid() {
   const grid = qs('categoriesGrid');
   grid.innerHTML = '';
@@ -142,43 +147,33 @@ function renderCategoriesGrid() {
   CATEGORIES_DATA.forEach(cat => {
     const btn = document.createElement('div');
     const isSelected = selectedCategories.has(cat.id);
-    
-    // Lógica: ¿Está bloqueada? (Es premium Y NO la hemos desbloqueado)
     const isLocked = cat.premium && !unlockedCategories.has(cat.id);
 
-    // Clase CSS base
     btn.className = 'category-card-square';
     if(isSelected && !isLocked) btn.className += ' active';
-    if(isLocked) btn.className += ' locked'; // Puedes agregar estilos css para .locked si quieres (grisaceo)
+    if(isLocked) btn.className += ' locked'; 
 
-    // Contenido del botón
     let content = `<div class="cat-icon">${cat.icon}</div><div class="cat-name">${cat.name}</div>`;
     
     if(isLocked) {
-        // Añadir icono de candado visual
         content += `<div style="position:absolute; top:5px; right:5px; background:rgba(0,0,0,0.6); border-radius:50%; padding:4px;">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#fff" viewBox="0 0 24 24"><path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6z"/></svg>
         </div>`;
     }
 
     btn.innerHTML = content;
-    btn.style.position = 'relative'; // Para que el candado absoluto funcione
+    btn.style.position = 'relative'; 
 
-    // Acción al hacer click
     btn.onclick = () => {
       playSound('soundClick');
-      
       if (isLocked) {
-          // Si está bloqueada, ofrecer video
-          if(confirm(`La categoría ${cat.name} es Premium. ¿Quieres ver un video corto para desbloquearla?`)) {
+          if(confirm(`Categoría ${cat.name} bloqueada. ¿Ver video para desbloquear? (Max ${MAX_VIDEO_UNLOCKS})`)) {
               showRewardForCategory(cat.id);
           }
       } else {
-          // Comportamiento normal (seleccionar/deseleccionar)
           if(selectedCategories.has(cat.id)) selectedCategories.delete(cat.id);
           else selectedCategories.add(cat.id);
-          
-          if(selectedCategories.size === 0) selectedCategories.add(cat.id); // Mínimo 1
+          if(selectedCategories.size === 0) selectedCategories.add(cat.id); 
           renderCategoriesGrid();
       }
     };
@@ -200,7 +195,6 @@ window.adjustValue = function(id, delta) {
   if(id === 'timeVote') qs('displayVoteTime').innerText = val;
 };
 
-// CARTA MANUAL
 window.toggleSecretCard = function() { 
     if(currentPhase !== 'word') return; 
     const cardInner = qs('secretCardInner');
@@ -245,9 +239,7 @@ socket.on('roundResult', (data) => {
   const finalWordRow = qs('finalSecretWord').parentElement;
   const finalImpostorsRow = qs('finalImpostors').parentElement;
 
-  // --- LANZAR PUBLICIDAD INTERSTICIAL AQUÍ (Al terminar la partida) ---
   showInterstitialEndGame();
-  // ------------------------------------------------------------------
 
   if (data.result === 'tie') {
       playSound('soundLose'); 
