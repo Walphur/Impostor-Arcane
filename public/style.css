@@ -13,7 +13,7 @@ body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at
 /* HOME */
 .screen-wrapper-home { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; padding: 20px; }
 .big-logo-container { margin-bottom: 30px; text-align: center; }
-.logo-img-home { width: 320px; max-width: 90vw; filter: drop-shadow(0 0 10px rgba(220,38,38,0.2)); }
+.logo-img-home { width: 330px; max-width: 90vw; filter: drop-shadow(0 0 10px rgba(220,38,38,0.2)); }
 .home-card-buttons { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(10px); padding: 25px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 15px; }
 
 /* PANTALLAS */
@@ -25,7 +25,7 @@ body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at
 /* FLECHA VOLVER */
 .btn-icon-back { background: #334155; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; }
 .arrow-icon-img { width: 20px; height: 20px; filter: invert(1); }
-.btn-exit-game { background: #1e293b; color: #f87171; border: 1px solid #7f1d1d; padding: 6px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; font-size: 0.8rem; }
+.btn-exit-game { background: #7f1d1d; color: #f87171; border: 1px solid #7f1d1d; padding: 6px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; font-size: 0.8rem; }
 .btn-exit-arrow { width: 12px; height: 12px; filter: invert(1); opacity: 0.7; margin-right: 5px; }
 
 /* CONTADORES */
@@ -93,4 +93,4 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
 .players-list { display: flex; flex-direction: column; gap: 5px; overflow-y: auto; max-height: 300px; }
 .player-row { padding: 8px; background: #0f172a; border-radius: 8px; font-size: 0.9rem; display: flex; align-items: center; gap: 10px; }
 
-@media (max-width: 768px) { .main-grid { grid-template-columns: 1fr; } .logo-img-home { width: 260px; } }
+@media (max-width: 768px) { .main-grid { grid-template-columns: 1fr; } }
