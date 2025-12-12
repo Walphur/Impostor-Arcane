@@ -5,10 +5,9 @@ const { Server } = require('socket.io');
 const { Client, GatewayIntentBits, ChannelType, PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 
-// Colores
 const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#f97316', '#a855f7', '#ec4899', '#0ea5e9', '#22d3ee', '#4ade80', '#facc15', '#fb7185', '#8b5cf6', '#14b8a6', '#64748b'];
 
-// ----------- DISCORD ----------- //
+// DISCORD CONFIG
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID;
 const DISCORD_CATEGORY_ID = process.env.DISCORD_CATEGORY_ID; 
@@ -16,8 +15,8 @@ let discordClient = null; let discordReady = false;
 
 if (DISCORD_TOKEN && DISCORD_GUILD_ID) {
   discordClient = new Client({ intents: [GatewayIntentBits.Guilds] });
-  discordClient.once('clientReady', () => { console.log(`✅ Discord conectado: ${discordClient.user.tag}`); discordReady = true; });
-  discordClient.login(DISCORD_TOKEN).catch(err => console.error('❌ Error Discord:', err));
+  discordClient.once('clientReady', () => { console.log(`✅ Discord Online: ${discordClient.user.tag}`); discordReady = true; });
+  discordClient.login(DISCORD_TOKEN).catch(err => console.error('❌ Discord Error:', err));
 }
 
 async function createDiscordChannelForRoom(code) {
@@ -29,10 +28,10 @@ async function createDiscordChannelForRoom(code) {
       permissionOverwrites: [{ id: guild.roles.everyone.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect] }]
     });
     return { url: `https://discord.com/channels/${guild.id}/${channel.id}`, channelId: channel.id };
-  } catch (err) { console.error('❌ Error creando canal:', err); return null; }
+  } catch (err) { console.error('Error creando canal:', err); return null; }
 }
 
-// ----------- PALABRAS ----------- //
+// WORDS DB
 const WORD_DB = {
   lugares: ['CINE', 'PLAYA', 'HOSPITAL', 'ESCUELA', 'AEROPUERTO', 'RESTAURANTE', 'GIMNASIO', 'PARQUE', 'MUSEO', 'SUPERMERCADO', 'PLAZA', 'ESTADIO', 'TEATRO', 'OFICINA', 'BIBLIOTECA', 'BANCO', 'HOTEL', 'DISCOTECA', 'ESTACIÓN DE TREN', 'GRANJA', 'PISCINA', 'FÁBRICA', 'ZOO', 'IGLESIA', 'MONTE', 'RIO', 'LAGO', 'DESIERTO', 'SUBMARINO', 'NAVE ESPACIAL', 'CUEVA', 'VOLCÁN', 'ISLA DESIERTA', 'CEMENTERIO', 'LABORATORIO', 'CÁRCEL', 'CASTILLO', 'BOSQUE', 'GARAJE', 'ÁTICO', 'SÓTANO', 'CASINO', 'CRUCERO', 'SPA', 'PELUQUERÍA', 'FARMACIA'],
   comidas: ['PIZZA', 'HAMBURGUESA', 'SUSHI', 'PASTA', 'ENSALADA', 'SOPA', 'EMPANADAS', 'ASADO', 'TACO', 'HELADO', 'CHOCOLATE', 'SÁNDWICH', 'MILANESA', 'ARROZ', 'PAELLA', 'TARTA', 'PANQUEQUES', 'HUEVO FRITO', 'POLLO ASADO', 'BIFE', 'POCHOCLOS', 'LASAÑA', 'CEREAL', 'GALLETITAS', 'TORTILLA', 'GUISO', 'MANDARINA', 'BANANA', 'MANZANA', 'FRUTILLAS', 'QUESO', 'SALAME', 'MATE', 'CAFÉ', 'TE', 'DONA', 'HOT DOG'],
@@ -48,7 +47,7 @@ function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Mat
 function generateCode() { let res = ''; const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; for (let i = 0; i < 6; i++) res += chars[Math.floor(Math.random() * chars.length)]; return res; }
 function pickWord(cats) { const pool = []; (cats.length ? cats : ['lugares']).forEach(c => { if (WORD_DB[c]) pool.push(...WORD_DB[c]); }); return pool[Math.floor(Math.random() * pool.length)]; }
 
-// ----------- APP ----------- //
+// SERVER SETUP
 const app = express(); const httpServer = http.createServer(app); const io = new Server(httpServer);
 app.use(express.static(path.join(__dirname, 'public')));
 const rooms = {}; const socketRoom = {};
@@ -74,17 +73,13 @@ function serializeRoom(room) {
 }
 function emitRoomState(room) { if (room) io.to(room.code).emit('roomState', serializeRoom(room)); }
 
-// ----------- SOCKETS ----------- //
 io.on('connection', (socket) => {
-  console.log(`🔌 Socket conectado: ${socket.id}`);
-
   socket.on('createRoom', async (data, cb) => {
     const code = generateCode();
     const maxP = Math.min(15, Math.max(3, parseInt(data.maxPlayers) || 10));
     const imps = Math.min(maxP - 1, Math.max(1, parseInt(data.impostors) || 2));
     
     let discordLink = null; let discordChannelId = null;
-    // Si groupMode es FALSE (desactivado), creamos Discord
     if (!data.groupMode && discordClient && discordReady) {
       const info = await createDiscordChannelForRoom(code);
       if (info) { discordLink = info.url; discordChannelId = info.channelId; }
@@ -97,52 +92,32 @@ io.on('connection', (socket) => {
       phase: 'lobby', roles: {}, votes: {}, spoken: {}, discordLink, discordChannelId, timerText: '--'
     };
     
-    socketRoom[socket.id] = code; 
-    socket.join(code);
-    
-    console.log(`✨ Sala creada: ${code} por ${data.name}`);
-    // Respondemos al creador con la data de la sala YA MISMO
+    socketRoom[socket.id] = code; socket.join(code);
     cb({ ok: true, roomCode: code, me: { id: socket.id }, isHost: true, discordLink, room: serializeRoom(rooms[code]) });
     emitRoomState(rooms[code]);
   });
 
   socket.on('joinRoom', (data, cb) => {
-    const code = (data.roomCode || '').trim().toUpperCase(); 
-    const room = rooms[code];
-    
-    if (!room) {
-        console.log(`❌ Intento unión fallida a ${code}`);
-        return cb({ ok: false, error: 'Sala no existe' });
-    }
+    const code = (data.roomCode || '').trim().toUpperCase(); const room = rooms[code];
+    if (!room) return cb({ ok: false, error: 'Sala no existe' });
     if (room.players.length >= room.maxPlayers) return cb({ ok: false, error: 'Sala llena' });
     if (room.phase !== 'lobby') return cb({ ok: false, error: 'Partida ya iniciada' });
-    
     const name = (data.name || '').trim();
     if (room.players.some(p => p.name.toUpperCase() === name.toUpperCase())) return cb({ ok: false, error: 'Nombre en uso' });
 
-    socket.join(code); 
-    socketRoom[socket.id] = code;
-    
-    // Agregamos jugador
+    socket.join(code); socketRoom[socket.id] = code;
     room.players.push({ id: socket.id, name, color: assignColor(room), isDead: false });
     
-    console.log(`👤 ${name} se unió a sala ${code}. Total: ${room.players.length}`);
-
-    // ¡CLAVE! Enviamos el estado de la sala al que se une inmediatamente
+    // IMPORTANTE: Enviar estado inmediato a quien entra Y a todos los demás
     cb({ ok: true, roomCode: code, me: { id: socket.id }, isHost: false, discordLink: room.discordLink, room: serializeRoom(room) });
-    
-    // Y notificamos a todos los demás
     emitRoomState(room);
   });
 
   socket.on('startRound', () => {
     const room = getRoom(socket.id); 
-    if (!room || room.hostId !== socket.id || room.phase !== 'lobby') return;
+    // Cambiado a 2 jugadores mínimo para que puedas probar
+    if (!room || room.hostId !== socket.id || room.phase !== 'lobby' || room.players.length < 2) return;
     
-    // Mínimo para iniciar (Puse 2 para que puedas probarlo con un amigo, luego cámbialo a 3)
-    if (room.players.length < 2) return; 
-    
-    console.log(`🎮 Iniciando partida en sala ${room.code}`);
     clearRoomTimer(room);
     room.players.forEach(p => p.isDead = false); room.votes = {}; room.spoken = {};
     const shuffled = shuffle([...room.players]);
@@ -150,6 +125,7 @@ io.on('connection', (socket) => {
     room.roles = {}; room.players.forEach(p => room.roles[p.id] = impIds.includes(p.id) ? 'impostor' : 'crew');
     room.secretWord = pickWord(room.categories);
     room.phase = 'word'; room.timerText = '10';
+    
     room.players.forEach(p => {
       const isImp = room.roles[p.id] === 'impostor';
       io.to(p.id).emit('privateRole', {
@@ -176,16 +152,10 @@ io.on('connection', (socket) => {
   socket.on('disconnect', async () => {
     const room = getRoom(socket.id); if (room) {
       room.players = room.players.filter(p => p.id !== socket.id); delete socketRoom[socket.id];
-      console.log(`👋 Socket desconectado. Quedan ${room.players.length} en sala ${room.code}`);
-      
       if (room.players.length === 0) {
         clearRoomTimer(room);
         if (room.discordChannelId && discordClient) {
-            try {
-                const channel = await discordClient.channels.fetch(room.discordChannelId);
-                if (channel) await channel.delete();
-                console.log(`🗑️ Canal Discord eliminado: ${room.code}`);
-            } catch(e) { console.error("Error borrando canal:", e); }
+            try { (await discordClient.channels.fetch(room.discordChannelId))?.delete(); } catch(e){}
         }
         delete rooms[room.code];
       } else { 

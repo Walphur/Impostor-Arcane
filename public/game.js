@@ -19,16 +19,15 @@ function playSound(id) {
   if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); }
 }
 
-// DATA SVGs
 const CATEGORIES_DATA = [
-  { id: 'lugares', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#38bdf8"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>', name: 'Lugares' },
-  { id: 'comidas', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#fbbf24"><path d="M20.79 11.25c-1.28-3.7-4.71-6.3-8.79-6.3s-7.51 2.6-8.79 6.3c-.13.38.06.8.43.94.08.03.16.05.24.05.29 0 .56-.16.7-.43 1.07-2.18 3.2-3.61 5.65-3.8V10h3.54V7.99c2.45.19 4.58 1.62 5.65 3.8.15.29.48.46.8.4.37-.08.62-.43.57-.81zM12 2c-5.52 0-10 4.48-10 10s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8h16c0 4.41-3.59 8-8 8z"/></svg>', name: 'Comidas' },
-  { id: 'objetos', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#a78bfa"><path d="M21 11.5v-6c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v6c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2v-2c0-1.1-.9-2-2-2zM11 5h2v3h1V5h2v3h3v2H5V8h3V5h2v3h1V5zm10 12.5c0 .28-.22.5-.5.5h-17c-.28 0-.5-.22-.5-.5v-1c0-.28.22-.5.5-.5h17c.28 0 .5.22.5.5v1z"/></svg>', name: 'Objetos' },
-  { id: 'animales', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#4ade80"><path d="M19.64 3.8c-.3-.62-1.26-.65-1.61-.05-.38.66-1.08 1.1-1.88 1.1H7.85c-.8 0-1.5-.44-1.88-1.1-.35-.6-1.31-.57-1.61.05C2.79 6.92 2 10.86 2 15c0 3.31 2.69 6 6 6 1.19 0 2.31-.35 3.26-.97.38-.24.7-.59 1.01-.95.27.36.62.71 1.01.95.94.62 2.06.97 3.26.97 3.31 0 6-2.69 6-6 0-4.14-.79-8.08-2.36-11.2zM8 15c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm8 0c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>', name: 'Animales' },
-  { id: 'profesiones', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f472b6"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-2 .89-2 2v11c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-8-2h4v2h-4V4zm8 13H4V8h16v9z"/></svg>', name: 'Profesiones' },
-  { id: 'deportes', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f87171"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.89-7.61L13 11V6h-2v5l-2.89 1.39c-.85.41-1.21 1.43-.8 2.29.41.85 1.43 1.21 2.29.8L12 14l2.41 1.46c.85.41 1.88.05 2.29-.8.41-.86.05-1.88-.81-2.27z"/></svg>', name: 'Deportes' },
-  { id: 'tecnologia', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#60a5fa"><path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>', name: 'Tecnología' },
-  { id: 'fantasia', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#818cf8"><path d="M10.59 4.59C10.21 4.21 9.7 4 9.17 4 8.1 4 7.17 4.94 7.27 6.2l.27 3.54-2.32-.8c-.36-.13-.76-.06-1.06.17-.32.25-.5.63-.5 1.04 0 .31.1.6.29.85l4.92 6.42c.48.62 1.3 1.02 2.2 1.02H19c1.1 0 2-.9 2-2v-5c0-1.1-.9-2-2-2h-3.17l-1.87-6.42c-.19-.67-.8-1.11-1.49-1.11-.4 0-.78.16-1.07.45l-.81.83zM5 18H3v2h2v-2zm-2-4h2v2H3v-2z"/></svg>', name: 'Fantasía' }
+  { id: 'lugares', name: 'Lugares', icon: '📍' },
+  { id: 'comidas', name: 'Comidas', icon: '🍔' },
+  { id: 'objetos', name: 'Objetos', icon: '🛠️' },
+  { id: 'animales', name: 'Animales', icon: '🐾' },
+  { id: 'profesiones', name: 'Profesiones', icon: '💼' },
+  { id: 'deportes', name: 'Deportes', icon: '🏆' },
+  { id: 'tecnologia', name: 'Tecnología', icon: '💻' },
+  { id: 'fantasia', name: 'Fantasía', icon: '🧙‍♂️' }
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -39,32 +38,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function setupEventListeners() {
   const screens = ['screenHome', 'screenCreate', 'screenJoin', 'screenCategories'];
-  const show = (id) => screens.forEach(s => qs(s).style.display = (s === id ? 'flex' : 'none'));
+  const show = (id) => screens.forEach(s => {
+      const el = qs(s);
+      if(el) el.style.display = (s === id ? 'flex' : 'none');
+  });
 
+  // Nav
   qs('btnGoCreate').onclick = () => { playSound('soundClick'); show('screenCreate'); };
   qs('btnGoJoin').onclick = () => { playSound('soundClick'); show('screenJoin'); };
   qs('backFromCreate').onclick = () => { playSound('soundClick'); show('screenHome'); };
   qs('backFromJoin').onclick = () => { playSound('soundClick'); show('screenHome'); };
+  
+  // Categories
   qs('btnOpenCategories').onclick = () => { playSound('soundClick'); show('screenCategories'); };
   qs('backFromCategories').onclick = () => { playSound('soundClick'); show('screenCreate'); };
   qs('btnSaveCategories').onclick = () => { playSound('soundClick'); updateCategoriesSummary(); show('screenCreate'); };
+  
+  // Game Actions
   qs('btnHowToPlay').onclick = () => qs('howToPlayOverlay').style.display = 'flex';
   qs('btnCloseHowToPlay').onclick = () => qs('howToPlayOverlay').style.display = 'none';
-
   qs('btnCreateRoom').onclick = () => { playSound('soundClick'); createRoom(); };
   qs('btnJoinRoom').onclick = () => { playSound('soundClick'); joinRoom(); };
   qs('btnStartRound').onclick = () => { if(isHost) socket.emit('startRound'); };
   qs('btnExit').onclick = () => location.reload();
   qs('btnBackToLobby').onclick = () => { qs('ejectionOverlay').style.display = 'none'; if(currentRoom) updateGameView(currentRoom); };
   
-  const copyBtn = qs('btnCopyCode');
-  copyBtn.onclick = () => { 
+  qs('btnCopyCode').onclick = () => { 
     const code = qs('roomCodeDisplay').innerText; 
     if(code !== '------') {
         navigator.clipboard.writeText(code);
-        const originalHtml = copyBtn.innerHTML;
-        copyBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-        setTimeout(() => { copyBtn.innerHTML = originalHtml; }, 2000);
+        const btn = qs('btnCopyCode');
+        const original = btn.innerHTML;
+        btn.innerHTML = '✅'; 
+        setTimeout(() => btn.innerHTML = original, 1500);
     }
   };
 
@@ -78,8 +84,8 @@ function renderCategoriesGrid() {
   grid.innerHTML = '';
   CATEGORIES_DATA.forEach(cat => {
     const btn = document.createElement('div');
-    btn.className = 'category-card-square' + (selectedCategories.has(cat.id) ? ' active' : '');
-    btn.innerHTML = `<div class="cat-icon">${cat.icon}</div><div class="cat-name">${cat.name}</div>`;
+    btn.className = 'category-pill' + (selectedCategories.has(cat.id) ? ' active' : '');
+    btn.innerHTML = `<span>${cat.icon}</span><span>${cat.name}</span>`;
     btn.onclick = () => {
       playSound('soundClick');
       if(selectedCategories.has(cat.id)) selectedCategories.delete(cat.id);
@@ -121,15 +127,9 @@ function handleJoin(res) {
   myId = res.me.id; isHost = res.isHost;
   qs('lobbyOverlay').style.display = 'none'; qs('mainContent').style.display = 'block'; qs('roomCodeDisplay').innerText = res.roomCode;
   
-  if(res.discordLink && !isHost) {
-      setTimeout(() => window.open(res.discordLink, '_blank'), 500); 
-  }
+  if(res.discordLink && !isHost) setTimeout(() => window.open(res.discordLink, '_blank'), 500); 
   
-  // FIX: Recibimos la sala completa y actualizamos YA
-  if(res.room) {
-      currentRoom = res.room;
-      updateGameView(res.room);
-  }
+  if(res.room) { currentRoom = res.room; updateGameView(res.room); }
 }
 
 socket.on('roomState', (room) => { currentRoom = room; updateGameView(room); });
@@ -147,38 +147,67 @@ socket.on('roundResult', (data) => {
   qs('resultSubtitle').innerText = data.reason; qs('ejectionOverlay').style.display = 'flex';
 });
 
+// FUNCIÓN BLINDADA CONTRA ERRORES NULL
 function updateGameView(room) {
   currentPhase = room.phase; isHost = (room.hostId === myId);
-  qs('phaseLabel').innerText = currentPhase.toUpperCase(); qs('timerNumber').innerText = room.timerText || '--';
-  const list = qs('playersList'); list.innerHTML = '';
-  (room.players || []).forEach(p => {
-    const row = document.createElement('div'); row.className = 'player-row';
-    if(p.isDead) row.style.opacity = '0.5';
-    if(room.currentTurnId === p.id) row.style.border = '1px solid #3b82f6';
-    row.innerHTML = `<div style="width:24px;height:24px;background:${p.color};border-radius:50%;text-align:center;font-weight:bold;color:#000;">${p.name[0]}</div><div style="flex:1;">${p.name}</div>${p.id === room.hostId ? '<span style="font-size:0.7rem;opacity:0.7;">HOST</span>' : ''}`;
-    list.appendChild(row);
-  });
-  qs('currentPlayersCount').innerText = room.players.length; qs('currentImpostorsCount').innerText = room.impostors;
+  const phaseLabel = qs('phaseLabel'); if(phaseLabel) phaseLabel.innerText = currentPhase.toUpperCase();
+  const timer = qs('timerNumber'); if(timer) timer.innerText = room.timerText || '--';
   
-  // FIX: Mostrar botón Start si hay >= 2 jugadores (para probar)
-  qs('btnStartRound').style.display = (isHost && currentPhase === 'lobby' && room.players.length >= 2) ? 'block' : 'none';
-  
-  // MOSTRAR BOTÓN DISCORD
-  qs('btnDiscord').style.display = room.discordLink ? 'flex' : 'none';
-  
-  ['viewLobby', 'viewWord', 'viewTurn', 'viewVote'].forEach(v => qs(v).style.display = 'none');
-  if(currentPhase === 'lobby') { 
-      qs('viewLobby').style.display = 'block'; 
-      qs('statusText').innerHTML = isHost ? "Esperando jugadores..." : `Esperando<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>`; 
+  const list = qs('playersList');
+  if(list) {
+      list.innerHTML = '';
+      (room.players || []).forEach(p => {
+        const row = document.createElement('div'); row.className = 'player-row';
+        if(p.isDead) row.style.opacity = '0.5';
+        if(room.currentTurnId === p.id) row.style.border = '1px solid #3b82f6';
+        row.innerHTML = `<div style="width:24px;height:24px;background:${p.color};border-radius:50%;text-align:center;font-weight:bold;color:#000;">${p.name[0]}</div><div style="flex:1;">${p.name}</div>${p.id === room.hostId ? '<span style="font-size:0.7rem;opacity:0.7;">HOST</span>' : ''}`;
+        list.appendChild(row);
+      });
   }
-  else if(currentPhase === 'word') { qs('viewWord').style.display = 'block'; qs('secretCardInner').classList.remove('flipped'); updateWordCard(); qs('statusText').innerText = "Viendo roles..."; }
-  else if(currentPhase === 'turn') { qs('viewTurn').style.display = 'block'; const turnP = room.players.find(p => p.id === room.currentTurnId); qs('currentTurnPlayer').innerText = turnP ? turnP.name : '...'; qs('turnActions').style.display = (room.currentTurnId === myId) ? 'block' : 'none'; qs('statusText').innerText = "Ronda de pistas."; }
-  else if(currentPhase === 'vote') { qs('viewVote').style.display = 'block'; renderVoteGrid(room); qs('statusText').innerText = "Votación en curso."; }
+
+  const pCount = qs('currentPlayersCount'); if(pCount) pCount.innerText = room.players.length;
+  const iCount = qs('currentImpostorsCount'); if(iCount) iCount.innerText = room.impostors;
+  
+  const btnStart = qs('btnStartRound');
+  // Se muestra si eres host, estás en lobby Y hay al menos 2 jugadores (para probar)
+  if(btnStart) btnStart.style.display = (isHost && currentPhase === 'lobby' && room.players.length >= 2) ? 'block' : 'none';
+  
+  const btnDisc = qs('btnDiscord');
+  if(btnDisc) btnDisc.style.display = room.discordLink ? 'flex' : 'none';
+  
+  ['viewLobby', 'viewWord', 'viewTurn', 'viewVote'].forEach(v => { const el = qs(v); if(el) el.style.display = 'none'; });
+  
+  if(currentPhase === 'lobby') { 
+      const vl = qs('viewLobby'); if(vl) vl.style.display = 'block'; 
+      const st = qs('statusText'); if(st) st.innerHTML = isHost ? "Inicia cuando estén listos." : `Esperando<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>`; 
+  }
+  else if(currentPhase === 'word') { 
+      const vw = qs('viewWord'); if(vw) vw.style.display = 'block'; 
+      qs('secretCardInner').classList.remove('flipped'); updateWordCard(); 
+      qs('statusText').innerText = "Viendo roles..."; 
+  }
+  else if(currentPhase === 'turn') { 
+      const vt = qs('viewTurn'); if(vt) vt.style.display = 'block'; 
+      const turnP = room.players.find(p => p.id === room.currentTurnId); 
+      qs('currentTurnPlayer').innerText = turnP ? turnP.name : '...'; 
+      qs('turnActions').style.display = (room.currentTurnId === myId) ? 'block' : 'none'; 
+      qs('statusText').innerText = "Ronda de pistas."; 
+  }
+  else if(currentPhase === 'vote') { 
+      const vv = qs('viewVote'); if(vv) vv.style.display = 'block'; 
+      renderVoteGrid(room); qs('statusText').innerText = "Votación en curso."; 
+  }
 }
 
-function updateWordCard() { qs('roleTitle').innerText = myRole; qs('secretWordDisplay').innerText = myWord; qs('wordHint').innerText = myHint; }
+function updateWordCard() { 
+    const rt = qs('roleTitle'); if(rt) rt.innerText = myRole; 
+    const sw = qs('secretWordDisplay'); if(sw) sw.innerText = myWord; 
+    const wh = qs('wordHint'); if(wh) wh.innerText = myHint; 
+}
+
 function renderVoteGrid(room) {
-  const grid = qs('votePlayersGrid'); grid.innerHTML = ''; voteLocked = !!(room.votes && room.votes[myId]);
+  const grid = qs('votePlayersGrid'); if(!grid) return;
+  grid.innerHTML = ''; voteLocked = !!(room.votes && room.votes[myId]);
   room.players.filter(p => !p.isDead && p.id !== myId).forEach(p => {
     const btn = document.createElement('div'); btn.className = 'mini-card'; btn.style.cursor = 'pointer';
     if(room.votes && room.votes[myId] === p.id) btn.style.border = '2px solid #ef4444';
