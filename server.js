@@ -47,8 +47,6 @@ function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Mat
 function generateCode() { let res = ''; const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; for (let i = 0; i < 6; i++) res += chars[Math.floor(Math.random() * chars.length)]; return res; }
 function pickWord(cats) { const pool = []; (cats.length ? cats : ['lugares']).forEach(c => { if (WORD_DB[c]) pool.push(...WORD_DB[c]); }); return pool[Math.floor(Math.random() * pool.length)]; }
 
-// --- SERVER SETUP ---
-const path = require('path'); // Asegúrate de tener esto arriba del todo
 
 // Le decimos que busque el HTML y los estilos dentro de la carpeta 'www'
 app.use(express.static(path.join(__dirname, 'www')));
