@@ -57,17 +57,23 @@ function setupEventListeners() {
   qs('btnJoinRoom').onclick = () => { playSound('soundClick'); joinRoom(); };
   qs('btnStartRound').onclick = () => { if(isHost) socket.emit('startRound'); };
   qs('btnExit').onclick = () => location.reload();
-  qs('btnBackToLobby').onclick = () => { qs('ejectionOverlay').style.display = 'none'; if(currentRoom) updateGameView(currentRoom); };
+  qs('btnBackToLobby').onclick = () => { 
+      qs('ejectionOverlay').style.display = 'none'; 
+      // Al volver del overlay, si el estado es lobby, actualizamos la vista.
+      if(currentRoom && currentRoom.phase === 'lobby') {
+          updateGameView(currentRoom);
+      }
+  };
   
-  // LOGICA COPIAR CON CHECKMARK MODERNO
+  // LOGICA COPIAR CON NUEVO ICONO
   const copyBtn = qs('btnCopyCode');
   copyBtn.onclick = () => { 
     const code = qs('roomCodeDisplay').innerText; 
     if(code !== '------') {
         navigator.clipboard.writeText(code);
         const originalHtml = copyBtn.innerHTML;
-        // Checkmark Moderno
-        copyBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+        // Icono de copiado (dos rectángulos superpuestos)
+        copyBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
         setTimeout(() => { copyBtn.innerHTML = originalHtml; }, 2000);
     }
   };
@@ -108,11 +114,16 @@ window.adjustValue = function(id, delta) {
   if(id === 'timeVote') qs('displayVoteTime').innerText = val;
 };
 
-// CARTA MANUAL
+// CARTA MANUAL: CLIC PARA MOSTRAR/OCULTAR
 window.toggleSecretCard = function() { 
     if(currentPhase !== 'word') return; 
-    playSound('soundFlip'); 
-    qs('secretCardInner').classList.toggle('flipped'); 
+    const cardInner = qs('secretCardInner');
+    if (cardInner.classList.contains('flipped')) {
+        cardInner.classList.remove('flipped');
+    } else {
+        playSound('soundFlip'); 
+        cardInner.classList.add('flipped');
+    }
 };
 
 function createRoom() {
@@ -142,12 +153,43 @@ socket.on('privateRole', (data) => {
   if(myRole === 'IMPOSTOR') qs('secretCardInner').classList.add('impostor-card');
   else qs('secretCardInner').classList.remove('impostor-card');
 });
+
 socket.on('roundResult', (data) => {
-  qs('finalSecretWord').innerText = data.secretWord; qs('finalImpostors').innerText = data.impostors.join(', ');
-  const iWon = (data.result === 'crew' && myRole === 'TRIPULANTE') || (data.result === 'impostor' && myRole === 'IMPOSTOR');
-  if(iWon) { playSound('soundWin'); qs('resultTitle').innerText = "VICTORIA"; qs('resultTitle').style.color="#4ade80"; }
-  else { playSound('soundLose'); qs('resultTitle').innerText = "DERROTA"; qs('resultTitle').style.color="#ef4444"; }
-  qs('resultSubtitle').innerText = data.reason; qs('ejectionOverlay').style.display = 'flex';
+  const resultTitle = qs('resultTitle');
+  const resultSubtitle = qs('resultSubtitle');
+  const resultIcon = qs('resultIcon');
+  const finalWordRow = qs('finalSecretWord').parentElement;
+  const finalImpostorsRow = qs('finalImpostors').parentElement;
+
+  if (data.result === 'tie') {
+      playSound('soundLose'); // O un sonido neutro si tienes
+      resultTitle.innerText = "EMPATE";
+      resultTitle.style.color = "#facc15"; // Amarillo para empate
+      resultSubtitle.innerText = data.reason;
+      resultIcon.innerHTML = '⚖️'; // Icono de balanza para empate
+      finalWordRow.style.display = 'none'; // No mostrar palabra en empate
+      finalImpostorsRow.style.display = 'none'; // No mostrar impostores en empate
+  } else {
+      qs('finalSecretWord').innerText = data.secretWord;
+      qs('finalImpostors').innerText = data.impostors.join(', ');
+      finalWordRow.style.display = 'flex';
+      finalImpostorsRow.style.display = 'flex';
+
+      const iWon = (data.result === 'crew' && myRole === 'TRIPULANTE') || (data.result === 'impostor' && myRole === 'IMPOSTOR');
+      if(iWon) { 
+          playSound('soundWin'); 
+          resultTitle.innerText = "VICTORIA"; 
+          resultTitle.style.color = "#4ade80";
+          resultIcon.innerHTML = '🏆';
+      } else { 
+          playSound('soundLose'); 
+          resultTitle.innerText = "DERROTA"; 
+          resultTitle.style.color = "#ef4444";
+          resultIcon.innerHTML = '💀';
+      }
+      resultSubtitle.innerText = data.reason;
+  }
+  qs('ejectionOverlay').style.display = 'flex';
 });
 
 // FUNCION UPDATE BLINDADA
