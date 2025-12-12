@@ -48,9 +48,15 @@ function generateCode() { let res = ''; const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ2
 function pickWord(cats) { const pool = []; (cats.length ? cats : ['lugares']).forEach(c => { if (WORD_DB[c]) pool.push(...WORD_DB[c]); }); return pool[Math.floor(Math.random() * pool.length)]; }
 
 // --- SERVER SETUP ---
-const app = express(); const httpServer = http.createServer(app); const io = new Server(httpServer);
-app.use(express.static(path.join(__dirname, 'public')));
-const rooms = {}; const socketRoom = {};
+const path = require('path'); // Asegúrate de tener esto arriba del todo
+
+// Le decimos que busque el HTML y los estilos dentro de la carpeta 'www'
+app.use(express.static(path.join(__dirname, 'www')));
+
+// Para que cuando entren a la web, les sirva el index.html correcto
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'www', 'index.html'));
+});
 
 function clearRoomTimer(room) { if (room._timer) { clearInterval(room._timer); room._timer = null; } }
 function startTimer(room, seconds, onEnd) {
