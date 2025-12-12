@@ -11,7 +11,7 @@ const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#f97316', '#
 // ----------- DISCORD ----------- //
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID;
-const DISCORD_CATEGORY_ID = process.env.DISCORD_CATEGORY_ID; // Opcional
+const DISCORD_CATEGORY_ID = process.env.DISCORD_CATEGORY_ID; 
 let discordClient = null; let discordReady = false;
 
 if (DISCORD_TOKEN && DISCORD_GUILD_ID) {
@@ -69,7 +69,7 @@ function serializeRoom(room) {
     code: room.code, hostId: room.hostId, phase: room.phase,
     players: room.players.map(p => ({ id: p.id, name: p.name, color: p.color, isDead: p.isDead })),
     currentTurnId: room.currentTurnId, timerText: room.timerText, remaining: room.remaining,
-    votes: room.votes, impostors: room.impostors
+    votes: room.votes, impostors: room.impostors, discordLink: room.discordLink
   };
 }
 function emitRoomState(room) { if (room) io.to(room.code).emit('roomState', serializeRoom(room)); }

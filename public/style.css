@@ -1,14 +1,16 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at top, #0f172a 0, #000 100%); color: #e5e7eb; height: 100vh; overflow: hidden; }
 
-/* BOTONES LIMPIOS (SIN MUCHO BRILLO) */
+/* BOTONES LIMPIOS */
 .btn-main { border-radius: 12px; padding: 14px 20px; font-weight: 700; font-size: 1rem; transition: transform 0.1s; border: none; cursor: pointer; }
 .btn-main:active { transform: scale(0.98); }
-.btn-primary { background: #dc2626; color: #fff; box-shadow: 0 4px 0 #991b1b; } /* Rojo plano */
+.btn-primary { background: #dc2626; color: #fff; box-shadow: 0 4px 0 #991b1b; } 
 .btn-primary:hover { background: #ef4444; }
 .btn-secondary { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; }
 .btn-secondary:hover { border-color: #94a3b8; color: #fff; }
 .btn-big { width: 100%; font-size: 1.1rem; padding: 16px; display: block; }
+.btn-discord { background: #5865F2; color: #fff; padding: 6px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; font-size: 0.8rem; border: none; font-weight: 600; }
+.btn-discord:hover { background: #4752C4; }
 
 /* HOME */
 .screen-wrapper-home { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; padding: 20px; }
@@ -25,7 +27,7 @@ body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at
 /* FLECHA VOLVER */
 .btn-icon-back { background: #334155; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; }
 .arrow-icon-img { width: 20px; height: 20px; filter: invert(1); }
-.btn-exit-game { background: #7f1d1d; color: #f87171; border: 1px solid #7f1d1d; padding: 6px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; font-size: 0.8rem; }
+.btn-exit-game { background: #1e293b; color: #f87171; border: 1px solid #7f1d1d; padding: 6px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; font-size: 0.8rem; }
 .btn-exit-arrow { width: 12px; height: 12px; filter: invert(1); opacity: 0.7; margin-right: 5px; }
 
 /* CONTADORES */
@@ -71,6 +73,8 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
 .back { background: #1e293b; transform: rotateY(180deg); }
 .secret-word-reveal { font-size: 1.8rem; font-weight: 800; color: #fff; margin: 10px 0; }
 .role-badge { background: #334155; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; text-transform: uppercase; }
+.secret-card-inner.impostor-card .back { background: #991b1b; border-color: #f87171; } /* CARTA ROJA PARA IMPOSTOR */
+.secret-card-inner.impostor-card .role-badge { background: #ef4444; color:white; }
 
 /* UTILS */
 .app-card { background: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #334155; }
@@ -81,13 +85,17 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
 .stat-value { font-size: 1.8rem; font-weight: 800; }
 .stat-label { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; }
 
-/* RESULTADOS */
+/* RESULTADOS & CÓMO JUGAR */
 .full-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 100; }
-.result-card, .howto-card { background: #1e293b; padding: 30px; border-radius: 20px; text-align: center; max-width: 400px; width: 90%; border: 1px solid #334155; }
-.result-title { font-size: 2.5rem; margin: 10px 0; }
+.result-card, .howto-card { background: #1e293b; padding: 25px; border-radius: 20px; text-align: left; max-width: 400px; width: 90%; border: 1px solid #334155; display: flex; flex-direction: column; }
+.result-title { font-size: 2.5rem; margin: 10px 0; text-align: center; }
 .result-row { display: flex; justify-content: space-between; padding: 5px 0; color: #cbd5e1; }
 .result-value { font-weight: bold; color: #fff; }
 .highlight { color: #f87171; }
+.howto-item { display: flex; gap: 15px; align-items: flex-start; margin-bottom: 20px; background: #0f172a; padding: 15px; border-radius: 12px; }
+.howto-icon { font-size: 2rem; }
+.howto-text h3 { margin: 0 0 5px 0; font-size: 1.1rem; color: #fff; }
+.howto-text p { margin: 0; font-size: 0.9rem; color: #cbd5e1; line-height: 1.4; }
 
 .timer-display-sidebar { font-size: 2rem; font-weight: 800; text-align: center; }
 .players-list { display: flex; flex-direction: column; gap: 5px; overflow-y: auto; max-height: 300px; }

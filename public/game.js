@@ -58,6 +58,8 @@ function setupEventListeners() {
   qs('btnCopyCode').onclick = () => { const code = qs('roomCodeDisplay').innerText; if(code !== '------') navigator.clipboard.writeText(code); };
   qs('btnSkipVote').onclick = () => { if(!currentRoom || currentPhase !== 'vote' || voteLocked) return; socket.emit('submitVote', { targetId: 'skip' }); voteLocked = true; qs('voteSubtitle').innerText = 'Has votado saltar.'; };
   qs('btnEndTurn').onclick = () => { if(currentRoom && currentPhase === 'turn') socket.emit('endTurnEarly'); };
+  
+  qs('btnDiscord').onclick = () => { if(currentRoom?.discordLink) window.open(currentRoom.discordLink, '_blank'); };
 }
 
 function renderCategoriesGrid() {
@@ -110,7 +112,12 @@ function handleJoin(res) {
 }
 
 socket.on('roomState', (room) => { currentRoom = room; updateGameView(room); });
-socket.on('privateRole', (data) => { myRole = data.role; myWord = data.word; myHint = data.hint; if(currentPhase === 'word') updateWordCard(); });
+socket.on('privateRole', (data) => { 
+  myRole = data.role; myWord = data.word; myHint = data.hint; 
+  if(currentPhase === 'word') updateWordCard(); 
+  if(myRole === 'IMPOSTOR') qs('secretCardInner').classList.add('impostor-card');
+  else qs('secretCardInner').classList.remove('impostor-card');
+});
 socket.on('roundResult', (data) => {
   qs('finalSecretWord').innerText = data.secretWord; qs('finalImpostors').innerText = data.impostors.join(', ');
   const iWon = (data.result === 'crew' && myRole === 'TRIPULANTE') || (data.result === 'impostor' && myRole === 'IMPOSTOR');
@@ -132,6 +139,7 @@ function updateGameView(room) {
   });
   qs('currentPlayersCount').innerText = room.players.length; qs('currentImpostorsCount').innerText = room.impostors;
   qs('btnStartRound').style.display = (isHost && currentPhase === 'lobby') ? 'block' : 'none';
+  qs('btnDiscord').style.display = room.discordLink ? 'flex' : 'none';
   ['viewLobby', 'viewWord', 'viewTurn', 'viewVote'].forEach(v => qs(v).style.display = 'none');
   if(currentPhase === 'lobby') { qs('viewLobby').style.display = 'block'; qs('statusText').innerText = isHost ? "Inicia cuando estén listos." : "Esperando al host..."; }
   else if(currentPhase === 'word') { qs('viewWord').style.display = 'block'; qs('secretCardInner').classList.remove('flipped'); updateWordCard(); qs('statusText').innerText = "Viendo roles..."; }
