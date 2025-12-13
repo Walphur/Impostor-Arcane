@@ -47,7 +47,7 @@ body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at
 .lobby-overlay { position: fixed; inset: 0; z-index: 50; background: #020617; display: flex; align-items: center; justify-content: center; }
 .screen { background: #0f172a; border-radius: 24px; padding: 25px; width: 90%; max-width: 450px; border: 1px solid #1e293b; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; }
 .screen-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
-.screen-header h2 { margin: 0; font-size: 1.2rem; }
+.screen-header h2 { margin: 0; font-size: 1.2rem; font-weight: 800; letter-spacing: 1px; }
 .btn-icon-back { background: #334155; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; }
 .arrow-icon-img { width: 20px; height: 20px; filter: invert(1); }
 
@@ -141,4 +141,35 @@ input:checked + .toggle-slider:before { transform: translateX(22px); }
   .btn-discord, .btn-exit-red { padding: 10px; }
   .btn-exit-arrow, .discord-icon-svg { margin: 0; width: 24px; height: 24px; }
   .app-card input[placeholder*="CÓDIGO"] { font-size: 1rem; letter-spacing: 1px; }
+}
+
+/* --- PREMIUM SCREEN --- */
+.premium-content-box {
+    background: rgba(30, 41, 59, 0.8);
+    border: 2px solid #fbbf24;
+    border-radius: 20px;
+    padding: 25px;
+    width: 90%;
+    max-width: 380px;
+    margin-bottom: 25px;
+    box-shadow: 0 0 25px rgba(251, 191, 36, 0.15);
+    text-align: center;
+}
+.premium-title {
+    font-size: 1.3rem; font-weight: 800; color: #fff; text-transform: uppercase; margin: 15px 0 10px; letter-spacing: 1px;
+}
+.premium-text {
+    font-size: 0.95rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 25px; font-weight: 600;
+}
+.premium-list {
+    text-align: left; list-style: none; padding: 0; margin: 0 auto; display: inline-block;
+}
+.premium-list li {
+    margin-bottom: 12px; display: flex; align-items: center; font-size: 1rem; font-weight: 700; color: #fff;
+}
+.checkmark-icon {
+    color: #fbbf24; margin-right: 12px; font-size: 1.2rem;
+}
+.premium-hint {
+    color: #94a3b8; font-size: 0.85rem; margin-top: 20px; font-weight: 600;
 }
