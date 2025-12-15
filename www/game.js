@@ -1,4 +1,7 @@
-const socket = io();
+// CONEXIÓN CON TU SERVIDOR (DOMINIO VERIFICADO)
+const socket = io('https://incognitogame.online', {
+    transports: ['websocket'] 
+});
 
 // --- CONFIGURACIÓN DE ADMOB (PUBLICIDAD) ---
 const AdMob = window.Capacitor ? window.Capacitor.Plugins.AdMob : null;
@@ -13,12 +16,19 @@ let isHost = false;
 let currentRoom = null;
 let currentPhase = 'lobby';
 let selectedCategories = new Set(['lugares', 'comidas', 'objetos']);
-let unlockedCategories = new Set(); 
+
+// --- LÓGICA DE MEMORIA (PERSISTENCIA) ---
+// 1. Leemos si es Premium
+let isPremium = localStorage.getItem('isPremium') === 'true';
+
+// 2. Leemos qué categorías desbloqueó por video (para que no se borren al cerrar)
+let unlockedCategories = new Set(JSON.parse(localStorage.getItem('videoUnlocks') || '[]')); 
+
 let myRole = null; 
 let myWord = null;
 let myHint = null;
 let voteLocked = false;
-const MAX_VIDEO_UNLOCKS = 2; // <--- LÍMITE DE VIDEOS
+const MAX_VIDEO_UNLOCKS = 2; // Límite de videos
 
 const qs = (id) => document.getElementById(id);
 
@@ -49,21 +59,45 @@ async function initAdMob() {
     } catch(e) { console.error("Error AdMob", e); }
 }
 
+// FUNCIÓN ÚNICA PARA DESBLOQUEAR CATEGORÍAS
 async function showRewardForCategory(catId) {
-    if (unlockedCategories.size >= MAX_VIDEO_UNLOCKS) {
-        alert(`❌ Límite alcanzado.\nSolo puedes desbloquear ${MAX_VIDEO_UNLOCKS} categorías gratis viendo anuncios.\n\n¡Hazte Premium para desbloquear todo sin límites!`);
-        return;
-    }
-    if(!AdMob) {
-        alert("[MODO WEB] Simulando video... Categoría desbloqueada.");
+    // 1. SI ES PREMIUM: Desbloquea directo y sale
+    if(isPremium) {
         unlockedCategories.add(catId);
         selectedCategories.add(catId);
         renderCategoriesGrid();
         return;
     }
+
+    // 2. SI NO ES PREMIUM: Verifica límite de videos
+    if (unlockedCategories.size >= MAX_VIDEO_UNLOCKS && !unlockedCategories.has(catId)) {
+        alert(`❌ Límite alcanzado.\nSolo puedes desbloquear ${MAX_VIDEO_UNLOCKS} categorías gratis viendo anuncios.\n\n¡Hazte Premium para desbloquear todo sin límites!`);
+        return;
+    }
+
+    // 3. MODO WEB (Si no hay AdMob real)
+    if(!AdMob) {
+        alert("[MODO WEB] Simulando video... Categoría desbloqueada.");
+        unlockedCategories.add(catId);
+        
+        // GUARDAR EN MEMORIA
+        localStorage.setItem('videoUnlocks', JSON.stringify(Array.from(unlockedCategories)));
+        
+        selectedCategories.add(catId);
+        renderCategoriesGrid();
+        return;
+    }
+
+    // 4. MODO APP: Muestra el video real
     try {
         await AdMob.showRewardVideoAd();
+        
+        // Si llegó hasta aquí, el usuario vio el video
         unlockedCategories.add(catId);
+        
+        // GUARDAR EN MEMORIA
+        localStorage.setItem('videoUnlocks', JSON.stringify(Array.from(unlockedCategories)));
+
         selectedCategories.add(catId);
         renderCategoriesGrid();
         await AdMob.prepareRewardVideoAd({ adId: ADMOB_IDS.bonificado, isTesting: true });
@@ -74,6 +108,7 @@ async function showRewardForCategory(catId) {
 }
 
 async function showInterstitialEndGame() {
+    if(isPremium) return; // SI ES PREMIUM, NO MOSTRAMOS ANUNCIO
     if(!AdMob) return;
     try {
         await AdMob.showInterstitial();
@@ -81,16 +116,26 @@ async function showInterstitialEndGame() {
     } catch(e) {}
 }
 
+
+// --- INICIO DE LA APLICACIÓN ---
 document.addEventListener('DOMContentLoaded', async () => {
+  // SI YA ES PREMIUM O YA VIO VIDEOS, APLICAMOS LOS DESBLOQUEOS VISUALES
+  if (isPremium) {
+      unlockedCategories = new Set(CATEGORIES_DATA.map(c => c.id));
+  }
+  // Si no es premium, 'unlockedCategories' ya se cargó desde la memoria arriba (línea 23)
+
   await initAdMob();
   renderCategoriesGrid();
   updateCategoriesSummary();
   setupEventListeners();
 
-  // --- ANUNCIO AL INICIAR LA APP (2 Segundos después de abrir) ---
+  // ANUNCIO AL INICIAR LA APP (Solo si NO es premium)
   setTimeout(() => {
-      console.log("Mostrando anuncio de bienvenida...");
-      showInterstitialEndGame(); 
+      if (!isPremium) { 
+          console.log("Mostrando anuncio de bienvenida...");
+          showInterstitialEndGame(); 
+      }
   }, 2000);
 });
 
@@ -141,6 +186,16 @@ function setupEventListeners() {
   qs('btnSkipVote').onclick = () => { if(!currentRoom || currentPhase !== 'vote' || voteLocked) return; socket.emit('submitVote', { targetId: 'skip' }); voteLocked = true; qs('voteSubtitle').innerText = 'Has votado saltar.'; };
   qs('btnEndTurn').onclick = () => { if(currentRoom && currentPhase === 'turn') socket.emit('endTurnEarly'); };
   qs('btnDiscord').onclick = () => { if(currentRoom?.discordLink) window.open(currentRoom.discordLink, '_blank'); };
+
+  // --- LÓGICA DE COMPRA PREMIUM (Simulada) ---
+  const btnBuy = qs('btnBuyPremium');
+  if(btnBuy) {
+      btnBuy.onclick = () => {
+          if(confirm("¿Confirmar compra por $2.99 USD? (Simulación)")) {
+              activatePremium();
+          }
+      };
+  }
 }
 
 function renderCategoriesGrid() {
@@ -170,6 +225,7 @@ function renderCategoriesGrid() {
     btn.onclick = () => {
       playSound('soundClick');
       if (isLocked) {
+          // Preguntamos confirmación antes de mostrar el video
           if(confirm(`Categoría ${cat.name} bloqueada. ¿Ver video para desbloquear? (Max ${MAX_VIDEO_UNLOCKS})`)) {
               showRewardForCategory(cat.id);
           }
@@ -242,6 +298,7 @@ socket.on('roundResult', (data) => {
   const finalWordRow = qs('finalSecretWord').parentElement;
   const finalImpostorsRow = qs('finalImpostors').parentElement;
 
+  // Mostramos anuncio al finalizar (solo si no es premium)
   showInterstitialEndGame();
 
   if (data.result === 'tie') {
@@ -362,4 +419,19 @@ function renderVoteGrid(room) {
     btn.onclick = () => { if(voteLocked) return; socket.emit('submitVote', { targetId: p.id }); voteLocked = true; qs('voteSubtitle').innerText = `Votaste a ${p.name}`; };
     grid.appendChild(btn);
   });
+}
+
+function activatePremium() {
+    isPremium = true;
+    localStorage.setItem('isPremium', 'true'); // GUARDAR EN MEMORIA
+    
+    // Desbloquear todas las categorías visualmente
+    unlockedCategories = new Set(CATEGORIES_DATA.map(c => c.id));
+    renderCategoriesGrid();
+    
+    alert("¡GRACIAS! 🚀\n\nAhora eres Premium.\n- Sin Anuncios\n- Todo Desbloqueado");
+    
+    playSound('soundWin'); // Sonido de victoria
+    qs('screenPremium').style.display = 'none'; // Cierra la pantalla
+    qs('screenHome').style.display = 'flex'; // Vuelve al home
 }
