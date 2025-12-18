@@ -3,25 +3,26 @@ body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at
 
 /* --- BOTONES --- */
 .btn-main { border-radius: 12px; padding: 14px 20px; font-weight: 700; font-size: 1rem; transition: transform 0.1s; border: none; cursor: pointer; }
-.btn-main:active { transform: scale(0.98); }
+.btn-main:active { transform: scale(0.96); } /* Efecto rebote al tocar */
 .btn-primary { background: #dc2626; color: #fff; box-shadow: 0 4px 0 #991b1b; } 
 .btn-primary:hover { background: #ef4444; }
 .btn-secondary { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; }
 .btn-secondary:hover { border-color: #94a3b8; color: #fff; }
 .btn-big { width: 100%; font-size: 1.1rem; padding: 16px; display: block; }
 
-/* Botón Dorado (Premium) */
+/* Botón Dorado (Premium) - MEJORADO */
 .btn-gold {
-    background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
+    /* Gradiente Dorado más brillante y premium */
+    background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%); 
     color: #fff;
-    font-weight: 800;
+    font-weight: 700; /* Igual que los otros botones */
     border: none;
     border-radius: 12px;
     box-shadow: 0 4px 0 #92400e;
     text-transform: uppercase;
     letter-spacing: 1px;
     transition: all 0.1s;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 .btn-gold:active {
     transform: translateY(4px);
@@ -41,6 +42,7 @@ body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at
 .big-logo-container { margin-bottom: 30px; text-align: center; }
 .big-logo-container img { user-select: none; pointer-events: none; }
 .logo-img-home { width: 330px; max-width: 85vw; filter: drop-shadow(0 0 10px rgba(220,38,38,0.2)); }
+/* Gap controla el espacio igual entre botones */
 .home-card-buttons { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(10px); padding: 25px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 15px; }
 
 /* --- PANTALLAS --- */
@@ -51,7 +53,7 @@ body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at
 .btn-icon-back { background: #334155; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; }
 .arrow-icon-img { width: 20px; height: 20px; filter: invert(1); }
 
-/* --- CONTADORES (RESPONSIVE FIX) --- */
+/* --- CONTADORES --- */
 .config-counters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
 .mini-card { background: #1e293b; border-radius: 12px; padding: 10px; text-align: center; border: 1px solid #334155; }
 .mini-label { font-size: 0.65rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; display: block; }

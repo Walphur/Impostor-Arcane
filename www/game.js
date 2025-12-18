@@ -3,7 +3,7 @@ const socket = io('https://incognitogame.online', {
     transports: ['websocket'] 
 });
 
-// --- CONFIGURACIÓN DE ADMOB (PUBLICIDAD) ---
+// --- CONFIGURACIÓN DE ADMOB (PRODUCCIÓN - REAL) ---
 const AdMob = window.Capacitor ? window.Capacitor.Plugins.AdMob : null;
 const ADMOB_IDS = {
     intersticial: 'ca-app-pub-6788680373227341/8374567976', 
@@ -49,17 +49,18 @@ const CATEGORIES_DATA = [
   { id: 'fantasia', premium: true, icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#818cf8"><path d="M10.59 4.59C10.21 4.21 9.7 4 9.17 4 8.1 4 7.17 4.94 7.27 6.2l.27 3.54-2.32-.8c-.36-.13-.76-.06-1.06.17-.32.25-.5.63-.5 1.04 0 .31.1.6.29.85l4.92 6.42c.48.62 1.3 1.02 2.2 1.02H19c1.1 0 2-.9 2-2v-5c0-1.1-.9-2-2-2h-3.17l-1.87-6.42c-.19-.67-.8-1.11-1.49-1.11-.4 0-.78.16-1.07.45l-.81.83zM5 18H3v2h2v-2zm-2-4h2v2H3v-2z"/></svg>', name: 'Fantasía' }
 ];
 
-// --- LÓGICA DE ANUNCIOS ---
+// --- LÓGICA DE ANUNCIOS (PRODUCCIÓN) ---
 async function initAdMob() {
     if(!AdMob) return;
     try {
-        await AdMob.initialize({ requestTrackingAuthorization: true, initializeForTesting: true });
-        await AdMob.prepareRewardVideoAd({ adId: ADMOB_IDS.bonificado, isTesting: true });
-        await AdMob.prepareInterstitial({ adId: ADMOB_IDS.intersticial, isTesting: true });
+        // Inicializamos SIN modo test
+        await AdMob.initialize({ requestTrackingAuthorization: true });
+        // Cargamos anuncios REALES
+        await AdMob.prepareRewardVideoAd({ adId: ADMOB_IDS.bonificado });
+        await AdMob.prepareInterstitial({ adId: ADMOB_IDS.intersticial });
     } catch(e) { console.error("Error AdMob", e); }
 }
 
-// FUNCIÓN ÚNICA PARA DESBLOQUEAR CATEGORÍAS
 async function showRewardForCategory(catId) {
     // 1. SI ES PREMIUM: Desbloquea directo y sale
     if(isPremium) {
@@ -79,10 +80,7 @@ async function showRewardForCategory(catId) {
     if(!AdMob) {
         alert("[MODO WEB] Simulando video... Categoría desbloqueada.");
         unlockedCategories.add(catId);
-        
-        // GUARDAR EN MEMORIA
         localStorage.setItem('videoUnlocks', JSON.stringify(Array.from(unlockedCategories)));
-        
         selectedCategories.add(catId);
         renderCategoriesGrid();
         return;
@@ -91,19 +89,16 @@ async function showRewardForCategory(catId) {
     // 4. MODO APP: Muestra el video real
     try {
         await AdMob.showRewardVideoAd();
-        
         // Si llegó hasta aquí, el usuario vio el video
         unlockedCategories.add(catId);
-        
-        // GUARDAR EN MEMORIA
         localStorage.setItem('videoUnlocks', JSON.stringify(Array.from(unlockedCategories)));
-
         selectedCategories.add(catId);
         renderCategoriesGrid();
-        await AdMob.prepareRewardVideoAd({ adId: ADMOB_IDS.bonificado, isTesting: true });
+        // Recargamos el siguiente anuncio
+        await AdMob.prepareRewardVideoAd({ adId: ADMOB_IDS.bonificado });
     } catch(e) {
-        alert("No se pudo cargar el anuncio. Intenta de nuevo.");
-        await AdMob.prepareRewardVideoAd({ adId: ADMOB_IDS.bonificado, isTesting: true });
+        alert("No hay anuncios disponibles por ahora. Intenta más tarde.");
+        await AdMob.prepareRewardVideoAd({ adId: ADMOB_IDS.bonificado });
     }
 }
 
@@ -112,31 +107,29 @@ async function showInterstitialEndGame() {
     if(!AdMob) return;
     try {
         await AdMob.showInterstitial();
-        await AdMob.prepareInterstitial({ adId: ADMOB_IDS.intersticial, isTesting: true });
+        await AdMob.prepareInterstitial({ adId: ADMOB_IDS.intersticial });
     } catch(e) {}
 }
 
 
 // --- INICIO DE LA APLICACIÓN ---
 document.addEventListener('DOMContentLoaded', async () => {
-  // SI YA ES PREMIUM O YA VIO VIDEOS, APLICAMOS LOS DESBLOQUEOS VISUALES
   if (isPremium) {
       unlockedCategories = new Set(CATEGORIES_DATA.map(c => c.id));
   }
-  // Si no es premium, 'unlockedCategories' ya se cargó desde la memoria arriba (línea 23)
 
   await initAdMob();
   renderCategoriesGrid();
   updateCategoriesSummary();
   setupEventListeners();
 
-  // ANUNCIO AL INICIAR LA APP (Solo si NO es premium)
+  // ANUNCIO AL INICIAR LA APP
   setTimeout(() => {
       if (!isPremium) { 
-          console.log("Mostrando anuncio de bienvenida...");
+          // console.log("Mostrando anuncio de bienvenida...");
           showInterstitialEndGame(); 
       }
-  }, 2000);
+  }, 3000); // Le damos 3 segundos para asegurar que cargue
 });
 
 function setupEventListeners() {
@@ -187,13 +180,18 @@ function setupEventListeners() {
   qs('btnEndTurn').onclick = () => { if(currentRoom && currentPhase === 'turn') socket.emit('endTurnEarly'); };
   qs('btnDiscord').onclick = () => { if(currentRoom?.discordLink) window.open(currentRoom.discordLink, '_blank'); };
 
-  // --- LÓGICA DE COMPRA PREMIUM (Simulada) ---
+  // --- LÓGICA DE COMPRA PREMIUM (MODO PROTEGIDO PARA LANZAMIENTO) ---
   const btnBuy = qs('btnBuyPremium');
   if(btnBuy) {
       btnBuy.onclick = () => {
+          // PROTECCIÓN: Mostramos mensaje de "Próximamente" en lugar de regalar el premium
+          alert("🚀 ¡Gracias por tu interés!\n\nLa compra Premium estará disponible en la próxima actualización (v1.1).\n\nPor ahora, disfruta del juego ganando categorías con los anuncios.");
+          
+          /* --- DESCOMENTAR ESTO CUANDO TENGAS PAGOS REALES CON GOOGLE ---
           if(confirm("¿Confirmar compra por $2.99 USD? (Simulación)")) {
               activatePremium();
           }
+          */
       };
   }
 }
@@ -225,7 +223,6 @@ function renderCategoriesGrid() {
     btn.onclick = () => {
       playSound('soundClick');
       if (isLocked) {
-          // Preguntamos confirmación antes de mostrar el video
           if(confirm(`Categoría ${cat.name} bloqueada. ¿Ver video para desbloquear? (Max ${MAX_VIDEO_UNLOCKS})`)) {
               showRewardForCategory(cat.id);
           }
@@ -298,7 +295,7 @@ socket.on('roundResult', (data) => {
   const finalWordRow = qs('finalSecretWord').parentElement;
   const finalImpostorsRow = qs('finalImpostors').parentElement;
 
-  // Mostramos anuncio al finalizar (solo si no es premium)
+  // ANUNCIO AL FINALIZAR LA PARTIDA (PRODUCCIÓN)
   showInterstitialEndGame();
 
   if (data.result === 'tie') {
