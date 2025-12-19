@@ -1,3 +1,4 @@
+// CONEXIÓN CON TU SERVIDOR
 const socket = io('https://incognitogame.online', { transports: ['websocket'], reconnection: true, reconnectionAttempts: 10, reconnectionDelay: 1000 });
 function getDeviceId() { let id = localStorage.getItem('deviceUUID'); if (!id) { id = 'user_' + Math.random().toString(36).substr(2, 9) + Date.now(); localStorage.setItem('deviceUUID', id); } return id; }
 const MY_DEVICE_ID = getDeviceId();
@@ -15,15 +16,32 @@ const MAX_VIDEO_UNLOCKS = 2;
 const qs = (id) => document.getElementById(id);
 function playSound(id) { const audio = qs(id); if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); } }
 
+// --- NUEVOS ICONOS SVG UNIFICADOS ---
 const CATEGORIES_DATA = [
-  { id: 'lugares', premium: false, icon: '🌍', name: 'Lugares' },
-  { id: 'comidas', premium: false, icon: '🍔', name: 'Comidas' },
-  { id: 'objetos', premium: false, icon: '📦', name: 'Objetos' },
-  { id: 'animales', premium: true, icon: '🐶', name: 'Animales' },
-  { id: 'profesiones', premium: true, icon: '👷', name: 'Profesiones' },
-  { id: 'deportes', premium: true, icon: '⚽', name: 'Deportes' },
-  { id: 'tecnologia', premium: true, icon: '💻', name: 'Tecnología' },
-  { id: 'fantasia', premium: true, icon: '🧙', name: 'Fantasía' }
+  { id: 'lugares', premium: false, name: 'Lugares', 
+    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>' },
+  
+  { id: 'comidas', premium: false, name: 'Comidas', 
+    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' }, // Icono abstracto tipo Pizza/Advertencia (visual simple) o cambiamos a burger:
+    // Icono Burger: <path d="M3 15h18"/><path d="M3 11h18"/><path d="M3 19h18"/><path d="M5 6a7 7 0 0 1 14 0"/>
+  
+  { id: 'objetos', premium: false, name: 'Objetos', 
+    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>' },
+  
+  { id: 'animales', premium: true, name: 'Animales', 
+    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2"/><path d="M9 10a2 2 0 0 1 2 2v.5"/><path d="M15 10a2 2 0 0 0-2 2v.5"/><path d="M9 16s1.5 2 3 2 3-2 3-2"/></svg>' }, // Cara simple
+  
+  { id: 'profesiones', premium: true, name: 'Profesiones', 
+    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f472b6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>' },
+  
+  { id: 'deportes', premium: true, name: 'Deportes', 
+    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>' },
+  
+  { id: 'tecnologia', premium: true, name: 'Tecnología', 
+    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>' },
+  
+  { id: 'fantasia', premium: true, name: 'Fantasía', 
+    icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>' }
 ];
 
 async function initAdMob() {
@@ -71,13 +89,16 @@ function setupEventListeners() {
   qs('btnExit').onclick = () => { if(confirm("⚠️ ¿Salir?")) location.reload(); };
   qs('btnBackToLobby').onclick = () => { qs('ejectionOverlay').style.display = 'none'; if(currentRoom) updateGameView(currentRoom); };
   
+  // --- BOTÓN COPIAR CON ICONO VERDE AL CLIC ---
   const copyBtn = qs('btnCopyCode');
   copyBtn.onclick = () => { 
       const code = qs('roomCodeDisplay').innerText; 
       if(code !== '------') { 
           navigator.clipboard.writeText(code); 
-          copyBtn.innerHTML = '✅'; 
+          // Icono Check Verde
+          copyBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'; 
           setTimeout(() => { 
+              // Volver al Icono Copiar Original
               copyBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>'; 
           }, 2000); 
       } 
@@ -87,21 +108,15 @@ function setupEventListeners() {
   qs('btnEndTurn').onclick = () => { if(currentRoom && currentPhase === 'turn') socket.emit('endTurnEarly'); };
   qs('btnDiscord').onclick = () => { if(currentRoom?.discordLink) window.open(currentRoom.discordLink, '_blank'); };
   
-  // --- BOTÓN ENVIAR PISTA ---
   qs('btnSendClue').onclick = () => {
       const input = qs('inputClue'); const text = input.value.trim();
       if(!text) return alert("Escribe algo.");
       socket.emit('submitClue', { text: text }); input.value = '';
   };
 
-  // --- BOTÓN CANCELAR RONDA (HOST) ---
   const btnCancel = document.getElementById('btnCancelRound');
   if(btnCancel) {
-      btnCancel.onclick = () => {
-          if(confirm("🛑 ¿DETENER la partida y volver al Lobby?")) {
-              socket.emit('cancelRound');
-          }
-      };
+      btnCancel.onclick = () => { if(confirm("🛑 ¿DETENER partida?")) socket.emit('cancelRound'); };
   }
 
   const btnBuy = qs('btnBuyPremium'); if(btnBuy) btnBuy.onclick = () => { const c = prompt("🔑 Código (INC2025)"); if (c && c.toUpperCase() === "INC2025") activatePremium(); else alert("Próximamente"); };
@@ -113,7 +128,8 @@ function renderCategoriesGrid() {
     const btn = document.createElement('div');
     const isSelected = selectedCategories.has(cat.id); const isLocked = cat.premium && !unlockedCategories.has(cat.id);
     btn.className = 'category-card-square' + (isSelected && !isLocked ? ' active' : '') + (isLocked ? ' locked' : '');
-    let content = `<div class="cat-icon" style="font-size:2rem;">${cat.icon}</div><div class="cat-name">${cat.name}</div>`;
+    // SVGs ya incluidos en CATEGORIES_DATA
+    let content = `<div class="cat-icon" style="width:32px; height:32px; margin-bottom:5px;">${cat.icon}</div><div class="cat-name">${cat.name}</div>`;
     if(isLocked) content += `<div style="position:absolute;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.7);border-radius:16px;display:flex;align-items:center;justify-content:center;"><span style="font-size:1.5rem;">📺</span></div>`;
     btn.innerHTML = content;
     btn.onclick = () => { playSound('soundClick'); if (isLocked) { if(confirm(`📺 ¿Desbloquear ${cat.name}?`)) showRewardForCategory(cat.id); } else { if(selectedCategories.has(cat.id)) selectedCategories.delete(cat.id); else selectedCategories.add(cat.id); if(selectedCategories.size===0) selectedCategories.add(cat.id); renderCategoriesGrid(); } };
@@ -127,21 +143,8 @@ window.toggleSecretCard = function() { if(currentPhase!=='word')return; const c=
 
 function createRoom() {
   if(selectedCategories.size === 0) return alert('Elige categorías');
-  // OBTENER MODO DE JUEGO
-  let mode = 'group';
-  if(qs('modeText').checked) mode = 'text';
-  else if(qs('modeDiscord').checked) mode = 'discord';
-  else mode = 'group';
-
-  socket.emit('createRoom', { 
-      name: qs('hostName').value || 'Agente', 
-      maxPlayers: qs('maxPlayers').value, 
-      impostors: qs('impostors').value, 
-      categories: Array.from(selectedCategories), 
-      voteTime: qs('timeVote').value, 
-      mode: mode, // Enviamos el modo seleccionado
-      userId: MY_DEVICE_ID 
-  }, handleJoin);
+  let mode = 'group'; if(qs('modeText').checked) mode = 'text'; else if(qs('modeDiscord').checked) mode = 'discord';
+  socket.emit('createRoom', { name: qs('hostName').value || 'Agente', maxPlayers: qs('maxPlayers').value, impostors: qs('impostors').value, categories: Array.from(selectedCategories), voteTime: qs('timeVote').value, mode: mode, userId: MY_DEVICE_ID }, handleJoin);
 }
 function joinRoom() { socket.emit('joinRoom', { name: qs('joinName').value || 'Agente', roomCode: qs('joinCode').value, userId: MY_DEVICE_ID }, handleJoin); }
 function handleJoin(res) {
@@ -188,44 +191,28 @@ function updateGameView(room) {
 
   const btnStart = document.getElementById('btnStartRound'); if (btnStart) btnStart.style.display = (isHost && currentPhase === 'lobby' && room.players.length >= 2) ? 'block' : 'none';
   const btnDiscord = document.getElementById('btnDiscord'); if (btnDiscord) btnDiscord.style.display = room.discordLink ? 'flex' : 'none';
-  
-  // BOTÓN CANCELAR RONDA (SOLO HOST Y NO LOBBY)
-  const btnCancel = document.getElementById('btnCancelRound');
-  if(btnCancel) {
-      btnCancel.style.display = (isHost && currentPhase !== 'lobby') ? 'block' : 'none';
-  }
+  const btnCancel = document.getElementById('btnCancelRound'); if(btnCancel) btnCancel.style.display = (isHost && currentPhase !== 'lobby') ? 'block' : 'none';
 
   ['viewLobby', 'viewWord', 'viewTurn', 'viewVote'].forEach(v => setDisplay(v, false));
 
   if (currentPhase === 'lobby') { setDisplay('viewLobby', true); const st = document.getElementById('statusText'); if(st) st.innerHTML = isHost ? "Inicia cuando estén listos." : `Esperando<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>`; } 
   else if (currentPhase === 'word') { setDisplay('viewWord', true); const c = document.getElementById('secretCardInner'); if(c) c.classList.remove('flipped'); updateWordCard(); setTxt('statusText', "Memorizando roles..."); } 
   else if (currentPhase === 'turn') { 
-      setDisplay('viewTurn', true); 
-      const t = room.players.find(p => p.id === room.currentTurnId); 
-      setTxt('currentTurnPlayer', t ? t.name : '...'); 
+      setDisplay('viewTurn', true); const t = room.players.find(p => p.id === room.currentTurnId); setTxt('currentTurnPlayer', t ? t.name : '...'); 
       
-      // SOLO MOSTRAR BITÁCORA Y CHAT SI EL MODO ES 'TEXT'
       const isTextMode = (room.mode === 'text');
-      qs('cluesHistoryContainer').style.display = isTextMode ? 'block' : 'none'; // Contenedor historial
-      
+      qs('cluesHistoryContainer').style.display = isTextMode ? 'block' : 'none'; 
       const isMyTurn = (room.currentTurnId === myId);
-      
-      // Input solo si es mi turno Y es modo texto
       qs('turnInputArea').style.display = (isMyTurn && isTextMode) ? 'flex' : 'none';
-      
-      // Botón "Ya hablé" normal para modos de voz
       qs('turnActionsNormal').style.display = (isMyTurn && !isTextMode) ? 'block' : 'none';
-
       qs('turnWaitMessage').style.display = isMyTurn ? 'none' : 'block';
       qs('turnWaitMessage').innerText = t ? `Esperando a ${t.name}...` : '...';
 
       if(isTextMode) {
-          const cluesContainer = qs('cluesHistory');
-          cluesContainer.innerHTML = '';
+          const cluesContainer = qs('cluesHistory'); cluesContainer.innerHTML = '';
           if(room.clues && room.clues.length > 0) {
               room.clues.forEach(clue => {
-                  const div = document.createElement('div');
-                  div.style.marginBottom = '5px'; div.style.fontSize = '0.9rem';
+                  const div = document.createElement('div'); div.style.marginBottom = '5px'; div.style.fontSize = '0.9rem';
                   div.innerHTML = `<span style="color:${clue.color}; font-weight:800;">${clue.name}:</span> <span style="color:#fff;">${clue.text}</span>`;
                   cluesContainer.appendChild(div);
               });
