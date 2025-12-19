@@ -1,13 +1,30 @@
-// CONEXIÓN CON TU SERVIDOR (DOMINIO VERIFICADO)
+// CONEXIÓN CON TU SERVIDOR
 const socket = io('https://incognitogame.online', {
-    transports: ['websocket'] 
+    transports: ['websocket'],
+    reconnection: true,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 1000
 });
 
-// --- CONFIGURACIÓN DE ADMOB (PRODUCCIÓN - REAL) ---
+// --- ID DE DISPOSITIVO PARA RECONEXIÓN ---
+function getDeviceId() {
+    let id = localStorage.getItem('deviceUUID');
+    if (!id) {
+        id = 'user_' + Math.random().toString(36).substr(2, 9) + Date.now();
+        localStorage.setItem('deviceUUID', id);
+    }
+    return id;
+}
+const MY_DEVICE_ID = getDeviceId();
+
+// --- 💰 CONFIGURACIÓN DE ADMOB (INGRESOS) ---
+// Usamos el plugin de Capacitor si está disponible
 const AdMob = window.Capacitor ? window.Capacitor.Plugins.AdMob : null;
+
+// TUS IDs REALES (CUIDALOS)
 const ADMOB_IDS = {
-    intersticial: 'ca-app-pub-6788680373227341/8374567976', 
-    bonificado: 'ca-app-pub-6788680373227341/4416794053'   
+    intersticial: 'ca-app-pub-6788680373227341/8374567976', // Anuncio de pantalla completa
+    bonificado: 'ca-app-pub-6788680373227341/4416794053'    // Anuncio de video con premio
 };
 
 // ESTADO DEL JUEGO
@@ -15,27 +32,22 @@ let myId = null;
 let isHost = false;
 let currentRoom = null;
 let currentPhase = 'lobby';
-let selectedCategories = new Set(['lugares', 'comidas', 'objetos']);
+let selectedCategories = new Set(['lugares', 'comidas', 'objetos']); // Por defecto
 
-// --- LÓGICA DE MEMORIA (PERSISTENCIA) ---
-// 1. Leemos si es Premium
+// MEMORIA DEL JUGADOR
 let isPremium = localStorage.getItem('isPremium') === 'true';
-
-// 2. Leemos qué categorías desbloqueó por video (para que no se borren al cerrar)
+// Recuperamos las categorías que desbloqueó viendo videos
 let unlockedCategories = new Set(JSON.parse(localStorage.getItem('videoUnlocks') || '[]')); 
 
 let myRole = null; 
-let myWord = null;
+let myWord = null; 
 let myHint = null;
 let voteLocked = false;
-const MAX_VIDEO_UNLOCKS = 2; // Límite de videos
+let adLoaded = false; // Para saber si el anuncio está listo
+const MAX_VIDEO_UNLOCKS = 2; // Cantidad de categorías gratis con video
 
 const qs = (id) => document.getElementById(id);
-
-function playSound(id) {
-  const audio = qs(id);
-  if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); }
-}
+function playSound(id) { const audio = qs(id); if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); } }
 
 // --- DATOS DE CATEGORÍAS ---
 const CATEGORIES_DATA = [
@@ -49,120 +61,150 @@ const CATEGORIES_DATA = [
   { id: 'fantasia', premium: true, icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#818cf8"><path d="M10.59 4.59C10.21 4.21 9.7 4 9.17 4 8.1 4 7.17 4.94 7.27 6.2l.27 3.54-2.32-.8c-.36-.13-.76-.06-1.06.17-.32.25-.5.63-.5 1.04 0 .31.1.6.29.85l4.92 6.42c.48.62 1.3 1.02 2.2 1.02H19c1.1 0 2-.9 2-2v-5c0-1.1-.9-2-2-2h-3.17l-1.87-6.42c-.19-.67-.8-1.11-1.49-1.11-.4 0-.78.16-1.07.45l-.81.83zM5 18H3v2h2v-2zm-2-4h2v2H3v-2z"/></svg>', name: 'Fantasía' }
 ];
 
-// --- LÓGICA DE ANUNCIOS (PRODUCCIÓN) ---
+// --- 💰 LÓGICA DE INGRESOS (ADMOB) ---
 async function initAdMob() {
     if(!AdMob) return;
     try {
-        // Inicializamos SIN modo test
         await AdMob.initialize({ requestTrackingAuthorization: true });
-        // Cargamos anuncios REALES
+        
+        // Carga inicial agresiva
         await AdMob.prepareRewardVideoAd({ adId: ADMOB_IDS.bonificado });
         await AdMob.prepareInterstitial({ adId: ADMOB_IDS.intersticial });
+        adLoaded = true;
+        console.log("💰 AdMob Inicializado y Cargando...");
     } catch(e) { console.error("Error AdMob", e); }
 }
 
+// Lógica de "Anuncio x Recompensa"
 async function showRewardForCategory(catId) {
-    // 1. SI ES PREMIUM: Desbloquea directo y sale
     if(isPremium) {
-        unlockedCategories.add(catId);
-        selectedCategories.add(catId);
-        renderCategoriesGrid();
+        // Si ya es premium, desbloquea directo sin video
+        unlockCategory(catId);
         return;
     }
-
-    // 2. SI NO ES PREMIUM: Verifica límite de videos
+    
+    // Verificamos límite para forzar Premium después de 2 videos
     if (unlockedCategories.size >= MAX_VIDEO_UNLOCKS && !unlockedCategories.has(catId)) {
-        alert(`❌ Límite alcanzado.\nSolo puedes desbloquear ${MAX_VIDEO_UNLOCKS} categorías gratis viendo anuncios.\n\n¡Hazte Premium para desbloquear todo sin límites!`);
+        if(confirm(`❌ Límite Gratuito Alcanzado.\n\nSolo puedes desbloquear ${MAX_VIDEO_UNLOCKS} categorías con videos.\n\n¿Quieres desbloquear TODO y quitar anuncios con Premium?`)) {
+            qs('screenCategories').style.display = 'none';
+            qs('screenPremium').style.display = 'flex';
+        }
         return;
     }
 
-    // 3. MODO WEB (Si no hay AdMob real)
+    // Si es WEB (PC), simulamos el video para probar
     if(!AdMob) {
-        alert("[MODO WEB] Simulando video... Categoría desbloqueada.");
-        unlockedCategories.add(catId);
-        localStorage.setItem('videoUnlocks', JSON.stringify(Array.from(unlockedCategories)));
-        selectedCategories.add(catId);
-        renderCategoriesGrid();
+        console.log("[MODO WEB] Simulando video de 3 segundos...");
+        const btn = document.activeElement;
+        if(btn) btn.innerHTML = "⏳ VIENDO...";
+        setTimeout(() => {
+            alert("✅ ¡Video completado!\nCategoría desbloqueada.");
+            unlockCategory(catId);
+            if(btn) btn.innerHTML = "DESBLOQUEADO";
+        }, 2000);
         return;
     }
 
-    // 4. MODO APP: Muestra el video real
+    // SI ES APP (Android), mostramos video real
     try {
-        await AdMob.showRewardVideoAd();
-        // Si llegó hasta aquí, el usuario vio el video
-        unlockedCategories.add(catId);
-        localStorage.setItem('videoUnlocks', JSON.stringify(Array.from(unlockedCategories)));
-        selectedCategories.add(catId);
-        renderCategoriesGrid();
-        // Recargamos el siguiente anuncio
-        await AdMob.prepareRewardVideoAd({ adId: ADMOB_IDS.bonificado });
+        // Mostramos el video
+        const result = await AdMob.showRewardVideoAd();
+        
+        // 💰 AQUÍ ES DONDE COBRAS: El usuario vio el video entero (amount > 0)
+        if (result && result.amount > 0) {
+            unlockCategory(catId);
+            // Cargar el siguiente video INMEDIATAMENTE para que esté listo luego
+            await AdMob.prepareRewardVideoAd({ adId: ADMOB_IDS.bonificado });
+        } else {
+            // A veces el plugin devuelve undefined pero funcionó, asumimos éxito si no hay error
+            unlockCategory(catId);
+            await AdMob.prepareRewardVideoAd({ adId: ADMOB_IDS.bonificado });
+        }
     } catch(e) {
-        alert("No hay anuncios disponibles por ahora. Intenta más tarde.");
+        alert("⚠️ El anuncio no está listo por conexión lenta.\nIntenta de nuevo en 5 segundos.");
+        // Reintentar carga
         await AdMob.prepareRewardVideoAd({ adId: ADMOB_IDS.bonificado });
     }
 }
 
-async function showInterstitialEndGame() {
-    if(isPremium) return; // SI ES PREMIUM, NO MOSTRAMOS ANUNCIO
-    if(!AdMob) return;
-    try {
-        await AdMob.showInterstitial();
-        await AdMob.prepareInterstitial({ adId: ADMOB_IDS.intersticial });
-    } catch(e) {}
+function unlockCategory(catId) {
+    unlockedCategories.add(catId); 
+    localStorage.setItem('videoUnlocks', JSON.stringify(Array.from(unlockedCategories)));
+    selectedCategories.add(catId); 
+    renderCategoriesGrid();
+    playSound('soundWin'); // Feedback sonoro satisfactorio
 }
 
+// Anuncio Intersticial (Pantalla completa)
+async function handleCreateRoomFlow() {
+    // Si es Premium, nunca mostrar anuncios
+    if (isPremium) {
+        createRoom(); 
+        return;
+    }
+    
+    // Si no hay plugin, pasar directo
+    if(!AdMob) { createRoom(); return; }
 
-// --- INICIO DE LA APLICACIÓN ---
+    try {
+        // Mostrar anuncio
+        await AdMob.showInterstitial();
+        // Al cerrar el anuncio, se ejecuta esto:
+        createRoom();
+        // Cargar el siguiente para la próxima vez
+        await AdMob.prepareInterstitial({ adId: ADMOB_IDS.intersticial });
+    } catch(e) {
+        // Si falla (ej: sin internet), permitir jugar igual para no perder al usuario
+        console.log("Error ad, pasando...", e);
+        createRoom();
+        await AdMob.prepareInterstitial({ adId: ADMOB_IDS.intersticial });
+    }
+}
+
+// --- INICIO ---
 document.addEventListener('DOMContentLoaded', async () => {
-  if (isPremium) {
-      unlockedCategories = new Set(CATEGORIES_DATA.map(c => c.id));
-  }
-
+  // Si es premium, desbloquear todo visualmente en memoria
+  if (isPremium) unlockedCategories = new Set(CATEGORIES_DATA.map(c => c.id));
+  
   await initAdMob();
   renderCategoriesGrid();
   updateCategoriesSummary();
   setupEventListeners();
 
-  // ANUNCIO AL INICIAR LA APP
-  setTimeout(() => {
-      if (!isPremium) { 
-          // console.log("Mostrando anuncio de bienvenida...");
-          showInterstitialEndGame(); 
-      }
-  }, 3000); // Le damos 3 segundos para asegurar que cargue
+  // Recuperar nombre
+  const savedName = localStorage.getItem('playerName');
+  if(savedName) { qs('hostName').value = savedName; qs('joinName').value = savedName; }
 });
 
 function setupEventListeners() {
   const screens = ['screenHome', 'screenCreate', 'screenJoin', 'screenCategories', 'screenPremium'];
-  const show = (id) => screens.forEach(s => {
-      const el = qs(s);
-      if(el) el.style.display = (s === id ? 'flex' : 'none');
-  });
+  const show = (id) => screens.forEach(s => { const el = qs(s); if(el) el.style.display = (s === id ? 'flex' : 'none'); });
 
   qs('btnGoCreate').onclick = () => { playSound('soundClick'); show('screenCreate'); };
   qs('btnGoJoin').onclick = () => { playSound('soundClick'); show('screenJoin'); };
   qs('backFromCreate').onclick = () => { playSound('soundClick'); show('screenHome'); };
   qs('backFromJoin').onclick = () => { playSound('soundClick'); show('screenHome'); };
   
-  // Categorías
   qs('btnOpenCategories').onclick = () => { playSound('soundClick'); show('screenCategories'); };
   qs('backFromCategories').onclick = () => { playSound('soundClick'); show('screenCreate'); };
   qs('btnSaveCategories').onclick = () => { playSound('soundClick'); updateCategoriesSummary(); show('screenCreate'); };
   
-  // Como Jugar
   qs('btnHowToPlay').onclick = () => qs('howToPlayOverlay').style.display = 'flex';
   qs('btnCloseHowToPlay').onclick = () => qs('howToPlayOverlay').style.display = 'none';
 
-  // PREMIUM
-  const btnPrem = qs('btnPremium');
-  if(btnPrem) btnPrem.onclick = () => { playSound('soundClick'); show('screenPremium'); };
-  const btnBackPrem = qs('btnBackFromPremium');
-  if(btnBackPrem) btnBackPrem.onclick = () => { playSound('soundClick'); show('screenHome'); };
+  const btnPrem = qs('btnPremium'); if(btnPrem) btnPrem.onclick = () => { playSound('soundClick'); show('screenPremium'); };
+  const btnBackPrem = qs('btnBackFromPremium'); if(btnBackPrem) btnBackPrem.onclick = () => { playSound('soundClick'); show('screenHome'); };
 
-  qs('btnCreateRoom').onclick = () => { playSound('soundClick'); createRoom(); };
+  // BOTÓN CREAR CON PUBLICIDAD
+  qs('btnCreateRoom').onclick = () => { playSound('soundClick'); handleCreateRoomFlow(); };
+  
   qs('btnJoinRoom').onclick = () => { playSound('soundClick'); joinRoom(); };
   qs('btnStartRound').onclick = () => { if(isHost) socket.emit('startRound'); };
-  qs('btnExit').onclick = () => location.reload();
+  
+  qs('btnExit').onclick = () => {
+      if(confirm("⚠️ ¿Salir de la sala?\nLa partida se cerrará para ti.")) { location.reload(); }
+  };
+  
   qs('btnBackToLobby').onclick = () => { qs('ejectionOverlay').style.display = 'none'; if(currentRoom) updateGameView(currentRoom); };
   
   const copyBtn = qs('btnCopyCode');
@@ -171,7 +213,7 @@ function setupEventListeners() {
     if(code !== '------') {
         navigator.clipboard.writeText(code);
         const originalHtml = copyBtn.innerHTML;
-        copyBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+        copyBtn.innerHTML = '✅';
         setTimeout(() => { copyBtn.innerHTML = originalHtml; }, 2000);
     }
   };
@@ -180,56 +222,59 @@ function setupEventListeners() {
   qs('btnEndTurn').onclick = () => { if(currentRoom && currentPhase === 'turn') socket.emit('endTurnEarly'); };
   qs('btnDiscord').onclick = () => { if(currentRoom?.discordLink) window.open(currentRoom.discordLink, '_blank'); };
 
-  // --- LÓGICA DE COMPRA PREMIUM (MODO PROTEGIDO PARA LANZAMIENTO) ---
+  // --- 💰 SISTEMA PREMIUM (CANJEAR CÓDIGO) ---
   const btnBuy = qs('btnBuyPremium');
   if(btnBuy) {
       btnBuy.onclick = () => {
-          // PROTECCIÓN: Mostramos mensaje de "Próximamente" en lugar de regalar el premium
-          alert("🚀 ¡Gracias por tu interés!\n\nLa compra Premium estará disponible en la próxima actualización (v1.1).\n\nPor ahora, disfruta del juego ganando categorías con los anuncios.");
+          // Preguntamos por código secreto
+          const code = prompt("🔑 ¿Tienes un Código Promocional?\nIngrésalo aquí para desbloquear Premium GRATIS.\n\n(O deja vacío para simular compra)");
           
-          /* --- DESCOMENTAR ESTO CUANDO TENGAS PAGOS REALES CON GOOGLE ---
-          if(confirm("¿Confirmar compra por $2.99 USD? (Simulación)")) {
+          if (code && code.toUpperCase() === "INC2025") { // <--- ¡AQUÍ ESTÁ TU CÓDIGO SECRETO!
               activatePremium();
+          } else if (code) {
+              alert("❌ Código incorrecto.");
+          } else {
+              // Simulación de compra para testers sin código
+              alert("🚀 Próximamente: Pagos con Google Play.\n\nUsa el código 'INC2025' para probar el Premium ahora.");
           }
-          */
       };
   }
 }
 
 function renderCategoriesGrid() {
-  const grid = qs('categoriesGrid');
-  grid.innerHTML = '';
-  
+  const grid = qs('categoriesGrid'); grid.innerHTML = '';
   CATEGORIES_DATA.forEach(cat => {
     const btn = document.createElement('div');
     const isSelected = selectedCategories.has(cat.id);
     const isLocked = cat.premium && !unlockedCategories.has(cat.id);
-
-    btn.className = 'category-card-square';
-    if(isSelected && !isLocked) btn.className += ' active';
-    if(isLocked) btn.className += ' locked'; 
-
+    
+    // Clases visuales
+    btn.className = 'category-card-square' + (isSelected && !isLocked ? ' active' : '') + (isLocked ? ' locked' : '');
+    
     let content = `<div class="cat-icon">${cat.icon}</div><div class="cat-name">${cat.name}</div>`;
     
+    // Candado o "Video"
     if(isLocked) {
-        content += `<div style="position:absolute; top:5px; right:5px; background:rgba(0,0,0,0.6); border-radius:50%; padding:4px;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#fff" viewBox="0 0 24 24"><path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6z"/></svg>
+        content += `
+        <div style="position:absolute; top:0; right:0; bottom:0; left:0; background:rgba(0,0,0,0.7); border-radius:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;">
+            <span style="font-size:1.5rem;">📺</span>
+            <span style="font-size:0.6rem; font-weight:800; color:#fbbf24; text-transform:uppercase;">VER VIDEO</span>
         </div>`;
     }
 
     btn.innerHTML = content;
-    btn.style.position = 'relative'; 
+    btn.style.position = 'relative';
 
     btn.onclick = () => {
       playSound('soundClick');
-      if (isLocked) {
-          if(confirm(`Categoría ${cat.name} bloqueada. ¿Ver video para desbloquear? (Max ${MAX_VIDEO_UNLOCKS})`)) {
+      if (isLocked) { 
+          // Confirmación más atractiva
+          if(confirm(`📺 ¿Ver video corto para desbloquear ${cat.name}?`)) {
               showRewardForCategory(cat.id);
           }
       } else {
-          if(selectedCategories.has(cat.id)) selectedCategories.delete(cat.id);
-          else selectedCategories.add(cat.id);
-          if(selectedCategories.size === 0) selectedCategories.add(cat.id); 
+          if(selectedCategories.has(cat.id)) selectedCategories.delete(cat.id); else selectedCategories.add(cat.id);
+          if(selectedCategories.size === 0) selectedCategories.add(cat.id);
           renderCategoriesGrid();
       }
     };
@@ -238,10 +283,8 @@ function renderCategoriesGrid() {
 }
 
 function updateCategoriesSummary() { const names = CATEGORIES_DATA.filter(c => selectedCategories.has(c.id)).map(c => c.name); qs('categoriesSummary').innerText = names.join(', '); }
-
 window.adjustValue = function(id, delta) {
-  const input = qs(id);
-  let val = parseInt(input.value);
+  const input = qs(id); let val = parseInt(input.value);
   if(id === 'maxPlayers') val = Math.min(15, Math.max(3, val + delta));
   if(id === 'impostors') val = Math.min(4, Math.max(1, val + delta));
   if(id === 'timeVote') val = Math.min(300, Math.max(60, val + delta));
@@ -250,27 +293,30 @@ window.adjustValue = function(id, delta) {
   if(id === 'impostors') qs('displayImpostors').innerText = val;
   if(id === 'timeVote') qs('displayVoteTime').innerText = val;
 };
-
-window.toggleSecretCard = function() { 
-    if(currentPhase !== 'word') return; 
-    const cardInner = qs('secretCardInner');
-    if (cardInner.classList.contains('flipped')) {
-        cardInner.classList.remove('flipped');
-    } else {
-        playSound('soundFlip'); 
-        cardInner.classList.add('flipped');
-    }
-};
+window.toggleSecretCard = function() { if(currentPhase !== 'word') return; const el = qs('secretCardInner'); if(el) { playSound('soundFlip'); el.classList.toggle('flipped'); } };
 
 function createRoom() {
   if(selectedCategories.size === 0) return alert('Elige categorías');
+  const name = qs('hostName').value || 'Agente';
+  localStorage.setItem('playerName', name);
+
   socket.emit('createRoom', {
-    name: qs('hostName').value || 'Agente', maxPlayers: qs('maxPlayers').value, impostors: qs('impostors').value,
+    name: name, maxPlayers: qs('maxPlayers').value, impostors: qs('impostors').value,
     categories: Array.from(selectedCategories), voteTime: qs('timeVote').value, 
-    groupMode: qs('groupModeToggle').checked
+    groupMode: qs('groupModeToggle').checked,
+    userId: MY_DEVICE_ID
   }, handleJoin);
 }
-function joinRoom() { socket.emit('joinRoom', { name: qs('joinName').value || 'Agente', roomCode: qs('joinCode').value }, handleJoin); }
+
+function joinRoom() { 
+    const name = qs('joinName').value || 'Agente';
+    localStorage.setItem('playerName', name);
+    socket.emit('joinRoom', { 
+        name: name, 
+        roomCode: qs('joinCode').value,
+        userId: MY_DEVICE_ID 
+    }, handleJoin); 
+}
 
 function handleJoin(res) {
   if(!res.ok) return alert(res.error || 'Error');
@@ -284,47 +330,29 @@ socket.on('roomState', (room) => { currentRoom = room; updateGameView(room); });
 socket.on('privateRole', (data) => { 
   myRole = data.role; myWord = data.word; myHint = data.hint; 
   if(currentPhase === 'word') updateWordCard(); 
-  if(myRole === 'IMPOSTOR') qs('secretCardInner').classList.add('impostor-card');
-  else qs('secretCardInner').classList.remove('impostor-card');
+  const el = qs('secretCardInner'); if(el) { if(myRole === 'IMPOSTOR') el.classList.add('impostor-card'); else el.classList.remove('impostor-card'); }
 });
 
 socket.on('roundResult', (data) => {
-  const resultTitle = qs('resultTitle');
-  const resultSubtitle = qs('resultSubtitle');
-  const resultIcon = qs('resultIcon');
-  const finalWordRow = qs('finalSecretWord').parentElement;
-  const finalImpostorsRow = qs('finalImpostors').parentElement;
-
-  // ANUNCIO AL FINALIZAR LA PARTIDA (PRODUCCIÓN)
-  showInterstitialEndGame();
+  const t = qs('resultTitle'), s = qs('resultSubtitle'), i = qs('resultIcon');
+  
+  // 💰 Publicidad al terminar (solo si no es Premium)
+  if(!isPremium && AdMob) { 
+      // Usamos prepare para asegurarnos que el siguiente esté listo
+      AdMob.showInterstitial().catch(e=>console.log("No ad ready"));
+      AdMob.prepareInterstitial({ adId: ADMOB_IDS.intersticial });
+  }
 
   if (data.result === 'tie') {
-      playSound('soundLose'); 
-      resultTitle.innerText = "EMPATE";
-      resultTitle.style.color = "#facc15"; 
-      resultSubtitle.innerText = data.reason;
-      resultIcon.innerHTML = '⚖️'; 
-      finalWordRow.style.display = 'none'; 
-      finalImpostorsRow.style.display = 'none'; 
+      playSound('soundLose'); t.innerText = "EMPATE"; t.style.color = "#facc15"; s.innerText = data.reason; i.innerHTML = '⚖️'; 
+      qs('finalSecretWord').parentElement.style.display = 'none'; qs('finalImpostors').parentElement.style.display = 'none';
   } else {
-      qs('finalSecretWord').innerText = data.secretWord;
-      qs('finalImpostors').innerText = data.impostors.join(', ');
-      finalWordRow.style.display = 'flex';
-      finalImpostorsRow.style.display = 'flex';
-
+      qs('finalSecretWord').innerText = data.secretWord; qs('finalImpostors').innerText = data.impostors.join(', ');
+      qs('finalSecretWord').parentElement.style.display = 'flex'; qs('finalImpostors').parentElement.style.display = 'flex';
       const iWon = (data.result === 'crew' && myRole === 'TRIPULANTE') || (data.result === 'impostor' && myRole === 'IMPOSTOR');
-      if(iWon) { 
-          playSound('soundWin'); 
-          resultTitle.innerText = "VICTORIA"; 
-          resultTitle.style.color = "#4ade80";
-          resultIcon.innerHTML = '🏆';
-      } else { 
-          playSound('soundLose'); 
-          resultTitle.innerText = "DERROTA"; 
-          resultTitle.style.color = "#ef4444";
-          resultIcon.innerHTML = '💀';
-      }
-      resultSubtitle.innerText = data.reason;
+      if(iWon) { playSound('soundWin'); t.innerText = "VICTORIA"; t.style.color = "#4ade80"; i.innerHTML = '🏆'; } 
+      else { playSound('soundLose'); t.innerText = "DERROTA"; t.style.color = "#ef4444"; i.innerHTML = '💀'; }
+      s.innerText = data.reason;
   }
   qs('ejectionOverlay').style.display = 'flex';
 });
@@ -338,7 +366,7 @@ function updateGameView(room) {
 
   setTxt('phaseLabel', currentPhase.toUpperCase());
   setTxt('timerNumber', room.timerText || '--');
-  setTxt('currentPlayersCount', room.players.length);
+  setTxt('currentPlayersCount', room.players.filter(p=>!p.disconnected).length);
   setTxt('currentImpostorsCount', room.impostors);
 
   const list = document.getElementById('playersList');
@@ -348,68 +376,33 @@ function updateGameView(room) {
         const row = document.createElement('div'); 
         row.className = 'player-row';
         if(p.isDead) row.style.opacity = '0.5';
-        if(room.currentTurnId === p.id) row.style.border = '1px solid #3b82f6';
-        
-        const badge = p.id === room.hostId ? '<span style="font-size:0.6rem; background:#ffffff20; padding:2px 6px; border-radius:4px; margin-left:auto;">HOST</span>' : '';
-        
-        row.innerHTML = `
-            <div style="width:28px;height:28px;background:${p.color};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#000;font-size:0.8rem;">${p.name.charAt(0).toUpperCase()}</div>
-            <div style="font-weight:600; font-size:0.9rem; margin-left:10px;">${p.name}</div>
-            ${badge}
-        `;
+        if(p.disconnected) row.style.border = '1px dashed #ef4444'; 
+        else if(room.currentTurnId === p.id) row.style.border = '1px solid #3b82f6';
+        const badge = p.id === room.hostId ? '<span style="font-size:0.6rem;background:#ffffff20;padding:2px 6px;border-radius:4px;margin-left:auto;">HOST</span>' : '';
+        const discIcon = p.disconnected ? '<span style="margin-left:5px;">🔌</span>' : '';
+        row.innerHTML = `<div style="width:28px;height:28px;background:${p.color};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#000;font-size:0.8rem;">${p.name.charAt(0).toUpperCase()}</div><div style="font-weight:600;font-size:0.9rem;margin-left:10px;">${p.name} ${discIcon}</div>${badge}`;
         list.appendChild(row);
       });
   }
 
   const btnStart = document.getElementById('btnStartRound');
-  if (btnStart) {
-      btnStart.style.display = (isHost && currentPhase === 'lobby' && room.players.length >= 2) ? 'block' : 'none';
-  }
-
+  if (btnStart) btnStart.style.display = (isHost && currentPhase === 'lobby' && room.players.length >= 2) ? 'block' : 'none';
   const btnDiscord = document.getElementById('btnDiscord');
   if (btnDiscord) btnDiscord.style.display = room.discordLink ? 'flex' : 'none';
 
   ['viewLobby', 'viewWord', 'viewTurn', 'viewVote'].forEach(v => setDisplay(v, false));
-
-  if (currentPhase === 'lobby') { 
-      setDisplay('viewLobby', true);
-      const st = document.getElementById('statusText');
-      if(st) st.innerHTML = isHost ? "Inicia cuando estén listos." : `Esperando<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>`;
-  } 
-  else if (currentPhase === 'word') { 
-      setDisplay('viewWord', true);
-      const card = document.getElementById('secretCardInner');
-      if(card) card.classList.remove('flipped'); 
-      updateWordCard();
-      setTxt('statusText', "Memorizando roles...");
-  } 
-  else if (currentPhase === 'turn') { 
-      setDisplay('viewTurn', true);
-      const turnP = room.players.find(p => p.id === room.currentTurnId);
-      setTxt('currentTurnPlayer', turnP ? turnP.name : '...');
-      
-      const turnActions = document.getElementById('turnActions');
-      if(turnActions) turnActions.style.display = (room.currentTurnId === myId) ? 'block' : 'none';
-      
-      setTxt('statusText', "Ronda de pistas.");
-  } 
-  else if (currentPhase === 'vote') { 
-      setDisplay('viewVote', true);
-      renderVoteGrid(room);
-      setTxt('statusText', "Votación en curso.");
-  }
+  if (currentPhase === 'lobby') { setDisplay('viewLobby', true); const st = document.getElementById('statusText'); if(st) st.innerHTML = isHost ? "Inicia cuando estén listos." : `Esperando<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>`; } 
+  else if (currentPhase === 'word') { setDisplay('viewWord', true); const c = document.getElementById('secretCardInner'); if(c) c.classList.remove('flipped'); updateWordCard(); setTxt('statusText', "Memorizando roles..."); } 
+  else if (currentPhase === 'turn') { setDisplay('viewTurn', true); const t = room.players.find(p => p.id === room.currentTurnId); setTxt('currentTurnPlayer', t ? t.name : '...'); const ta = document.getElementById('turnActions'); if(ta) ta.style.display = (room.currentTurnId === myId) ? 'block' : 'none'; setTxt('statusText', "Ronda de pistas."); } 
+  else if (currentPhase === 'vote') { setDisplay('viewVote', true); renderVoteGrid(room); setTxt('statusText', "Votación en curso."); }
 }
 
-function updateWordCard() { 
-    const rt = qs('roleTitle'); if(rt) rt.innerText = myRole; 
-    const sw = qs('secretWordDisplay'); if(sw) sw.innerText = myWord; 
-    const wh = qs('wordHint'); if(wh) wh.innerText = myHint; 
-}
+function updateWordCard() { const rt = qs('roleTitle'), sw = qs('secretWordDisplay'), wh = qs('wordHint'); if(rt) rt.innerText = myRole; if(sw) sw.innerText = myWord; if(wh) wh.innerText = myHint; }
 
 function renderVoteGrid(room) {
   const grid = qs('votePlayersGrid'); if(!grid) return;
   grid.innerHTML = ''; voteLocked = !!(room.votes && room.votes[myId]);
-  room.players.filter(p => !p.isDead && p.id !== myId).forEach(p => {
+  room.players.filter(p => !p.isDead && !p.disconnected && p.id !== myId).forEach(p => {
     const btn = document.createElement('div'); btn.className = 'mini-card'; btn.style.cursor = 'pointer';
     if(room.votes && room.votes[myId] === p.id) btn.style.border = '2px solid #ef4444';
     btn.innerHTML = `<div style="font-weight:bold;">${p.name}</div>`;
@@ -418,17 +411,14 @@ function renderVoteGrid(room) {
   });
 }
 
+// 💰 ACTIVACIÓN DEL PREMIUM
 function activatePremium() {
-    isPremium = true;
-    localStorage.setItem('isPremium', 'true'); // GUARDAR EN MEMORIA
-    
-    // Desbloquear todas las categorías visualmente
-    unlockedCategories = new Set(CATEGORIES_DATA.map(c => c.id));
+    isPremium = true; 
+    localStorage.setItem('isPremium', 'true');
+    unlockedCategories = new Set(CATEGORIES_DATA.map(c => c.id)); // Desbloquear todo
     renderCategoriesGrid();
-    
-    alert("¡GRACIAS! 🚀\n\nAhora eres Premium.\n- Sin Anuncios\n- Todo Desbloqueado");
-    
-    playSound('soundWin'); // Sonido de victoria
-    qs('screenPremium').style.display = 'none'; // Cierra la pantalla
-    qs('screenHome').style.display = 'flex'; // Vuelve al home
+    alert("🌟 ¡PREMIUM ACTIVADO! 🌟\n\n- Adiós Anuncios\n- Todo Desbloqueado\n\n¡Gracias por tu apoyo!");
+    playSound('soundWin'); 
+    qs('screenPremium').style.display = 'none'; 
+    qs('screenHome').style.display = 'flex';
 }
