@@ -257,75 +257,83 @@ socket.on('roundResult', (data) => {
 function updateGameView(room) {
   if (!room) return;
   currentPhase = room.phase; 
-  // Recalcular isHost cada vez para asegurar que el botón aparezca si soy yo
-  isHost = (room.hostId === myId);
+  
+  // Aseguramos que isHost se recalcule correctamente comparando IDs
+  isHost = (room.hostId === myId) || (room.hostId === socket.id);
 
   const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
   const setDisplay = (id, show) => { const el = document.getElementById(id); if (el) el.style.display = show ? 'block' : 'none'; };
 
-  // 1. Contadores superiores
+  // 1. Actualizar Contadores Superiores
   setTxt('timerNumber', room.timerText || '--');
   setTxt('currentPlayersCount', room.players.length); 
   setTxt('currentImpostorsCount', room.impostors);
 
-  // 2. Contadores del Lobby (Configuración)
+  // 2. Actualizar Configuración del Lobby
   if(currentPhase === 'lobby') {
-      qs('displayPlayers').innerText = room.maxPlayers;
-      qs('displayImpostors').innerText = room.impostors;
-      qs('displayVoteTime').innerText = room.config.voteTime / 1000;
-      // Solo el host puede tocar los botones
+      const pDisplay = qs('displayPlayers'); if(pDisplay) pDisplay.innerText = room.maxPlayers;
+      const iDisplay = qs('displayImpostors'); if(iDisplay) iDisplay.innerText = room.impostors;
+      const vDisplay = qs('displayVoteTime'); if(vDisplay) vDisplay.innerText = room.config.voteTime / 1000;
+      
       const btns = document.querySelectorAll('.mini-controls button');
       btns.forEach(b => b.disabled = !isHost);
   }
 
-  // 3. Lista de Agentes (CORREGIDO PARA EVITAR CRASH)
+  // 3. Lista de Agentes (BLINDADA CONTRA ERRORES)
   const list = document.getElementById('playersList');
   if (list) {
-      list.innerHTML = '';
+      list.innerHTML = ''; // Limpiar lista
       (room.players || []).forEach(p => {
-        // Protección contra datos vacíos
-        const pName = p.name || 'Agente'; 
-        const pColor = p.color || '#94a3b8';
-        const initial = pName.charAt(0).toUpperCase();
-        
-        const row = document.createElement('div'); 
-        row.className = 'player-row';
-        if(p.isDead) row.style.opacity = '0.5';
-        
-        // Bordes de estado
-        if(p.disconnected) row.style.border = '1px dashed #ef4444'; 
-        else if(room.currentTurnId === p.id) row.style.border = '1px solid #3b82f6';
+        try {
+            // Protección: Si faltan datos, usamos valores por defecto
+            const pName = p.name ? p.name : 'Agente'; 
+            const pColor = p.color ? p.color : '#64748b';
+            const initial = pName.charAt(0).toUpperCase();
+            
+            const row = document.createElement('div'); 
+            row.className = 'player-row';
+            
+            // Estilos dinámicos
+            if(p.isDead) row.style.opacity = '0.5';
+            if(p.disconnected) row.style.border = '1px dashed #ef4444'; 
+            else if(room.currentTurnId === p.id) row.style.border = '1px solid #3b82f6';
 
-        // Badge de HOST
-        const badge = p.id === room.hostId ? '<span style="font-size:0.6rem;background:#ffffff20;padding:2px 6px;border-radius:4px;margin-left:auto;">HOST</span>' : '';
-        const discIcon = p.disconnected ? '🔌' : '';
+            const badge = p.id === room.hostId ? '<span style="font-size:0.6rem;background:#ffffff20;padding:2px 6px;border-radius:4px;margin-left:auto;">HOST</span>' : '';
+            const discIcon = p.disconnected ? '🔌' : '';
 
-        row.innerHTML = `
-            <div style="width:28px;height:28px;background:${pColor};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#000;font-size:0.8rem;">${initial}</div>
-            <div style="font-weight:600;font-size:0.9rem;margin-left:10px; color:#fff;">${pName} ${discIcon}</div>
-            ${badge}
-        `;
-        list.appendChild(row);
+            // Insertamos el HTML del jugador
+            row.innerHTML = `
+                <div style="width:28px;height:28px;background:${pColor};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#000;font-size:0.8rem;">${initial}</div>
+                <div style="font-weight:600;font-size:0.9rem;margin-left:10px; color:#fff;">${pName} ${discIcon}</div>
+                ${badge}
+            `;
+            list.appendChild(row);
+        } catch (err) {
+            console.error("Error dibujando jugador:", err);
+        }
       });
   }
 
-  // 4. Botones y Vistas (Esto se ejecutará ahora sí o sí)
+  // 4. Botones y Vistas (Ahora se ejecutará sí o sí)
   const btnStart = document.getElementById('btnStartRound'); 
   if (btnStart) {
       // Mostrar SOLO si soy Host Y estamos en Lobby
-      btnStart.style.display = (isHost && currentPhase === 'lobby') ? 'block' : 'none';
+      if (isHost && currentPhase === 'lobby') {
+          btnStart.style.display = 'block';
+      } else {
+          btnStart.style.display = 'none';
+      }
   }
   
   const btnDiscord = document.getElementById('btnDiscord'); if (btnDiscord) btnDiscord.style.display = room.discordLink ? 'flex' : 'none';
   const btnCancel = document.getElementById('btnCancelRound'); if(btnCancel) btnCancel.style.display = (isHost && currentPhase !== 'lobby') ? 'block' : 'none';
 
-  // Gestión de Vistas (Lobby, Juego, Votación)
+  // 5. Gestión de Pantallas
   ['viewLobby', 'viewWord', 'viewTurn', 'viewVote'].forEach(v => setDisplay(v, false));
 
   if (currentPhase === 'lobby') { 
       setDisplay('viewLobby', true); 
       const st = document.getElementById('statusText'); 
-      // Actualizar texto de estado
       if(st) st.innerHTML = isHost ? "Inicia cuando estén listos." : `Esperando al Host...`; 
   } 
   else if (currentPhase === 'word') { 
@@ -340,23 +348,30 @@ function updateGameView(room) {
       setTxt('currentTurnPlayer', t ? t.name : '...'); 
       
       const isTextMode = (room.mode === 'text');
-      qs('cluesHistoryContainer').style.display = isTextMode ? 'block' : 'none'; 
-      const isMyTurn = (room.currentTurnId === myId);
+      const cluesContainer = qs('cluesHistoryContainer');
+      if(cluesContainer) cluesContainer.style.display = isTextMode ? 'block' : 'none'; 
       
-      qs('turnInputArea').style.display = (isMyTurn && isTextMode) ? 'flex' : 'none';
-      qs('turnActionsNormal').style.display = (isMyTurn && !isTextMode) ? 'block' : 'none';
-      qs('turnWaitMessage').style.display = isMyTurn ? 'none' : 'block';
-      qs('turnWaitMessage').innerText = t ? `Esperando a ${t.name}...` : '...';
+      const isMyTurn = (room.currentTurnId === myId);
+      const inputArea = qs('turnInputArea'); if(inputArea) inputArea.style.display = (isMyTurn && isTextMode) ? 'flex' : 'none';
+      const actionsNormal = qs('turnActionsNormal'); if(actionsNormal) actionsNormal.style.display = (isMyTurn && !isTextMode) ? 'block' : 'none';
+      const waitMsg = qs('turnWaitMessage');
+      if(waitMsg) {
+          waitMsg.style.display = isMyTurn ? 'none' : 'block';
+          waitMsg.innerText = t ? `Esperando a ${t.name}...` : '...';
+      }
 
       if(isTextMode) {
-          const cluesContainer = qs('cluesHistory'); cluesContainer.innerHTML = '';
-          if(room.clues && room.clues.length > 0) {
-              room.clues.forEach(clue => {
-                  const div = document.createElement('div'); div.style.marginBottom = '5px'; div.style.fontSize = '0.9rem';
-                  div.innerHTML = `<span style="color:${clue.color}; font-weight:800;">${clue.name}:</span> <span style="color:#fff;">${clue.text}</span>`;
-                  cluesContainer.appendChild(div);
-              });
-          } else { cluesContainer.innerHTML = '<div style="color:#64748b; font-size:0.8rem; font-style:italic;">Sin pistas escritas aún...</div>'; }
+          const cluesList = qs('cluesHistory'); 
+          if(cluesList) {
+              cluesList.innerHTML = '';
+              if(room.clues && room.clues.length > 0) {
+                  room.clues.forEach(clue => {
+                      const div = document.createElement('div'); div.style.marginBottom = '5px'; div.style.fontSize = '0.9rem';
+                      div.innerHTML = `<span style="color:${clue.color}; font-weight:800;">${clue.name}:</span> <span style="color:#fff;">${clue.text}</span>`;
+                      cluesList.appendChild(div);
+                  });
+              } else { cluesList.innerHTML = '<div style="color:#64748b; font-size:0.8rem; font-style:italic;">Sin pistas escritas aún...</div>'; }
+          }
       }
       setTxt('statusText', "Ronda de pistas.");
   } 

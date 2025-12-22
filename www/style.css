@@ -196,7 +196,9 @@ body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at
 .premium-list { text-align: left; list-style: none; padding: 0; margin: 0 auto; display: inline-block; }
 .premium-list li { margin-bottom: 12px; display: flex; align-items: center; font-size: 1rem; font-weight: 700; color: #fff; }
 .checkmark-icon { color: #fbbf24; margin-right: 12px; font-size: 1.2rem; }
-/* Barra lateral y tarjetas */
+
+/* AGREGA ESTO AL FINAL DE style.css SI NO LO TIENES */
+
 .sidebar-panel {
     display: flex; 
     flex-direction: column; 
@@ -214,9 +216,11 @@ body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at
     align-items: center;
     justify-content: center;
     text-align: center;
+    min-height: 80px; /* Para que no se vea vacío si no hay datos */
 }
 
-/* Ajuste para que la lista de jugadores ocupe el espacio */
+/* Ajuste específico para la tarjeta de la lista de jugadores */
 .sidebar-card:nth-child(2) {
-    justify-content: flex-start; /* Alinear lista arriba */
+    justify-content: flex-start; /* Alinea los items arriba */
+    flex: 1; /* Ocupa el espacio restante */
 }
