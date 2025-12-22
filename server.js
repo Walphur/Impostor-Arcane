@@ -68,6 +68,9 @@ function startTimer(room, seconds, onEnd) {
 function serializeRoom(room) {
   return {
     code: room.code, hostId: room.hostId, phase: room.phase, mode: room.mode,
+    // --- ESTA ES LA LÍNEA QUE FALTABA Y CAUSABA EL ERROR ---
+    config: room.config, 
+    // -------------------------------------------------------
     players: room.players.map(p => ({ 
         id: p.id, userId: p.userId, name: p.name, color: p.color, isDead: p.isDead, disconnected: p.disconnected 
     })),

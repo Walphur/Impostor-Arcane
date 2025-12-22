@@ -45,8 +45,7 @@ body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at
 .btn-icon-back { background: #334155; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; }
 .arrow-icon-img { width: 20px; height: 20px; filter: invert(1); }
 
-/* --- SELECCION DE MODOS (CORREGIDO) --- */
-/* Antes tenías .mode-card pero el HTML usa .mode-button */
+/* --- SELECCION DE MODOS --- */
 .mode-button {
     background: #1e293b;
     border: 2px solid #334155;
@@ -62,7 +61,7 @@ body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at
 .mode-button:hover { opacity: 1; border-color: #64748b; }
 .mode-button.selected-mode {
     background: #1e293b; 
-    border-color: #ef4444; /* Rojo activo */
+    border-color: #ef4444; 
     opacity: 1;
     box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
 }
@@ -161,9 +160,6 @@ body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at
 .howto-text p { margin: 0; font-size: 0.85rem; color: #cbd5e1; line-height: 1.4; }
 
 .timer-display-sidebar { font-size: 2rem; font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; }
-.players-list { display: flex; flex-direction: column; gap: 5px; overflow-y: auto; max-height: 300px; }
-.player-row { padding: 10px; background: #0f172a; border-radius: 10px; font-size: 0.95rem; display: flex; align-items: center; gap: 10px; font-weight: 600; }
-
 .loading-dots span { animation: dots 1.5s infinite; opacity: 0; }
 .loading-dots span:nth-child(1) { animation-delay: 0s; }
 .loading-dots span:nth-child(2) { animation-delay: 0.5s; }
@@ -197,8 +193,9 @@ body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at
 .premium-list li { margin-bottom: 12px; display: flex; align-items: center; font-size: 1rem; font-weight: 700; color: #fff; }
 .checkmark-icon { color: #fbbf24; margin-right: 12px; font-size: 1.2rem; }
 
-/* AGREGA ESTO AL FINAL DE style.css SI NO LO TIENES */
-
+/* =========================================
+   BARRA LATERAL Y LISTA DE JUGADORES
+   ========================================= */
 .sidebar-panel {
     display: flex; 
     flex-direction: column; 
@@ -216,11 +213,36 @@ body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at
     align-items: center;
     justify-content: center;
     text-align: center;
-    min-height: 80px; /* Para que no se vea vacío si no hay datos */
+    min-height: 80px;
 }
 
 /* Ajuste específico para la tarjeta de la lista de jugadores */
 .sidebar-card:nth-child(2) {
     justify-content: flex-start; /* Alinea los items arriba */
     flex: 1; /* Ocupa el espacio restante */
+    max-height: 400px;
+}
+
+.players-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    max-height: 100%;
+    margin-top: 10px;
+}
+
+.player-row {
+    width: 100%;
+    padding: 10px; 
+    background: #0f172a; 
+    border-radius: 10px; 
+    font-size: 0.95rem; 
+    display: flex; 
+    align-items: center; 
+    gap: 10px; 
+    font-weight: 600;
+    color: #fff;
+    border: 1px solid #334155;
 }

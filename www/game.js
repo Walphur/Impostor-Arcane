@@ -273,7 +273,13 @@ function updateGameView(room) {
   if(currentPhase === 'lobby') {
       const pDisplay = qs('displayPlayers'); if(pDisplay) pDisplay.innerText = room.maxPlayers;
       const iDisplay = qs('displayImpostors'); if(iDisplay) iDisplay.innerText = room.impostors;
-      const vDisplay = qs('displayVoteTime'); if(vDisplay) vDisplay.innerText = room.config.voteTime / 1000;
+      
+      // --- CORRECCIÓN AQUÍ: Protección contra crash ---
+      const vDisplay = qs('displayVoteTime'); 
+      if(vDisplay && room.config) {
+          vDisplay.innerText = room.config.voteTime / 1000;
+      }
+      // ------------------------------------------------
       
       const btns = document.querySelectorAll('.mini-controls button');
       btns.forEach(b => b.disabled = !isHost);
