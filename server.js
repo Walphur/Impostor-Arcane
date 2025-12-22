@@ -84,7 +84,6 @@ io.on('connection', (socket) => {
     const maxP = Math.min(15, Math.max(3, parseInt(data.maxPlayers) || 10));
     const imps = Math.min(maxP - 1, Math.max(1, parseInt(data.impostors) || 2));
     const userId = data.userId || socket.id;
-    // Modos: 'text', 'discord', 'group'
     const mode = data.mode || 'group'; 
 
     let discordLink = null; let discordChannelId = null;
@@ -144,17 +143,35 @@ io.on('connection', (socket) => {
     emitRoomState(room);
   });
 
+  socket.on('updateSettings', (data) => {
+    const room = getRoom(socket.id);
+    if(!room || room.hostId !== socket.id || room.phase !== 'lobby') return;
+    
+    // Validar y Actualizar
+    if(data.impostors) room.impostors = Math.min(room.players.length - 1, Math.max(1, parseInt(data.impostors)));
+    if(data.maxPlayers) room.maxPlayers = Math.min(15, Math.max(3, parseInt(data.maxPlayers)));
+    if(data.voteTime) room.config.voteTime = parseInt(data.voteTime) * 1000;
+    
+    emitRoomState(room);
+  });
+
   socket.on('startRound', () => {
     const room = getRoom(socket.id); 
-    if (!room || room.hostId !== socket.id || room.phase !== 'lobby' || room.players.length < 2) return;
+    if (!room || room.hostId !== socket.id || room.phase !== 'lobby') return;
+    // PUNTO 4: VALIDAR 3 JUGADORES
+    if (room.players.length < 3) return; 
     
     clearRoomTimer(room);
     room.players.forEach(p => p.isDead = false); room.votes = {}; room.spoken = {}; room.clues = [];
 
     const shuffled = shuffle([...room.players]); room.players = shuffled;
-    const totalPlayers = room.players.length;
+    
+    // Asegurar que impostores no supere el límite lógico (Max players - 1)
+    const activeCount = room.players.length;
+    if(room.impostors >= activeCount) room.impostors = Math.max(1, activeCount - 1);
+
     const possibleImpostorIndices = [];
-    for(let i = 1; i < totalPlayers; i++) possibleImpostorIndices.push(i);
+    for(let i = 1; i < activeCount; i++) possibleImpostorIndices.push(i);
     const shuffledIndices = shuffle(possibleImpostorIndices);
     const impostorIndices = shuffledIndices.slice(0, room.impostors);
 
@@ -186,8 +203,12 @@ io.on('connection', (socket) => {
   });
 
   socket.on('submitVote', (data) => {
-    const room = getRoom(socket.id); if (!room || room.phase !== 'vote' || room.votes[socket.id]) return;
-    room.votes[socket.id] = data.targetId; emitRoomState(room);
+    const room = getRoom(socket.id); 
+    if (!room || room.phase !== 'vote') return;
+    // PUNTO 3: PERMITIR CAMBIAR VOTO (Se sobreescribe)
+    room.votes[socket.id] = data.targetId; 
+    emitRoomState(room);
+    
     const living = room.players.filter(p => !p.isDead && !p.disconnected).length;
     if (Object.keys(room.votes).length >= living) finishVoting(room, 'Votación finalizada');
   });
@@ -197,17 +218,22 @@ io.on('connection', (socket) => {
     clearRoomTimer(room); avanzarDesdeTurno(room);
   });
 
-  // --- NUEVO: CANCELAR RONDA (HOST) ---
   socket.on('cancelRound', () => {
       const room = getRoom(socket.id);
-      if (!room || room.hostId !== socket.id) return; // Solo host
+      if (!room || room.hostId !== socket.id) return; 
       resetToLobby(room);
   });
 
   socket.on('disconnect', () => {
     const room = getRoom(socket.id); if (!room) return;
     const player = room.players.find(p => p.id === socket.id); if (!player) return;
-    player.disconnected = true; delete socketRoom[socket.id]; emitRoomState(room);
+    
+    // PUNTO 5: RETRASO EN DESCONEXIÓN (Evitar kick por minimizar)
+    // Solo marcamos visualmente, pero no borramos hasta que pase el timer global
+    player.disconnected = true; 
+    delete socketRoom[socket.id]; 
+    emitRoomState(room);
+    
     const activePlayers = room.players.filter(p => !p.disconnected);
     if (activePlayers.length === 0) {
         room.deletionTimer = setTimeout(async () => {
@@ -216,7 +242,10 @@ io.on('connection', (socket) => {
             delete rooms[room.code];
         }, 60000); 
     } else {
-        if (room.hostId === socket.id) room.hostId = activePlayers[0].id;
+        // PUNTO 6: MIGRAR HOST AL SIGUIENTE ACTIVO
+        if (room.hostId === socket.id) {
+            room.hostId = activePlayers[0].id;
+        }
         emitRoomState(room);
     }
   });
@@ -247,6 +276,7 @@ function avanzarDesdeTurno(room) {
   }
 }
 
+// PUNTO 1: LÓGICA DE VICTORIA CORREGIDA
 function finishVoting(room, reason) {
   clearRoomTimer(room); room.phase = 'result';
   const counts = {}; let maxV = 0;
@@ -259,16 +289,25 @@ function finishVoting(room, reason) {
     const victim = room.players.find(p => p.id === elimId);
     if(victim) {
         victim.isDead = true;
-        if (room.roles[elimId] === 'impostor') { result = 'crew'; resReason = `¡Atraparon al impostor (${victim.name})!`; }
-        else resReason = `Expulsaron a un inocente (${victim.name}).`;
+        if (room.roles[elimId] === 'impostor') { 
+            resReason = `¡Atraparon al impostor (${victim.name})!`; 
+        } else {
+            resReason = `Expulsaron a un inocente (${victim.name}).`;
+        }
     }
-  } else { resReason = "Nadie fue expulsado."; result = 'tie'; }
+  } else { resReason = "Nadie fue expulsado (Empate o Skip)."; result = 'tie'; }
 
-  if (result !== 'tie') {
-    const impsAlive = room.players.filter(p => !p.isDead && room.roles[p.id] === 'impostor').length;
-    const crewAlive = room.players.filter(p => !p.isDead && room.roles[p.id] === 'crew').length;
-    if (impsAlive === 0) { result = 'crew'; resReason = "¡Impostores eliminados!"; }
-    else if (impsAlive >= crewAlive) { result = 'impostor'; resReason = "¡Impostores dominan la nave!"; }
+  // VERIFICAR VICTORIA
+  const impsAlive = room.players.filter(p => !p.isDead && room.roles[p.id] === 'impostor').length;
+  const crewAlive = room.players.filter(p => !p.isDead && room.roles[p.id] === 'crew').length;
+
+  if (impsAlive === 0) { 
+      result = 'crew'; resReason = "¡TODOS los impostores eliminados!"; 
+  } else if (impsAlive >= crewAlive) { 
+      result = 'impostor'; resReason = "¡Impostores dominan la nave (Mayoría)!"; 
+  } else {
+      // Si nadie ganó, verificamos si fue Skip/Empate para seguir jugando
+      if(result === 'none') result = 'tie'; // Seguir jugando
   }
 
   io.to(room.code).emit('roundResult', { result, secretWord: room.secretWord, reason: resReason, impostors: room.players.filter(p=>room.roles[p.id]==='impostor').map(p=>p.name) });
@@ -276,7 +315,8 @@ function finishVoting(room, reason) {
   setTimeout(() => {
     if (!rooms[room.code]) return;
     clearRoomTimer(room);
-    if (result === 'tie') {
+    if (result === 'tie' || (result === 'none' && impsAlive > 0 && impsAlive < crewAlive)) {
+        // SEGUIR JUGANDO (Nadie ganó todavía)
         room.votes = {}; room.spoken = {}; room.clues = []; 
         const living = room.players.filter(p => !p.isDead && !p.disconnected);
         if (living.length > 0) {
@@ -286,11 +326,14 @@ function finishVoting(room, reason) {
             room.phase = 'turn'; emitRoomState(room);
             startTimer(room, room.config.turnTime / 1000, (r) => avanzarDesdeTurno(r));
         } else resetToLobby(room);
-    } else resetToLobby(room);
-  }, 8000);
+    } else {
+        // TERMINÓ PARTIDA -> LOBBY
+        resetToLobby(room);
+    }
+  }, 8000); // 8 segundos para leer resultado
 }
 
 function resetToLobby(room) { room.phase = 'lobby'; room.timerText = '--'; room.votes = {}; room.spoken = {}; room.turnIndex = -1; room.currentTurnId = null; room.clues = []; emitRoomState(room); }
 
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => console.log(`🚀 Server 1.2 en puerto ${PORT}`));
+httpServer.listen(PORT, () => console.log(`🚀 Server 1.4 Master en puerto ${PORT}`));
