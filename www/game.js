@@ -10,23 +10,22 @@ let selectedCategories = new Set(['lugares', 'comidas', 'objetos']);
 let isPremium = localStorage.getItem('isPremium') === 'true';
 let unlockedCategories = new Set(JSON.parse(localStorage.getItem('videoUnlocks') || '[]')); 
 let myRole = null; let myWord = null; let myHint = null; let voteLocked = false;
+let flipTimeout = null; // Para controlar cierre de carta
 const MAX_VIDEO_UNLOCKS = 2; 
 
 const qs = (id) => document.getElementById(id);
 function playSound(id) { const audio = qs(id); if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); } }
 
-// --- MODAL GENÉRICO (Estilo Dark) ---
+// --- MODAL GENÉRICO ---
 function showModal(title, text, onConfirm) {
     qs('modalTitle').innerText = title;
     qs('modalText').innerText = text;
     const modal = qs('customModal');
     modal.style.display = 'flex';
     
-    // Configurar botones (limpiar anteriores)
     const btnOk = qs('modalBtnOk');
     const btnCancel = qs('modalBtnCancel');
     
-    // Clonar para eliminar listeners viejos
     const newOk = btnOk.cloneNode(true); btnOk.parentNode.replaceChild(newOk, btnOk);
     const newCancel = btnCancel.cloneNode(true); btnCancel.parentNode.replaceChild(newCancel, btnCancel);
     
@@ -34,7 +33,7 @@ function showModal(title, text, onConfirm) {
     newCancel.onclick = () => { modal.style.display = 'none'; playSound('soundClick'); };
 }
 
-// --- MODAL INPUT (Para código) ---
+// --- MODAL INPUT ---
 function showInputModal(title, placeholder, onConfirm) {
     qs('inputModalTitle').innerText = title;
     const input = qs('modalInput');
@@ -82,10 +81,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (isPremium) unlockedCategories = new Set(CATEGORIES_DATA.map(c => c.id));
   await initAdMob(); renderCategoriesGrid(); updateCategoriesSummary(); setupEventListeners();
   const savedName = localStorage.getItem('playerName'); if(savedName) { qs('hostName').value = savedName; qs('joinName').value = savedName; }
-  setupModeSelectors(); // Punto 11
+  setupModeSelectors(); 
 });
 
-// PUNTO 11: SELECTORES DE MODO ESTILIZADOS
 function setupModeSelectors() {
     const modes = ['modeText', 'modeGroup', 'modeDiscord'];
     modes.forEach(m => {
@@ -109,7 +107,6 @@ function setupEventListeners() {
   qs('backFromCategories').onclick = () => { playSound('soundClick'); show('screenCreate'); };
   qs('btnSaveCategories').onclick = () => { playSound('soundClick'); updateCategoriesSummary(); show('screenCreate'); };
   
-  // PUNTO 8: POSICIÓN BOTÓN ?
   qs('btnHowToPlay').onclick = () => qs('howToPlayOverlay').style.display = 'flex';
   qs('btnCloseHowToPlay').onclick = () => qs('howToPlayOverlay').style.display = 'none';
 
@@ -119,7 +116,6 @@ function setupEventListeners() {
   qs('btnCreateRoom').onclick = () => { playSound('soundClick'); handleCreateRoomFlow(); };
   qs('btnJoinRoom').onclick = () => { playSound('soundClick'); joinRoom(); };
   
-  // PUNTO 4: CONFIRMACIÓN INICIAR PARTIDA
   qs('btnStartRound').onclick = () => { 
       if(isHost) {
           if(currentRoom && currentRoom.players.length < 3) return showModal("Faltan Jugadores", "Se necesitan mínimo 3 para jugar.");
@@ -148,7 +144,6 @@ function setupEventListeners() {
   const btnCancel = document.getElementById('btnCancelRound');
   if(btnCancel) btnCancel.onclick = () => { showModal("¿Cancelar Ronda?", "Volverán todos al Lobby.", () => socket.emit('cancelRound')); };
 
-  // PUNTO 9: CÓDIGO PREMIUM OCULTO EN MODAL
   const btnBuy = qs('btnBuyPremium'); 
   if(btnBuy) btnBuy.onclick = () => { 
       showInputModal("Código Promocional", "Ingresa tu código...", (code) => {
@@ -174,7 +169,7 @@ function renderCategoriesGrid() {
 
 function updateCategoriesSummary() { qs('categoriesSummary').innerText = CATEGORIES_DATA.filter(c => selectedCategories.has(c.id)).map(c => c.name).join(', '); }
 
-// PUNTO 7: AJUSTES EN TIEMPO REAL (HOST)
+// AJUSTES EN TIEMPO REAL (HOST)
 window.adjustValue = function(id, d) { 
     const i = qs(id); let v = parseInt(i.value); 
     if(id==='maxPlayers') v = Math.min(15, Math.max(3, v + d)); 
@@ -187,23 +182,28 @@ window.adjustValue = function(id, d) {
     if(id==='impostors') qs('displayImpostors').innerText=v; 
     if(id==='timeVote') qs('displayVoteTime').innerText=v;
 
-    // Si soy Host y estoy en Lobby, actualizar en servidor
     if(isHost && currentRoom && currentPhase === 'lobby') {
         socket.emit('updateSettings', { [id]: v });
     }
 };
 
-// PUNTO 2: CARTA CON TOGGLE Y AUTO-CIERRE
+// CARTA CON TOGGLE Y AUTO-CIERRE
 window.toggleSecretCard = function() { 
     if(currentPhase!=='word')return; 
     const c=qs('secretCardInner'); 
+    
     if(c.classList.contains('flipped')) {
         c.classList.remove('flipped'); // Click para cerrar
+        if(flipTimeout) { clearTimeout(flipTimeout); flipTimeout = null; }
     } else { 
         playSound('soundFlip'); 
         c.classList.add('flipped'); // Click para abrir
-        // Auto cerrar a los 15s por si acaso
-        setTimeout(() => c.classList.remove('flipped'), 15000);
+        // Reiniciar timer
+        if(flipTimeout) clearTimeout(flipTimeout);
+        flipTimeout = setTimeout(() => {
+            c.classList.remove('flipped');
+            flipTimeout = null;
+        }, 15000);
     } 
 };
 
@@ -227,7 +227,6 @@ function handleJoin(res) {
 socket.on('roomState', (room) => { currentRoom = room; updateGameView(room); });
 socket.on('privateRole', (data) => { myRole = data.role; myWord = data.word; myHint = data.hint; if(currentPhase === 'word') updateWordCard(); if(myRole === 'IMPOSTOR') qs('secretCardInner').classList.add('impostor-card'); else qs('secretCardInner').classList.remove('impostor-card'); });
 
-// PUNTO 12: MENSAJE VICTORIA/DERROTA PERSONALIZADO
 socket.on('roundResult', (data) => {
   const t = qs('resultTitle'), s = qs('resultSubtitle'), i = qs('resultIcon');
   if(!isPremium && AdMob) { AdMob.showInterstitial().catch(()=>{}); AdMob.prepareInterstitial({ adId: ADMOB_IDS.intersticial }); }
@@ -262,15 +261,13 @@ function updateGameView(room) {
   const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
   const setDisplay = (id, show) => { const el = document.getElementById(id); if (el) el.style.display = show ? 'block' : 'none'; };
 
-  setTxt('phaseLabel', currentPhase.toUpperCase()); setTxt('timerNumber', room.timerText || '--');
+  setTxt('timerNumber', room.timerText || '--');
   setTxt('currentPlayersCount', room.players.length); setTxt('currentImpostorsCount', room.impostors);
 
-  // ACTUALIZAR CONTADORES LOBBY EN TIEMPO REAL
   if(currentPhase === 'lobby') {
       qs('displayPlayers').innerText = room.maxPlayers;
       qs('displayImpostors').innerText = room.impostors;
       qs('displayVoteTime').innerText = room.config.voteTime / 1000;
-      // Solo el host puede editar
       const btns = document.querySelectorAll('.mini-controls button');
       btns.forEach(b => b.disabled = !isHost);
   }
@@ -325,8 +322,6 @@ function updateGameView(room) {
 function updateWordCard() { const rt = qs('roleTitle'); if(rt) rt.innerText = myRole; const sw = qs('secretWordDisplay'); if(sw) sw.innerText = myWord; const wh = qs('wordHint'); if(wh) wh.innerText = myHint; }
 function renderVoteGrid(room) { 
     const grid = qs('votePlayersGrid'); if(!grid) return; grid.innerHTML = ''; 
-    // PUNTO 3: VOTE LOCKED VISUAL
-    // (Ahora se permite cambiar en server, pero visualmente marcamos el seleccionado)
     room.players.filter(p => !p.isDead && p.id !== myId).forEach(p => { 
         const btn = document.createElement('div'); btn.className = 'mini-card'; btn.style.cursor = 'pointer'; 
         if(room.votes && room.votes[myId] === p.id) btn.style.border = '2px solid #ef4444'; 

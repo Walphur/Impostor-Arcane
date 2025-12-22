@@ -1,5 +1,5 @@
 /* =========================================
-   BASE & RESET (Tú código original)
+   BASE & RESET
    ========================================= */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at top, #0f172a 0, #000 100%); color: #e5e7eb; height: 100vh; overflow: hidden; }
@@ -45,32 +45,27 @@ body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at
 .btn-icon-back { background: #334155; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; }
 .arrow-icon-img { width: 20px; height: 20px; filter: invert(1); }
 
-/* --- SELECCION DE MODOS (NUEVO) --- */
-.modes-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr; /* Dos columnas */
-    gap: 15px;
-    margin-bottom: 20px;
-}
-.mode-card {
+/* --- SELECCION DE MODOS (CORREGIDO) --- */
+/* Antes tenías .mode-card pero el HTML usa .mode-button */
+.mode-button {
     background: #1e293b;
     border: 2px solid #334155;
     border-radius: 16px;
-    padding: 15px 10px;
-    text-align: center;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
     cursor: pointer;
     transition: all 0.2s;
     opacity: 0.7;
 }
-.mode-card:hover { opacity: 1; border-color: #64748b; }
-.mode-card.active {
-    background: #1e293b; /* O un azul oscuro */
+.mode-button:hover { opacity: 1; border-color: #64748b; }
+.mode-button.selected-mode {
+    background: #1e293b; 
     border-color: #ef4444; /* Rojo activo */
     opacity: 1;
     box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
 }
-.mode-icon { font-size: 1.5rem; margin-bottom: 5px; display: block; }
-.mode-name { font-weight: 700; font-size: 0.9rem; color: #fff; }
 
 /* --- CONTADORES --- */
 .config-counters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
@@ -83,21 +78,14 @@ body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at
 
 /* --- CATEGORIAS --- */
 .categories-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 12px; padding: 10px 0; }
-.category-card-square { background: #1e293b; border: 1px solid #475569; border-radius: 16px; padding: 15px 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: all 0.2s; aspect-ratio: 1 / 1; }
+.category-card-square { background: #1e293b; border: 1px solid #475569; border-radius: 16px; padding: 15px 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: all 0.2s; aspect-ratio: 1 / 1; position: relative; overflow: hidden; }
 .category-card-square:hover { background: #334155; border-color: #94a3b8; }
 .category-card-square.active { background: #2563eb; border-color: #60a5fa; }
 .cat-icon { width: 36px; height: 36px; color: #cbd5e1; }
 .category-card-square.active .cat-icon { color: #fff; }
 .cat-name { font-size: 0.8rem; font-weight: 700; color: #cbd5e1; text-align: center; }
 .category-card-square.active .cat-name { color: #fff; }
-
-/* --- TOGGLE --- */
-.toggle-wrapper { position: relative; width: 50px; height: 28px; flex-shrink: 0; }
-.toggle-wrapper input { position: absolute; opacity: 0; cursor: pointer; height: 100%; width: 100%; left:0; top:0; z-index: 10; margin:0; }
-.toggle-slider { position: absolute; inset: 0; background: #334155; border-radius: 34px; transition: .3s; pointer-events: none; }
-.toggle-slider:before { content: ""; position: absolute; height: 22px; width: 22px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .3s; }
-input:checked + .toggle-slider { background: #dc2626; }
-input:checked + .toggle-slider:before { transform: translateX(22px); }
+.category-card-square.locked { opacity: 0.8; }
 
 /* --- JUEGO UI --- */
 .main-layout { max-width: 1200px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; padding: 10px; }
@@ -106,7 +94,6 @@ input:checked + .toggle-slider:before { transform: translateX(22px); }
 .room-code-display { font-family: "Poppins", sans-serif; font-size: 1.4rem; color: #ef4444; font-weight: 900; letter-spacing: 2px; margin-right: 10px; }
 .copy-btn-icon { background: none; border: none; color: #94a3b8; cursor: pointer; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; transition: color 0.2s; }
 .copy-btn-icon:hover { color: #fff; }
-.copy-btn-icon svg { width: 22px; height: 22px; }
 
 .main-grid { display: grid; grid-template-columns: 1fr 280px; gap: 15px; flex: 1; overflow: hidden; }
 .view-panel { background: rgba(30,41,59,0.5); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
@@ -119,18 +106,17 @@ input:checked + .toggle-slider:before { transform: translateX(22px); }
     height: 180px; 
     margin: 20px auto; 
     cursor: pointer; 
-    user-select: none; /* Evita que se seleccione el texto al hacer click rápido */
-    -webkit-tap-highlight-color: transparent; /* Quita el brillo azul en celular */
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 .secret-card-inner { 
     position: relative; 
     width: 100%; 
     height: 100%; 
     text-align: center; 
-    transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1); /* Animación más suave */
+    transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
     transform-style: preserve-3d; 
 }
-/* Esta clase se agrega/quita con JS para girar */
 .secret-card-inner.flipped { transform: rotateY(180deg); }
 
 .secret-card-face { 
@@ -144,21 +130,14 @@ input:checked + .toggle-slider:before { transform: translateX(22px); }
     align-items: center; 
     padding: 15px; 
     border: 1px solid #475569; 
-    box-shadow: 0 10px 25px rgba(0,0,0,0.3); /* Sombra 3D */
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3); 
 }
-.front { 
-    background: #0f172a; 
-    z-index: 2; /* Asegura que el frente tape al dorso */
-}
-.back { 
-    background: #1e293b; 
-    transform: rotateY(180deg); 
-}
+.front { background: #0f172a; z-index: 2; }
+.back { background: #1e293b; transform: rotateY(180deg); }
 .secret-word-reveal { font-size: 1.8rem; font-weight: 800; color: #fff; margin: 10px 0; }
 .role-badge { background: #334155; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; text-transform: uppercase; }
 .secret-card-inner.impostor-card .back { background: #7f1d1d; border-color: #ef4444; }
 .secret-card-inner.impostor-card .role-badge { background: #ef4444; color: white; }
-.tap-hint { font-size: 0.7rem; color: #64748b; margin-top: 10px; opacity: 0.8; }
 
 /* UTILS */
 .app-card { background: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #334155; }
@@ -169,18 +148,10 @@ input:checked + .toggle-slider:before { transform: translateX(22px); }
 .stat-value { font-size: 2rem; font-weight: 800; }
 .stat-label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; font-weight: 700; }
 
-/* --- MODALES Y POPUPS (SALIR/COMENZAR) --- */
+/* --- MODALES --- */
 .full-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(5px); }
-.result-card, .howto-card, .modal-card { background: #1e293b; padding: 25px; border-radius: 20px; text-align: left; max-width: 400px; width: 90%; border: 1px solid #334155; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
-.modal-center { text-align: center; align-items: center; } /* Variante centrada */
-
+.result-card, .howto-card { background: #1e293b; padding: 25px; border-radius: 20px; text-align: left; max-width: 400px; width: 90%; border: 1px solid #334155; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
 .result-title { font-size: 2.5rem; margin: 10px 0; text-align: center; font-weight: 900; }
-.modal-title { font-size: 1.5rem; margin-bottom: 10px; font-weight: 800; color: #fff; }
-.modal-text { color: #cbd5e1; font-size: 0.95rem; margin-bottom: 20px; line-height: 1.5; text-align: center; }
-
-.modal-actions { display: flex; gap: 10px; width: 100%; margin-top: 10px; }
-.modal-actions .btn-main { flex: 1; }
-
 .result-row { display: flex; justify-content: space-between; padding: 5px 0; color: #cbd5e1; }
 .result-value { font-weight: bold; color: #fff; }
 .highlight { color: #f87171; }
@@ -199,17 +170,13 @@ input:checked + .toggle-slider:before { transform: translateX(22px); }
 .loading-dots span:nth-child(3) { animation-delay: 1s; }
 @keyframes dots { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
 
-/* ------- RESPONSIVE FIX (CELULAR) ------- */
+/* ------- RESPONSIVE FIX ------- */
 @media (max-width: 768px) {
   .main-grid { grid-template-columns: 1fr; } 
   .config-counters { grid-template-columns: 1fr; }
   .btn-discord span, .btn-exit-red span, .btn-exit-text { display: none; }
   .btn-discord, .btn-exit-red { padding: 10px; }
   .btn-exit-arrow, .discord-icon-svg { margin: 0; width: 24px; height: 24px; }
-  .app-card input[placeholder*="CÓDIGO"] { font-size: 1rem; letter-spacing: 1px; }
-  
-  /* Ajuste para modal en celular */
-  .modal-actions { flex-direction: column; }
 }
 
 /* --- PREMIUM SCREEN --- */
@@ -229,4 +196,3 @@ input:checked + .toggle-slider:before { transform: translateX(22px); }
 .premium-list { text-align: left; list-style: none; padding: 0; margin: 0 auto; display: inline-block; }
 .premium-list li { margin-bottom: 12px; display: flex; align-items: center; font-size: 1rem; font-weight: 700; color: #fff; }
 .checkmark-icon { color: #fbbf24; margin-right: 12px; font-size: 1.2rem; }
-.premium-hint { color: #94a3b8; font-size: 0.85rem; margin-top: 20px; font-weight: 600; }

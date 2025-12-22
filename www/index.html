@@ -69,6 +69,7 @@
         <button id="btnHowToPlay" style="background:#334155; border:none; color:white; width:40px; height:40px; border-radius:50%; cursor:pointer; font-weight:800; margin-top:10px;">?</button>
       </div>
     </div>
+
     <div id="screenPremium" class="screen" style="display:none; flex-direction:column; align-items:center;">
         <div class="screen-header"><button id="btnBackFromPremium" class="btn-icon-back"><img src="images/arrow.png" class="arrow-icon-img"></button><h2 style="color:#fbbf24;">PREMIUM</h2></div>
         <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%;">
@@ -76,6 +77,7 @@
             <button id="btnBuyPremium" class="btn-big btn-gold" style="width:90%; max-width:380px;">COMPRAR POR 2.99 USD</button>
         </div>
     </div>
+
     <div id="screenCreate" class="screen" style="display:none;">
       <div class="screen-header"><button id="backFromCreate" class="btn-icon-back"><img src="images/arrow.png" class="arrow-icon-img"></button><h2>Crear Sala</h2></div>
       <div class="app-card"><input type="text" id="hostName" class="input-modern" maxlength="12" placeholder="Tu Nombre..."></div>
@@ -110,12 +112,14 @@
 
       <button id="btnCreateRoom" class="btn-big btn-main btn-primary" style="margin-top:10px;">CREAR SALA</button>
     </div>
+
     <div id="screenJoin" class="screen" style="display:none;">
       <div class="screen-header"><button id="backFromJoin" class="btn-icon-back"><img src="images/arrow.png" class="arrow-icon-img"></button><h2>Unirse</h2></div>
       <div class="app-card"><input type="text" id="joinName" class="input-modern" maxlength="12" placeholder="Tu Nombre..."></div>
       <div class="app-card"><input type="text" id="joinCode" class="input-modern" maxlength="6" placeholder="CÓDIGO" style="text-transform:uppercase; letter-spacing:2px; font-weight:700;"></div>
       <button id="btnJoinRoom" class="btn-big btn-main btn-primary" style="margin-top:10px;">ENTRAR</button>
     </div>
+
     <div id="screenCategories" class="screen" style="display:none;">
       <div class="screen-header"><button id="backFromCategories" class="btn-icon-back"><img src="images/arrow.png" class="arrow-icon-img"></button><h2>Categorías</h2></div>
       <div id="categoriesGrid" class="categories-grid" style="flex:1; align-content:flex-start; overflow-y:auto;"></div>
