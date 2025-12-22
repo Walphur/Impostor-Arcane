@@ -196,3 +196,27 @@ body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at
 .premium-list { text-align: left; list-style: none; padding: 0; margin: 0 auto; display: inline-block; }
 .premium-list li { margin-bottom: 12px; display: flex; align-items: center; font-size: 1rem; font-weight: 700; color: #fff; }
 .checkmark-icon { color: #fbbf24; margin-right: 12px; font-size: 1.2rem; }
+/* Barra lateral y tarjetas */
+.sidebar-panel {
+    display: flex; 
+    flex-direction: column; 
+    gap: 15px; 
+    height: 100%;
+}
+
+.sidebar-card {
+    background: #1e293b;
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid #334155;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+/* Ajuste para que la lista de jugadores ocupe el espacio */
+.sidebar-card:nth-child(2) {
+    justify-content: flex-start; /* Alinear lista arriba */
+}

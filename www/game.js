@@ -256,49 +256,93 @@ socket.on('roundResult', (data) => {
 
 function updateGameView(room) {
   if (!room) return;
-  currentPhase = room.phase; isHost = (room.hostId === myId);
+  currentPhase = room.phase; 
+  // Recalcular isHost cada vez para asegurar que el botón aparezca si soy yo
+  isHost = (room.hostId === myId);
 
   const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
   const setDisplay = (id, show) => { const el = document.getElementById(id); if (el) el.style.display = show ? 'block' : 'none'; };
 
+  // 1. Contadores superiores
   setTxt('timerNumber', room.timerText || '--');
-  setTxt('currentPlayersCount', room.players.length); setTxt('currentImpostorsCount', room.impostors);
+  setTxt('currentPlayersCount', room.players.length); 
+  setTxt('currentImpostorsCount', room.impostors);
 
+  // 2. Contadores del Lobby (Configuración)
   if(currentPhase === 'lobby') {
       qs('displayPlayers').innerText = room.maxPlayers;
       qs('displayImpostors').innerText = room.impostors;
       qs('displayVoteTime').innerText = room.config.voteTime / 1000;
+      // Solo el host puede tocar los botones
       const btns = document.querySelectorAll('.mini-controls button');
       btns.forEach(b => b.disabled = !isHost);
   }
 
+  // 3. Lista de Agentes (CORREGIDO PARA EVITAR CRASH)
   const list = document.getElementById('playersList');
   if (list) {
       list.innerHTML = '';
       (room.players || []).forEach(p => {
-        const row = document.createElement('div'); row.className = 'player-row';
+        // Protección contra datos vacíos
+        const pName = p.name || 'Agente'; 
+        const pColor = p.color || '#94a3b8';
+        const initial = pName.charAt(0).toUpperCase();
+        
+        const row = document.createElement('div'); 
+        row.className = 'player-row';
         if(p.isDead) row.style.opacity = '0.5';
-        if(p.disconnected) row.style.border = '1px dashed #ef4444'; else if(room.currentTurnId === p.id) row.style.border = '1px solid #3b82f6';
+        
+        // Bordes de estado
+        if(p.disconnected) row.style.border = '1px dashed #ef4444'; 
+        else if(room.currentTurnId === p.id) row.style.border = '1px solid #3b82f6';
+
+        // Badge de HOST
         const badge = p.id === room.hostId ? '<span style="font-size:0.6rem;background:#ffffff20;padding:2px 6px;border-radius:4px;margin-left:auto;">HOST</span>' : '';
         const discIcon = p.disconnected ? '🔌' : '';
-        row.innerHTML = `<div style="width:28px;height:28px;background:${p.color};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#000;font-size:0.8rem;">${p.name.charAt(0).toUpperCase()}</div><div style="font-weight:600;font-size:0.9rem;margin-left:10px;">${p.name} ${discIcon}</div>${badge}`;
+
+        row.innerHTML = `
+            <div style="width:28px;height:28px;background:${pColor};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#000;font-size:0.8rem;">${initial}</div>
+            <div style="font-weight:600;font-size:0.9rem;margin-left:10px; color:#fff;">${pName} ${discIcon}</div>
+            ${badge}
+        `;
         list.appendChild(row);
       });
   }
 
-  const btnStart = document.getElementById('btnStartRound'); if (btnStart) btnStart.style.display = (isHost && currentPhase === 'lobby') ? 'block' : 'none';
+  // 4. Botones y Vistas (Esto se ejecutará ahora sí o sí)
+  const btnStart = document.getElementById('btnStartRound'); 
+  if (btnStart) {
+      // Mostrar SOLO si soy Host Y estamos en Lobby
+      btnStart.style.display = (isHost && currentPhase === 'lobby') ? 'block' : 'none';
+  }
+  
   const btnDiscord = document.getElementById('btnDiscord'); if (btnDiscord) btnDiscord.style.display = room.discordLink ? 'flex' : 'none';
   const btnCancel = document.getElementById('btnCancelRound'); if(btnCancel) btnCancel.style.display = (isHost && currentPhase !== 'lobby') ? 'block' : 'none';
 
+  // Gestión de Vistas (Lobby, Juego, Votación)
   ['viewLobby', 'viewWord', 'viewTurn', 'viewVote'].forEach(v => setDisplay(v, false));
 
-  if (currentPhase === 'lobby') { setDisplay('viewLobby', true); const st = document.getElementById('statusText'); if(st) st.innerHTML = isHost ? "Inicia cuando estén listos." : `Esperando al Host...`; } 
-  else if (currentPhase === 'word') { setDisplay('viewWord', true); const c = document.getElementById('secretCardInner'); if(c) c.classList.remove('flipped'); updateWordCard(); setTxt('statusText', "Memorizando roles..."); } 
+  if (currentPhase === 'lobby') { 
+      setDisplay('viewLobby', true); 
+      const st = document.getElementById('statusText'); 
+      // Actualizar texto de estado
+      if(st) st.innerHTML = isHost ? "Inicia cuando estén listos." : `Esperando al Host...`; 
+  } 
+  else if (currentPhase === 'word') { 
+      setDisplay('viewWord', true); 
+      const c = document.getElementById('secretCardInner'); if(c) c.classList.remove('flipped'); 
+      updateWordCard(); 
+      setTxt('statusText', "Memorizando roles..."); 
+  } 
   else if (currentPhase === 'turn') { 
-      setDisplay('viewTurn', true); const t = room.players.find(p => p.id === room.currentTurnId); setTxt('currentTurnPlayer', t ? t.name : '...'); 
+      setDisplay('viewTurn', true); 
+      const t = room.players.find(p => p.id === room.currentTurnId); 
+      setTxt('currentTurnPlayer', t ? t.name : '...'); 
+      
       const isTextMode = (room.mode === 'text');
       qs('cluesHistoryContainer').style.display = isTextMode ? 'block' : 'none'; 
       const isMyTurn = (room.currentTurnId === myId);
+      
       qs('turnInputArea').style.display = (isMyTurn && isTextMode) ? 'flex' : 'none';
       qs('turnActionsNormal').style.display = (isMyTurn && !isTextMode) ? 'block' : 'none';
       qs('turnWaitMessage').style.display = isMyTurn ? 'none' : 'block';
@@ -316,7 +360,11 @@ function updateGameView(room) {
       }
       setTxt('statusText', "Ronda de pistas.");
   } 
-  else if (currentPhase === 'vote') { setDisplay('viewVote', true); renderVoteGrid(room); setTxt('statusText', "Votación en curso."); }
+  else if (currentPhase === 'vote') { 
+      setDisplay('viewVote', true); 
+      renderVoteGrid(room); 
+      setTxt('statusText', "Votación en curso."); 
+  }
 }
 
 function updateWordCard() { const rt = qs('roleTitle'); if(rt) rt.innerText = myRole; const sw = qs('secretWordDisplay'); if(sw) sw.innerText = myWord; const wh = qs('wordHint'); if(wh) wh.innerText = myHint; }
