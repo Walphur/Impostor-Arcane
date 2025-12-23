@@ -10,7 +10,7 @@ let selectedCategories = new Set(['lugares', 'comidas', 'objetos']);
 let isPremium = localStorage.getItem('isPremium') === 'true';
 let unlockedCategories = new Set(JSON.parse(localStorage.getItem('videoUnlocks') || '[]')); 
 let myRole = null; let myWord = null; let myHint = null; let voteLocked = false;
-let flipTimeout = null; // Para controlar cierre de carta
+let flipTimeout = null; // Variable para controlar el cierre automático
 const MAX_VIDEO_UNLOCKS = 2; 
 
 const qs = (id) => document.getElementById(id);
@@ -187,18 +187,21 @@ window.adjustValue = function(id, d) {
     }
 };
 
-// CARTA CON TOGGLE Y AUTO-CIERRE
+// --- CARTA CON TOGGLE (MANUAL + 15 SEG AUTO-CIERRE) ---
 window.toggleSecretCard = function() { 
     if(currentPhase!=='word')return; 
     const c=qs('secretCardInner'); 
     
     if(c.classList.contains('flipped')) {
-        c.classList.remove('flipped'); // Click para cerrar
+        // SI ESTÁ ABIERTA -> CIÉRRALA
+        c.classList.remove('flipped'); 
         if(flipTimeout) { clearTimeout(flipTimeout); flipTimeout = null; }
     } else { 
+        // SI ESTÁ CERRADA -> ÁBRELA Y PON TIMER
         playSound('soundFlip'); 
-        c.classList.add('flipped'); // Click para abrir
-        // Reiniciar timer
+        c.classList.add('flipped'); 
+        
+        // Reiniciar timer: se cierra sola a los 15s si el usuario no la cierra antes
         if(flipTimeout) clearTimeout(flipTimeout);
         flipTimeout = setTimeout(() => {
             c.classList.remove('flipped');
@@ -274,12 +277,11 @@ function updateGameView(room) {
       const pDisplay = qs('displayPlayers'); if(pDisplay) pDisplay.innerText = room.maxPlayers;
       const iDisplay = qs('displayImpostors'); if(iDisplay) iDisplay.innerText = room.impostors;
       
-      // --- CORRECCIÓN AQUÍ: Protección contra crash ---
+      // Protección contra crash de config vacía
       const vDisplay = qs('displayVoteTime'); 
       if(vDisplay && room.config) {
           vDisplay.innerText = room.config.voteTime / 1000;
       }
-      // ------------------------------------------------
       
       const btns = document.querySelectorAll('.mini-controls button');
       btns.forEach(b => b.disabled = !isHost);
