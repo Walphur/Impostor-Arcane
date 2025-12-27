@@ -68,9 +68,7 @@ function startTimer(room, seconds, onEnd) {
 function serializeRoom(room) {
   return {
     code: room.code, hostId: room.hostId, phase: room.phase, mode: room.mode,
-    // --- ESTA ES LA LÍNEA QUE FALTABA Y CAUSABA EL ERROR ---
     config: room.config, 
-    // -------------------------------------------------------
     players: room.players.map(p => ({ 
         id: p.id, userId: p.userId, name: p.name, color: p.color, isDead: p.isDead, disconnected: p.disconnected 
     })),
@@ -113,12 +111,22 @@ io.on('connection', (socket) => {
     const userId = data.userId || socket.id;
     if (!room) return cb({ ok: false, error: 'Sala no existe' });
 
+    // RECONEXIÓN INTELIGENTE (1 MINUTO)
     const existingPlayer = room.players.find(p => p.userId === userId);
     if (existingPlayer) {
+        if (existingPlayer.disconnectTimeout) {
+            clearTimeout(existingPlayer.disconnectTimeout);
+            existingPlayer.disconnectTimeout = null;
+        }
+
         if (room.deletionTimer) { clearTimeout(room.deletionTimer); room.deletionTimer = null; }
+        
         const oldSocketId = existingPlayer.id;
         delete socketRoom[oldSocketId]; socketRoom[socket.id] = code;
-        existingPlayer.id = socket.id; existingPlayer.disconnected = false;
+        
+        existingPlayer.id = socket.id; 
+        existingPlayer.disconnected = false; // Quita cable
+        
         if (room.hostId === oldSocketId) room.hostId = socket.id;
         if (room.currentTurnId === oldSocketId) room.currentTurnId = socket.id;
 
@@ -227,23 +235,34 @@ io.on('connection', (socket) => {
     const room = getRoom(socket.id); if (!room) return;
     const player = room.players.find(p => p.id === socket.id); if (!player) return;
     
+    // MARCAR COMO DESCONECTADO (CABLE)
     player.disconnected = true; 
+    
+    // ESPERAR 60 SEGUNDOS
+    player.disconnectTimeout = setTimeout(() => {
+        if (!rooms[room.code]) return;
+        
+        // SI SIGUE DESCONECTADO, BORRAR
+        const idx = room.players.indexOf(player);
+        if (idx > -1) {
+            room.players.splice(idx, 1); 
+            
+            if (room.players.length === 0) {
+                 clearRoomTimer(room);
+                 delete rooms[room.code];
+                 if (room.discordChannelId && discordClient) { try { discordClient.channels.fetch(room.discordChannelId).then(c => c?.delete()); } catch(e){} }
+            } else {
+                if (room.hostId === player.id) {
+                    const active = room.players.find(p => !p.disconnected);
+                    if(active) room.hostId = active.id;
+                }
+                emitRoomState(room);
+            }
+        }
+    }, 60000); 
+
     delete socketRoom[socket.id]; 
     emitRoomState(room);
-    
-    const activePlayers = room.players.filter(p => !p.disconnected);
-    if (activePlayers.length === 0) {
-        room.deletionTimer = setTimeout(async () => {
-            clearRoomTimer(room);
-            if (room.discordChannelId && discordClient) { try { (await discordClient.channels.fetch(room.discordChannelId))?.delete(); } catch(e){} }
-            delete rooms[room.code];
-        }, 60000); 
-    } else {
-        if (room.hostId === socket.id) {
-            room.hostId = activePlayers[0].id;
-        }
-        emitRoomState(room);
-    }
   });
 });
 

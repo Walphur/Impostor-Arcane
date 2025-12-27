@@ -10,42 +10,37 @@ let selectedCategories = new Set(['lugares', 'comidas', 'objetos']);
 let isPremium = localStorage.getItem('isPremium') === 'true';
 let unlockedCategories = new Set(JSON.parse(localStorage.getItem('videoUnlocks') || '[]')); 
 let myRole = null; let myWord = null; let myHint = null; let voteLocked = false;
-let flipTimeout = null; // Variable para controlar el cierre automático
 const MAX_VIDEO_UNLOCKS = 2; 
+let wakeLock = null; 
 
 const qs = (id) => document.getElementById(id);
 function playSound(id) { const audio = qs(id); if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); } }
 
-// --- MODAL GENÉRICO ---
+// --- PANTALLA SIEMPRE ENCENDIDA ---
+async function requestWakeLock() {
+    try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (err) {}
+}
+document.addEventListener('visibilitychange', async () => {
+    if (wakeLock !== null && document.visibilityState === 'visible') await requestWakeLock();
+    if (document.visibilityState === 'visible' && !socket.connected) socket.connect();
+});
+
+// --- MODALES ---
 function showModal(title, text, onConfirm) {
-    qs('modalTitle').innerText = title;
-    qs('modalText').innerText = text;
-    const modal = qs('customModal');
-    modal.style.display = 'flex';
-    
-    const btnOk = qs('modalBtnOk');
-    const btnCancel = qs('modalBtnCancel');
-    
+    qs('modalTitle').innerText = title; qs('modalText').innerText = text;
+    const modal = qs('customModal'); modal.style.display = 'flex';
+    const btnOk = qs('modalBtnOk'); const btnCancel = qs('modalBtnCancel');
     const newOk = btnOk.cloneNode(true); btnOk.parentNode.replaceChild(newOk, btnOk);
     const newCancel = btnCancel.cloneNode(true); btnCancel.parentNode.replaceChild(newCancel, btnCancel);
-    
     newOk.onclick = () => { modal.style.display = 'none'; if(onConfirm) onConfirm(); playSound('soundClick'); };
     newCancel.onclick = () => { modal.style.display = 'none'; playSound('soundClick'); };
 }
-
-// --- MODAL INPUT ---
 function showInputModal(title, placeholder, onConfirm) {
-    qs('inputModalTitle').innerText = title;
-    const input = qs('modalInput');
-    input.value = ''; input.placeholder = placeholder;
-    const modal = qs('customInputModal');
-    modal.style.display = 'flex';
-    
-    const btnOk = qs('inputModalBtnOk');
-    const btnCancel = qs('inputModalBtnCancel');
+    qs('inputModalTitle').innerText = title; const input = qs('modalInput'); input.value = ''; input.placeholder = placeholder;
+    const modal = qs('customInputModal'); modal.style.display = 'flex';
+    const btnOk = qs('inputModalBtnOk'); const btnCancel = qs('inputModalBtnCancel');
     const newOk = btnOk.cloneNode(true); btnOk.parentNode.replaceChild(newOk, btnOk);
     const newCancel = btnCancel.cloneNode(true); btnCancel.parentNode.replaceChild(newCancel, btnCancel);
-    
     newOk.onclick = () => { modal.style.display = 'none'; if(onConfirm) onConfirm(input.value); playSound('soundClick'); };
     newCancel.onclick = () => { modal.style.display = 'none'; playSound('soundClick'); };
 }
@@ -58,7 +53,7 @@ const CATEGORIES_DATA = [
   { id: 'profesiones', premium: true, name: 'Profesiones', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f472b6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>' },
   { id: 'deportes', premium: true, name: 'Deportes', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>' },
   { id: 'tecnologia', premium: true, name: 'Tecnología', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>' },
-  { id: 'fantasia', premium: true, name: 'Fantasía', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>' }
+  { id: 'fantasia', premium: true, name: 'Fantasía', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L12 3Z"/></svg>' }
 ];
 
 async function initAdMob() {
@@ -78,10 +73,19 @@ async function handleCreateRoomFlow() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // --- CORRECCIÓN IMPORTANTE: ACTIVAR BOTONES PRIMERO ---
+  setupEventListeners(); // 1. Botones listos YA
+  setupModeSelectors();  // 2. Modos listos YA
+  
   if (isPremium) unlockedCategories = new Set(CATEGORIES_DATA.map(c => c.id));
-  await initAdMob(); renderCategoriesGrid(); updateCategoriesSummary(); setupEventListeners();
+  renderCategoriesGrid(); 
+  updateCategoriesSummary(); 
   const savedName = localStorage.getItem('playerName'); if(savedName) { qs('hostName').value = savedName; qs('joinName').value = savedName; }
-  setupModeSelectors(); 
+
+  requestWakeLock(); // Activar pantalla encendida
+
+  // 3. Cargar AdMob AL FINAL y sin bloquear
+  initAdMob().then(() => console.log("AdMob cargado en segundo plano"));
 });
 
 function setupModeSelectors() {
@@ -187,27 +191,12 @@ window.adjustValue = function(id, d) {
     }
 };
 
-// --- CARTA CON TOGGLE (MANUAL + 15 SEG AUTO-CIERRE) ---
+// --- CARTA TOTALMENTE MANUAL ---
 window.toggleSecretCard = function() { 
-    if(currentPhase!=='word')return; 
-    const c=qs('secretCardInner'); 
-    
-    if(c.classList.contains('flipped')) {
-        // SI ESTÁ ABIERTA -> CIÉRRALA
-        c.classList.remove('flipped'); 
-        if(flipTimeout) { clearTimeout(flipTimeout); flipTimeout = null; }
-    } else { 
-        // SI ESTÁ CERRADA -> ÁBRELA Y PON TIMER
-        playSound('soundFlip'); 
-        c.classList.add('flipped'); 
-        
-        // Reiniciar timer: se cierra sola a los 15s si el usuario no la cierra antes
-        if(flipTimeout) clearTimeout(flipTimeout);
-        flipTimeout = setTimeout(() => {
-            c.classList.remove('flipped');
-            flipTimeout = null;
-        }, 15000);
-    } 
+    if(currentPhase !== 'word') return; 
+    const c = qs('secretCardInner'); 
+    playSound('soundFlip'); 
+    c.classList.toggle('flipped'); 
 };
 
 function createRoom() {
@@ -223,6 +212,7 @@ function handleJoin(res) {
   if(!res.ok) return showModal("Error", res.error);
   myId = res.me.id; isHost = res.isHost;
   qs('lobbyOverlay').style.display = 'none'; qs('mainContent').style.display = 'block'; qs('roomCodeDisplay').innerText = res.roomCode;
+  requestWakeLock(); // Pantalla ON
   if(res.discordLink && !isHost) setTimeout(() => window.open(res.discordLink, '_blank'), 500); 
   if(res.room) { currentRoom = res.room; updateGameView(res.room); }
 }
@@ -260,48 +250,34 @@ socket.on('roundResult', (data) => {
 function updateGameView(room) {
   if (!room) return;
   currentPhase = room.phase; 
-  
-  // Aseguramos que isHost se recalcule correctamente comparando IDs
   isHost = (room.hostId === myId) || (room.hostId === socket.id);
 
   const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
   const setDisplay = (id, show) => { const el = document.getElementById(id); if (el) el.style.display = show ? 'block' : 'none'; };
 
-  // 1. Actualizar Contadores Superiores
   setTxt('timerNumber', room.timerText || '--');
   setTxt('currentPlayersCount', room.players.length); 
   setTxt('currentImpostorsCount', room.impostors);
 
-  // 2. Actualizar Configuración del Lobby
   if(currentPhase === 'lobby') {
       const pDisplay = qs('displayPlayers'); if(pDisplay) pDisplay.innerText = room.maxPlayers;
       const iDisplay = qs('displayImpostors'); if(iDisplay) iDisplay.innerText = room.impostors;
-      
-      // Protección contra crash de config vacía
-      const vDisplay = qs('displayVoteTime'); 
-      if(vDisplay && room.config) {
-          vDisplay.innerText = room.config.voteTime / 1000;
-      }
+      const vDisplay = qs('displayVoteTime'); if(vDisplay && room.config) vDisplay.innerText = room.config.voteTime / 1000;
       
       const btns = document.querySelectorAll('.mini-controls button');
       btns.forEach(b => b.disabled = !isHost);
   }
 
-  // 3. Lista de Agentes (BLINDADA CONTRA ERRORES)
   const list = document.getElementById('playersList');
   if (list) {
-      list.innerHTML = ''; // Limpiar lista
+      list.innerHTML = ''; 
       (room.players || []).forEach(p => {
         try {
-            // Protección: Si faltan datos, usamos valores por defecto
             const pName = p.name ? p.name : 'Agente'; 
             const pColor = p.color ? p.color : '#64748b';
             const initial = pName.charAt(0).toUpperCase();
+            const row = document.createElement('div'); row.className = 'player-row';
             
-            const row = document.createElement('div'); 
-            row.className = 'player-row';
-            
-            // Estilos dinámicos
             if(p.isDead) row.style.opacity = '0.5';
             if(p.disconnected) row.style.border = '1px dashed #ef4444'; 
             else if(room.currentTurnId === p.id) row.style.border = '1px solid #3b82f6';
@@ -309,40 +285,26 @@ function updateGameView(room) {
             const badge = p.id === room.hostId ? '<span style="font-size:0.6rem;background:#ffffff20;padding:2px 6px;border-radius:4px;margin-left:auto;">HOST</span>' : '';
             const discIcon = p.disconnected ? '🔌' : '';
 
-            // Insertamos el HTML del jugador
-            row.innerHTML = `
-                <div style="width:28px;height:28px;background:${pColor};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#000;font-size:0.8rem;">${initial}</div>
-                <div style="font-weight:600;font-size:0.9rem;margin-left:10px; color:#fff;">${pName} ${discIcon}</div>
-                ${badge}
-            `;
+            row.innerHTML = `<div style="width:28px;height:28px;background:${pColor};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#000;font-size:0.8rem;">${initial}</div><div style="font-weight:600;font-size:0.9rem;margin-left:10px; color:#fff;">${pName} ${discIcon}</div>${badge}`;
             list.appendChild(row);
-        } catch (err) {
-            console.error("Error dibujando jugador:", err);
-        }
+        } catch (err) {}
       });
   }
 
-  // 4. Botones y Vistas (Ahora se ejecutará sí o sí)
   const btnStart = document.getElementById('btnStartRound'); 
   if (btnStart) {
-      // Mostrar SOLO si soy Host Y estamos en Lobby
-      if (isHost && currentPhase === 'lobby') {
-          btnStart.style.display = 'block';
-      } else {
-          btnStart.style.display = 'none';
-      }
+      if (isHost && currentPhase === 'lobby') btnStart.style.display = 'block';
+      else btnStart.style.display = 'none';
   }
   
   const btnDiscord = document.getElementById('btnDiscord'); if (btnDiscord) btnDiscord.style.display = room.discordLink ? 'flex' : 'none';
   const btnCancel = document.getElementById('btnCancelRound'); if(btnCancel) btnCancel.style.display = (isHost && currentPhase !== 'lobby') ? 'block' : 'none';
 
-  // 5. Gestión de Pantallas
   ['viewLobby', 'viewWord', 'viewTurn', 'viewVote'].forEach(v => setDisplay(v, false));
 
   if (currentPhase === 'lobby') { 
       setDisplay('viewLobby', true); 
-      const st = document.getElementById('statusText'); 
-      if(st) st.innerHTML = isHost ? "Inicia cuando estén listos." : `Esperando al Host...`; 
+      const st = document.getElementById('statusText'); if(st) st.innerHTML = isHost ? "Inicia cuando estén listos." : `Esperando al Host...`; 
   } 
   else if (currentPhase === 'word') { 
       setDisplay('viewWord', true); 
@@ -354,19 +316,14 @@ function updateGameView(room) {
       setDisplay('viewTurn', true); 
       const t = room.players.find(p => p.id === room.currentTurnId); 
       setTxt('currentTurnPlayer', t ? t.name : '...'); 
-      
       const isTextMode = (room.mode === 'text');
       const cluesContainer = qs('cluesHistoryContainer');
       if(cluesContainer) cluesContainer.style.display = isTextMode ? 'block' : 'none'; 
-      
       const isMyTurn = (room.currentTurnId === myId);
       const inputArea = qs('turnInputArea'); if(inputArea) inputArea.style.display = (isMyTurn && isTextMode) ? 'flex' : 'none';
       const actionsNormal = qs('turnActionsNormal'); if(actionsNormal) actionsNormal.style.display = (isMyTurn && !isTextMode) ? 'block' : 'none';
       const waitMsg = qs('turnWaitMessage');
-      if(waitMsg) {
-          waitMsg.style.display = isMyTurn ? 'none' : 'block';
-          waitMsg.innerText = t ? `Esperando a ${t.name}...` : '...';
-      }
+      if(waitMsg) { waitMsg.style.display = isMyTurn ? 'none' : 'block'; waitMsg.innerText = t ? `Esperando a ${t.name}...` : '...'; }
 
       if(isTextMode) {
           const cluesList = qs('cluesHistory'); 
