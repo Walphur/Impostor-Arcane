@@ -1,11 +1,28 @@
 /* =========================================
    BASE & RESET
    ========================================= */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at top, #0f172a 0, #000 100%); color: #e5e7eb; height: 100vh; overflow: hidden; }
+*, *::before, *::after { 
+    box-sizing: border-box; 
+    margin: 0; 
+    padding: 0; 
+    /* ESTO QUITA EL AZUL AL TOCAR EN CELULARES */
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+}
+
+body { 
+    font-family: "Poppins", sans-serif; 
+    background: radial-gradient(circle at top, #0f172a 0, #000 100%); 
+    color: #e5e7eb; 
+    height: 100vh; 
+    overflow: hidden; 
+    /* ESTO EVITA QUE SE SELECCIONE TEXTO Y SE PONGA AZUL */
+    user-select: none;
+    -webkit-user-select: none; 
+}
 
 /* --- BOTONES --- */
-.btn-main { border-radius: 12px; padding: 14px 20px; font-weight: 700; font-size: 1rem; transition: transform 0.1s; border: none; cursor: pointer; }
+.btn-main { border-radius: 12px; padding: 14px 20px; font-weight: 700; font-size: 1rem; transition: transform 0.1s; border: none; cursor: pointer; touch-action: manipulation; }
 .btn-main:active { transform: scale(0.96); } 
 .btn-primary { background: #dc2626; color: #fff; box-shadow: 0 4px 0 #991b1b; } 
 .btn-primary:hover { background: #ef4444; }
@@ -31,11 +48,11 @@ body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at
 .discord-icon-svg { width: 20px; height: 20px; margin-right: 6px; fill: currentColor; }
 
 /* --- HOME --- */
-.screen-wrapper-home { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; padding: 20px; }
+.screen-wrapper-home { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; padding: 20px; position: relative; z-index: 10; }
 .big-logo-container { margin-bottom: 30px; text-align: center; }
 .big-logo-container img { user-select: none; pointer-events: none; }
 .logo-img-home { width: 330px; max-width: 85vw; filter: drop-shadow(0 0 10px rgba(220,38,38,0.2)); }
-.home-card-buttons { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(10px); padding: 25px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 15px; }
+.home-card-buttons { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(10px); padding: 25px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 15px; position: relative; z-index: 100; transform: translateZ(0); }
 
 /* --- PANTALLAS (LOBBY / CREAR) --- */
 .lobby-overlay { position: fixed; inset: 0; z-index: 50; background: #020617; display: flex; align-items: center; justify-content: center; }
@@ -106,7 +123,7 @@ body { font-family: "Poppins", sans-serif; background: radial-gradient(circle at
     margin: 20px auto; 
     cursor: pointer; 
     user-select: none;
-    -webkit-tap-highlight-color: transparent;
+    -webkit-tap-highlight-color: transparent; /* CLAVE PARA LA CARTA */
 }
 .secret-card-inner { 
     position: relative; 

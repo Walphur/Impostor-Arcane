@@ -153,6 +153,16 @@ function setupEventListeners() {
           else showModal("Error", "Código inválido o expirado.");
       });
   };
+
+  // --- SOLUCIÓN PARA LA CARTA: EVENTO CONTROLADO ---
+  const cardContainer = document.getElementById('cardContainer');
+  if(cardContainer) {
+      cardContainer.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleSecretCard();
+      };
+  }
 }
 
 function renderCategoriesGrid() {
