@@ -213,6 +213,7 @@ io.on('connection', (socket) => {
     const room = getRoom(socket.id); 
     if (!room || room.phase !== 'vote') return;
     
+    // SI ESTÁ MUERTO, NO PUEDE VOTAR
     const voter = room.players.find(p => p.id === socket.id);
     if (!voter || voter.isDead) return;
 
@@ -289,6 +290,7 @@ function avanzarDesdeTurno(room) {
   }
 }
 
+// --- LOGICA DE RESULTADOS FINAL ---
 function finishVoting(room, reason) {
   clearRoomTimer(room); room.phase = 'result';
   const counts = {}; let maxV = 0;
@@ -303,18 +305,20 @@ function finishVoting(room, reason) {
     const victim = room.players.find(p => p.id === elimId);
     if(victim) {
         victim.isDead = true;
+        // MENSAJE CLARO DE QUIEN FUE ELIMINADO
         if (room.roles[elimId] === 'impostor') { 
             resReason = `¡${victim.name} era un Impostor!`; 
         } else {
             resReason = `${victim.name} era Inocente.`;
         }
-        result = 'ejected'; 
+        result = 'ejected'; // ESTADO CLAVE PARA EL CLIENTE: EJECTED
     }
   } else { 
       resReason = "Nadie fue expulsado (Empate o Skip)."; 
-      result = 'tie'; 
+      result = 'tie'; // ESTADO CLAVE: EMPATE
   }
 
+  // REVISAR SI TERMINÓ LA PARTIDA DE VERDAD
   const impsAlive = room.players.filter(p => !p.isDead && room.roles[p.id] === 'impostor').length;
   const crewAlive = room.players.filter(p => !p.isDead && room.roles[p.id] === 'crew').length;
 
@@ -324,9 +328,10 @@ function finishVoting(room, reason) {
       result = 'impostor'; resReason = "¡Impostores dominan la nave (Mayoría)!"; 
   }
 
+  // ENVIAR RESULTADO
   io.to(room.code).emit('roundResult', { result, secretWord: room.secretWord, reason: resReason, impostors: room.players.filter(p=>room.roles[p.id]==='impostor').map(p=>p.name) });
   
-  // --- CAMBIO: 10 SEGUNDOS (10000ms) DE ESPERA ---
+  // ESPERAR 10 SEGUNDOS Y SEGUIR O TERMINAR
   setTimeout(() => {
     if (!rooms[room.code]) return;
     clearRoomTimer(room);
@@ -334,6 +339,7 @@ function finishVoting(room, reason) {
     if (result === 'crew' || result === 'impostor') {
         resetToLobby(room);
     } else {
+        // SI ES TIE O EJECTED (PERO QUEDAN JUGADORES), SEGUIMOS
         room.votes = {}; 
         room.spoken = {}; 
         
@@ -348,10 +354,11 @@ function finishVoting(room, reason) {
             startTimer(room, room.config.turnTime / 1000, (r) => avanzarDesdeTurno(r));
         } else resetToLobby(room);
     }
-  }, 10000); // 10 Segundos
+  }, 10000); 
 }
 
 function resetToLobby(room) { room.phase = 'lobby'; room.timerText = '--'; room.votes = {}; room.spoken = {}; room.turnIndex = -1; room.currentTurnId = null; room.clues = []; emitRoomState(room); }
 
+// --- ARREGLO DEPLOY RENDER: 0.0.0.0 ---
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => console.log(`🚀 Server 1.4 Master en puerto ${PORT}`));
+httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server 1.4 Master en puerto ${PORT}`));

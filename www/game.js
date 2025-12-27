@@ -16,7 +16,6 @@ let wakeLock = null;
 const qs = (id) => document.getElementById(id);
 function playSound(id) { const audio = qs(id); if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); } }
 
-// --- PANTALLA SIEMPRE ENCENDIDA ---
 async function requestWakeLock() {
     try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (err) {}
 }
@@ -25,7 +24,6 @@ document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState === 'visible' && !socket.connected) socket.connect();
 });
 
-// --- MODALES ---
 function showModal(title, text, onConfirm) {
     qs('modalTitle').innerText = title; qs('modalText').innerText = text;
     const modal = qs('customModal'); modal.style.display = 'flex';
@@ -154,12 +152,11 @@ function setupEventListeners() {
       });
   };
 
-  // --- SOLUCIÓN PARA LA CARTA: EVENTO CONTROLADO ---
+  // CARTA MANUAL
   const cardContainer = document.getElementById('cardContainer');
   if(cardContainer) {
       cardContainer.onclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
+          e.preventDefault(); e.stopPropagation();
           toggleSecretCard();
       };
   }
@@ -181,7 +178,6 @@ function renderCategoriesGrid() {
 
 function updateCategoriesSummary() { qs('categoriesSummary').innerText = CATEGORIES_DATA.filter(c => selectedCategories.has(c.id)).map(c => c.name).join(', '); }
 
-// AJUSTES EN TIEMPO REAL (HOST)
 window.adjustValue = function(id, d) { 
     const i = qs(id); let v = parseInt(i.value); 
     if(id==='maxPlayers') v = Math.min(15, Math.max(3, v + d)); 
@@ -189,7 +185,6 @@ window.adjustValue = function(id, d) {
     if(id==='timeVote') v = Math.min(300, Math.max(60, v + d)); 
     i.value = v; 
     
-    // Actualizar visual local
     if(id==='maxPlayers') qs('displayPlayers').innerText=v; 
     if(id==='impostors') qs('displayImpostors').innerText=v; 
     if(id==='timeVote') qs('displayVoteTime').innerText=v;
@@ -199,7 +194,6 @@ window.adjustValue = function(id, d) {
     }
 };
 
-// --- CARTA TOTALMENTE MANUAL (SOLO CLICK) ---
 window.toggleSecretCard = function() { 
     if(currentPhase !== 'word') return; 
     const c = qs('secretCardInner'); 
@@ -228,29 +222,25 @@ function handleJoin(res) {
 socket.on('roomState', (room) => { currentRoom = room; updateGameView(room); });
 socket.on('privateRole', (data) => { myRole = data.role; myWord = data.word; myHint = data.hint; if(currentPhase === 'word') updateWordCard(); if(myRole === 'IMPOSTOR') qs('secretCardInner').classList.add('impostor-card'); else qs('secretCardInner').classList.remove('impostor-card'); });
 
-// --- LÓGICA DE RESULTADOS CORREGIDA ---
+// --- LÓGICA DE RESULTADOS (CORREGIDA) ---
 socket.on('roundResult', (data) => {
   const t = qs('resultTitle'), s = qs('resultSubtitle'), i = qs('resultIcon');
   if(!isPremium && AdMob) { AdMob.showInterstitial().catch(()=>{}); AdMob.prepareInterstitial({ adId: ADMOB_IDS.intersticial }); }
   
-  // Elementos de victoria/derrota
   const wordRow = qs('finalSecretWord').parentElement;
   const impsRow = qs('finalImpostors').parentElement;
 
   if (data.result === 'tie') { 
-      // EMPATE O SKIP
       playSound('soundLose'); 
       t.innerText = "Nadie Expulsado"; t.style.color = "#facc15"; i.innerHTML = '⚖️'; 
       wordRow.style.display = 'none'; impsRow.style.display = 'none';
   } 
   else if (data.result === 'ejected') {
-      // EXPULSADO PERO EL JUEGO SIGUE
       playSound('soundLose'); 
-      t.innerText = "EXPULSADO"; t.style.color = "#f97316"; i.innerHTML = '👢'; // Icono bota
+      t.innerText = "EXPULSADO"; t.style.color = "#f97316"; i.innerHTML = '👢'; // Bota
       wordRow.style.display = 'none'; impsRow.style.display = 'none'; 
   }
   else {
-      // VICTORIA O DERROTA (JUEGO TERMINADO)
       qs('finalSecretWord').innerText = data.secretWord; 
       qs('finalImpostors').innerText = data.impostors.join(', '); 
       wordRow.style.display = 'flex'; impsRow.style.display = 'flex'; 
@@ -281,7 +271,6 @@ function updateGameView(room) {
           overlay.style.display = 'none';
       }
   }
-  // ----------------------------------------------------------
 
   const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
   const setDisplay = (id, show) => { const el = document.getElementById(id); if (el) el.style.display = show ? 'block' : 'none'; };
@@ -386,16 +375,15 @@ function renderVoteGrid(room) {
     const grid = qs('votePlayersGrid'); if(!grid) return; grid.innerHTML = ''; 
     const subtitle = qs('voteSubtitle');
 
-    // Revisar si YO estoy muerto
     const me = room.players.find(p => p.id === myId);
     if (me && me.isDead) {
         subtitle.innerText = "Estás muerto 💀 (Silencio)";
         grid.innerHTML = '<div style="color:#64748b; font-style:italic; padding:20px; text-align:center;">Los muertos no votan...</div>';
-        qs('btnSkipVote').style.display = 'none'; // Ocultar botón Skip
+        qs('btnSkipVote').style.display = 'none'; 
         return;
     }
 
-    qs('btnSkipVote').style.display = 'block'; // Mostrar Skip si vivo
+    qs('btnSkipVote').style.display = 'block'; 
     
     room.players.filter(p => !p.isDead && p.id !== myId).forEach(p => { 
         const btn = document.createElement('div'); btn.className = 'mini-card'; btn.style.cursor = 'pointer'; 
