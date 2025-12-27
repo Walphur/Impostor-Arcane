@@ -235,7 +235,19 @@ function handleJoin(res) {
 }
 
 socket.on('roomState', (room) => { currentRoom = room; updateGameView(room); });
-socket.on('privateRole', (data) => { myRole = data.role; myWord = data.word; myHint = data.hint; if(currentPhase === 'word') updateWordCard(); if(myRole === 'IMPOSTOR') qs('secretCardInner').classList.add('impostor-card'); else qs('secretCardInner').classList.remove('impostor-card'); });
+socket.on('privateRole', (data) => { 
+    myRole = data.role; 
+    myWord = data.word; 
+    myHint = data.hint; 
+    
+    // FIX: Asegurar que arranque cerrada al recibir nuevo rol
+    const card = qs('secretCardInner'); 
+    if(card) card.classList.remove('flipped');
+
+    if(currentPhase === 'word') updateWordCard(); 
+    if(myRole === 'IMPOSTOR') qs('secretCardInner').classList.add('impostor-card'); 
+    else qs('secretCardInner').classList.remove('impostor-card'); 
+});
 
 socket.on('roundResult', (data) => {
   const t = qs('resultTitle'), s = qs('resultSubtitle'), i = qs('resultIcon');
@@ -353,7 +365,7 @@ function updateGameView(room) {
   } 
   else if (currentPhase === 'word') { 
       setDisplay('viewWord', true); 
-      const c = document.getElementById('secretCardInner'); if(c) c.classList.remove('flipped'); 
+      // FIX: Se eliminó la línea que forzaba el cierre de la carta con el timer
       updateWordCard(); 
       setTxt('statusText', "Memorizando roles..."); 
   } 
