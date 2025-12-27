@@ -53,7 +53,7 @@ const CATEGORIES_DATA = [
   { id: 'profesiones', premium: true, name: 'Profesiones', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f472b6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>' },
   { id: 'deportes', premium: true, name: 'Deportes', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>' },
   { id: 'tecnologia', premium: true, name: 'Tecnología', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>' },
-  { id: 'fantasia', premium: true, name: 'Fantasía', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L12 3Z"/></svg>' }
+  { id: 'fantasia', premium: true, name: 'Fantasía', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>' }
 ];
 
 async function initAdMob() {
@@ -73,18 +73,16 @@ async function handleCreateRoomFlow() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // --- CORRECCIÓN IMPORTANTE: ACTIVAR BOTONES PRIMERO ---
-  setupEventListeners(); // 1. Botones listos YA
-  setupModeSelectors();  // 2. Modos listos YA
+  setupEventListeners(); 
+  setupModeSelectors();  
   
   if (isPremium) unlockedCategories = new Set(CATEGORIES_DATA.map(c => c.id));
   renderCategoriesGrid(); 
   updateCategoriesSummary(); 
   const savedName = localStorage.getItem('playerName'); if(savedName) { qs('hostName').value = savedName; qs('joinName').value = savedName; }
 
-  requestWakeLock(); // Activar pantalla encendida
+  requestWakeLock(); 
 
-  // 3. Cargar AdMob AL FINAL y sin bloquear
   initAdMob().then(() => console.log("AdMob cargado en segundo plano"));
 });
 
@@ -191,7 +189,7 @@ window.adjustValue = function(id, d) {
     }
 };
 
-// --- CARTA TOTALMENTE MANUAL ---
+// --- CARTA TOTALMENTE MANUAL (SOLO CLICK) ---
 window.toggleSecretCard = function() { 
     if(currentPhase !== 'word') return; 
     const c = qs('secretCardInner'); 
@@ -212,7 +210,7 @@ function handleJoin(res) {
   if(!res.ok) return showModal("Error", res.error);
   myId = res.me.id; isHost = res.isHost;
   qs('lobbyOverlay').style.display = 'none'; qs('mainContent').style.display = 'block'; qs('roomCodeDisplay').innerText = res.roomCode;
-  requestWakeLock(); // Pantalla ON
+  requestWakeLock(); 
   if(res.discordLink && !isHost) setTimeout(() => window.open(res.discordLink, '_blank'), 500); 
   if(res.room) { currentRoom = res.room; updateGameView(res.room); }
 }
@@ -220,18 +218,32 @@ function handleJoin(res) {
 socket.on('roomState', (room) => { currentRoom = room; updateGameView(room); });
 socket.on('privateRole', (data) => { myRole = data.role; myWord = data.word; myHint = data.hint; if(currentPhase === 'word') updateWordCard(); if(myRole === 'IMPOSTOR') qs('secretCardInner').classList.add('impostor-card'); else qs('secretCardInner').classList.remove('impostor-card'); });
 
+// --- LÓGICA DE RESULTADOS CORREGIDA ---
 socket.on('roundResult', (data) => {
   const t = qs('resultTitle'), s = qs('resultSubtitle'), i = qs('resultIcon');
   if(!isPremium && AdMob) { AdMob.showInterstitial().catch(()=>{}); AdMob.prepareInterstitial({ adId: ADMOB_IDS.intersticial }); }
   
+  // Elementos de victoria/derrota
+  const wordRow = qs('finalSecretWord').parentElement;
+  const impsRow = qs('finalImpostors').parentElement;
+
   if (data.result === 'tie') { 
-      playSound('soundLose'); t.innerText = "Nadie Expulsado"; t.style.color = "#facc15"; i.innerHTML = '⚖️'; 
-      qs('finalSecretWord').parentElement.style.display = 'none'; qs('finalImpostors').parentElement.style.display = 'none';
-  } else {
+      // EMPATE O SKIP
+      playSound('soundLose'); 
+      t.innerText = "Nadie Expulsado"; t.style.color = "#facc15"; i.innerHTML = '⚖️'; 
+      wordRow.style.display = 'none'; impsRow.style.display = 'none';
+  } 
+  else if (data.result === 'ejected') {
+      // EXPULSADO PERO EL JUEGO SIGUE
+      playSound('soundLose'); 
+      t.innerText = "EXPULSADO"; t.style.color = "#f97316"; i.innerHTML = '👢'; // Icono bota
+      wordRow.style.display = 'none'; impsRow.style.display = 'none'; 
+  }
+  else {
+      // VICTORIA O DERROTA (JUEGO TERMINADO)
       qs('finalSecretWord').innerText = data.secretWord; 
       qs('finalImpostors').innerText = data.impostors.join(', '); 
-      qs('finalSecretWord').parentElement.style.display = 'flex'; 
-      qs('finalImpostors').parentElement.style.display = 'flex'; 
+      wordRow.style.display = 'flex'; impsRow.style.display = 'flex'; 
       
       const iWon = (data.result === 'crew' && myRole === 'TRIPULANTE') || (data.result === 'impostor' && myRole === 'IMPOSTOR');
       
@@ -251,6 +263,15 @@ function updateGameView(room) {
   if (!room) return;
   currentPhase = room.phase; 
   isHost = (room.hostId === myId) || (room.hostId === socket.id);
+
+  // --- AUTO CERRAR CARTEL DE RESULTADOS SI EL JUEGO AVANZA ---
+  if (currentPhase === 'turn' || currentPhase === 'word') {
+      const overlay = document.getElementById('ejectionOverlay');
+      if (overlay && overlay.style.display !== 'none') {
+          overlay.style.display = 'none';
+      }
+  }
+  // ----------------------------------------------------------
 
   const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
   const setDisplay = (id, show) => { const el = document.getElementById(id); if (el) el.style.display = show ? 'block' : 'none'; };
@@ -284,8 +305,9 @@ function updateGameView(room) {
 
             const badge = p.id === room.hostId ? '<span style="font-size:0.6rem;background:#ffffff20;padding:2px 6px;border-radius:4px;margin-left:auto;">HOST</span>' : '';
             const discIcon = p.disconnected ? '🔌' : '';
+            const deadIcon = p.isDead ? '💀' : '';
 
-            row.innerHTML = `<div style="width:28px;height:28px;background:${pColor};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#000;font-size:0.8rem;">${initial}</div><div style="font-weight:600;font-size:0.9rem;margin-left:10px; color:#fff;">${pName} ${discIcon}</div>${badge}`;
+            row.innerHTML = `<div style="width:28px;height:28px;background:${pColor};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#000;font-size:0.8rem;">${initial}</div><div style="font-weight:600;font-size:0.9rem;margin-left:10px; color:#fff;">${pName} ${discIcon} ${deadIcon}</div>${badge}`;
             list.appendChild(row);
         } catch (err) {}
       });
@@ -348,8 +370,23 @@ function updateGameView(room) {
 }
 
 function updateWordCard() { const rt = qs('roleTitle'); if(rt) rt.innerText = myRole; const sw = qs('secretWordDisplay'); if(sw) sw.innerText = myWord; const wh = qs('wordHint'); if(wh) wh.innerText = myHint; }
+
+// --- SI ESTÁS MUERTO NO APARECEN LOS BOTONES ---
 function renderVoteGrid(room) { 
     const grid = qs('votePlayersGrid'); if(!grid) return; grid.innerHTML = ''; 
+    const subtitle = qs('voteSubtitle');
+
+    // Revisar si YO estoy muerto
+    const me = room.players.find(p => p.id === myId);
+    if (me && me.isDead) {
+        subtitle.innerText = "Estás muerto 💀 (Silencio)";
+        grid.innerHTML = '<div style="color:#64748b; font-style:italic; padding:20px; text-align:center;">Los muertos no votan...</div>';
+        qs('btnSkipVote').style.display = 'none'; // Ocultar botón Skip
+        return;
+    }
+
+    qs('btnSkipVote').style.display = 'block'; // Mostrar Skip si vivo
+    
     room.players.filter(p => !p.isDead && p.id !== myId).forEach(p => { 
         const btn = document.createElement('div'); btn.className = 'mini-card'; btn.style.cursor = 'pointer'; 
         if(room.votes && room.votes[myId] === p.id) btn.style.border = '2px solid #ef4444'; 

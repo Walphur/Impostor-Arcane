@@ -111,7 +111,6 @@ io.on('connection', (socket) => {
     const userId = data.userId || socket.id;
     if (!room) return cb({ ok: false, error: 'Sala no existe' });
 
-    // RECONEXIÓN INTELIGENTE (1 MINUTO)
     const existingPlayer = room.players.find(p => p.userId === userId);
     if (existingPlayer) {
         if (existingPlayer.disconnectTimeout) {
@@ -125,7 +124,7 @@ io.on('connection', (socket) => {
         delete socketRoom[oldSocketId]; socketRoom[socket.id] = code;
         
         existingPlayer.id = socket.id; 
-        existingPlayer.disconnected = false; // Quita cable
+        existingPlayer.disconnected = false; 
         
         if (room.hostId === oldSocketId) room.hostId = socket.id;
         if (room.currentTurnId === oldSocketId) room.currentTurnId = socket.id;
@@ -213,6 +212,10 @@ io.on('connection', (socket) => {
   socket.on('submitVote', (data) => {
     const room = getRoom(socket.id); 
     if (!room || room.phase !== 'vote') return;
+    
+    const voter = room.players.find(p => p.id === socket.id);
+    if (!voter || voter.isDead) return;
+
     room.votes[socket.id] = data.targetId; 
     emitRoomState(room);
     
@@ -235,18 +238,13 @@ io.on('connection', (socket) => {
     const room = getRoom(socket.id); if (!room) return;
     const player = room.players.find(p => p.id === socket.id); if (!player) return;
     
-    // MARCAR COMO DESCONECTADO (CABLE)
     player.disconnected = true; 
     
-    // ESPERAR 60 SEGUNDOS
     player.disconnectTimeout = setTimeout(() => {
         if (!rooms[room.code]) return;
-        
-        // SI SIGUE DESCONECTADO, BORRAR
         const idx = room.players.indexOf(player);
         if (idx > -1) {
             room.players.splice(idx, 1); 
-            
             if (room.players.length === 0) {
                  clearRoomTimer(room);
                  delete rooms[room.code];
@@ -298,18 +296,24 @@ function finishVoting(room, reason) {
   const candidates = Object.keys(counts).filter(id => counts[id] === maxV);
   let elimId = (candidates.length === 1 && candidates[0] !== 'skip') ? candidates[0] : null;
 
-  let result = 'none', resReason = reason;
+  let result = 'continue'; 
+  let resReason = reason;
+  
   if (elimId) {
     const victim = room.players.find(p => p.id === elimId);
     if(victim) {
         victim.isDead = true;
         if (room.roles[elimId] === 'impostor') { 
-            resReason = `¡Atraparon al impostor (${victim.name})!`; 
+            resReason = `¡${victim.name} era un Impostor!`; 
         } else {
-            resReason = `Expulsaron a un inocente (${victim.name}).`;
+            resReason = `${victim.name} era Inocente.`;
         }
+        result = 'ejected'; 
     }
-  } else { resReason = "Nadie fue expulsado (Empate o Skip)."; result = 'tie'; }
+  } else { 
+      resReason = "Nadie fue expulsado (Empate o Skip)."; 
+      result = 'tie'; 
+  }
 
   const impsAlive = room.players.filter(p => !p.isDead && room.roles[p.id] === 'impostor').length;
   const crewAlive = room.players.filter(p => !p.isDead && room.roles[p.id] === 'crew').length;
@@ -318,25 +322,23 @@ function finishVoting(room, reason) {
       result = 'crew'; resReason = "¡TODOS los impostores eliminados!"; 
   } else if (impsAlive >= crewAlive) { 
       result = 'impostor'; resReason = "¡Impostores dominan la nave (Mayoría)!"; 
-  } else {
-      if(result === 'none') result = 'tie';
   }
 
   io.to(room.code).emit('roundResult', { result, secretWord: room.secretWord, reason: resReason, impostors: room.players.filter(p=>room.roles[p.id]==='impostor').map(p=>p.name) });
   
+  // --- CAMBIO: 10 SEGUNDOS (10000ms) DE ESPERA ---
   setTimeout(() => {
     if (!rooms[room.code]) return;
     clearRoomTimer(room);
     
-    // Si nadie ganó (EMPATE), continuamos la partida
-    if (result === 'tie' || (result === 'none' && impsAlive > 0 && impsAlive < crewAlive)) {
+    if (result === 'crew' || result === 'impostor') {
+        resetToLobby(room);
+    } else {
         room.votes = {}; 
         room.spoken = {}; 
-        // No borramos clues si es modo texto, para que quede historial
         
         const living = room.players.filter(p => !p.isDead && !p.disconnected);
         if (living.length > 0) {
-            // Elige un jugador al azar para empezar la siguiente ronda de discusión
             const nextStartPlayer = living[Math.floor(Math.random() * living.length)];
             room.turnIndex = room.players.findIndex(p => p.id === nextStartPlayer.id);
             room.currentTurnId = nextStartPlayer.id;
@@ -345,11 +347,8 @@ function finishVoting(room, reason) {
             emitRoomState(room);
             startTimer(room, room.config.turnTime / 1000, (r) => avanzarDesdeTurno(r));
         } else resetToLobby(room);
-    } else {
-        // Alguien ganó -> VOLVER AL LOBBY
-        resetToLobby(room);
     }
-  }, 8000); 
+  }, 10000); // 10 Segundos
 }
 
 function resetToLobby(room) { room.phase = 'lobby'; room.timerText = '--'; room.votes = {}; room.spoken = {}; room.turnIndex = -1; room.currentTurnId = null; room.clues = []; emitRoomState(room); }
