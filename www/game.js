@@ -17,7 +17,6 @@ let wakeLock = null;
 const qs = (id) => document.getElementById(id);
 function playSound(id) { const audio = qs(id); if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); } }
 
-// --- GRÁFICOS SVG ---
 const SVG_ICONS = {
     win: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>',
     lose: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 3 2 3-2 3-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>',
@@ -25,24 +24,20 @@ const SVG_ICONS = {
     boot: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16v-4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v4"/><path d="M22 16v-4h-2a2 2 0 0 0-2 2v2"/><path d="M2 16v-4h2a2 2 0 0 1 2 2v2"/><path d="M4 22h16a2 2 0 0 0 2-2V16H2v4a2 2 0 0 0 2 2z"/></svg>'
 };
 
-// --- PANTALLA SIEMPRE ENCENDIDA Y RECONEXIÓN ---
 async function requestWakeLock() {
     try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (err) {}
 }
 document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState === 'visible') {
         if (wakeLock !== null) await requestWakeLock();
-        // RECONEXIÓN AGRESIVA
         if (!socket.connected) { 
             socket.connect(); 
         } else {
-            // Si parece conectado, reenviar join para asegurar estado
             if(currentRoom) socket.emit('joinRoom', { roomCode: currentRoom.code, userId: MY_DEVICE_ID }, handleJoin);
         }
     }
 });
 
-// --- MODALES ---
 function showModal(title, text, onConfirm) {
     qs('modalTitle').innerText = title; qs('modalText').innerText = text;
     const modal = qs('customModal'); modal.style.display = 'flex';
@@ -70,7 +65,7 @@ const CATEGORIES_DATA = [
   { id: 'profesiones', premium: true, name: 'Profesiones', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f472b6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>' },
   { id: 'deportes', premium: true, name: 'Deportes', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>' },
   { id: 'tecnologia', premium: true, name: 'Tecnología', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>' },
-  { id: 'fantasia', premium: true, name: 'Fantasía', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>' }
+  { id: 'fantasia', premium: true, name: 'Fantasía', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L12 3Z"/></svg>' }
 ];
 
 async function initAdMob() {
@@ -303,10 +298,10 @@ function updateGameView(room) {
             const discIcon = p.disconnected ? '🔌' : '';
             const deadIcon = p.isDead ? '💀' : '';
             
-            // BOTON KICK
+            // FIXED: Centrado del botón Kick
             let kickBtn = '';
             if(isHost && currentPhase === 'lobby' && p.id !== myId) {
-                kickBtn = `<button class="btn-kick" onclick="socket.emit('kickPlayer', '${p.id}')">✖</button>`;
+                kickBtn = `<div style="display:flex; align-items:center; justify-content:center; width:30px;"><button class="btn-kick" onclick="socket.emit('kickPlayer', '${p.id}')">✖</button></div>`;
             }
 
             row.innerHTML = `<div style="display:flex;align-items:center;"><div style="width:28px;height:28px;background:${pColor};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#000;font-size:0.8rem;">${initial}</div><div style="font-weight:600;font-size:0.9rem;margin-left:10px; color:#fff;">${pName} ${discIcon} ${deadIcon}</div></div><div style="display:flex;align-items:center;gap:5px;">${badge}${kickBtn}</div>`;
@@ -333,7 +328,7 @@ function updateGameView(room) {
   else if (currentPhase === 'word') { 
       setDisplay('viewWord', true); 
       updateWordCard(); 
-      qs('btnReady').style.display = 'block'; // Mostrar botón de listo
+      qs('btnReady').style.display = 'block'; 
       setTxt('statusText', "Memorizando roles..."); 
   } 
   else if (currentPhase === 'turn') { 
@@ -376,7 +371,6 @@ function updateWordCard() {
     const sw = qs('secretWordDisplay'); if(sw) sw.innerText = myWord; 
     const wh = qs('wordHint'); 
     
-    // MOSTRAR DATOS EXTRA AL IMPOSTOR
     if(myRole === 'IMPOSTOR') {
         let partnersText = '';
         if(myPartners && myPartners.length > 0) {
@@ -406,11 +400,9 @@ function renderVoteGrid(room) {
         const btn = document.createElement('div'); btn.className = 'mini-card'; btn.style.cursor = 'pointer'; 
         if(room.votes && room.votes[myId] === p.id) btn.style.border = '2px solid #ef4444'; 
         btn.innerHTML = `<div style="font-weight:bold;">${p.name}</div>`; 
-        // VOTO OPTIMISTA: Marcar visualmente de inmediato
         btn.onclick = () => { 
             socket.emit('submitVote', { targetId: p.id }); 
             qs('voteSubtitle').innerText = `Votaste a ${p.name}`; 
-            // Limpiar otros bordes
             Array.from(grid.children).forEach(c => c.style.border = '1px solid #334155');
             btn.style.border = '2px solid #ef4444';
         }; 

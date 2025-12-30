@@ -99,7 +99,7 @@ io.on('connection', (socket) => {
       config: { turnTime: 30000, voteTime: (parseInt(data.voteTime) || 120) * 1000 },
       players: [{ id: socket.id, userId: userId, name: data.name || 'Host', color: assignColor({players:[]}), isDead: false, disconnected: false }],
       phase: 'lobby', roles: {}, votes: {}, spoken: {}, discordLink, discordChannelId, timerText: '--',
-      clues: [], deletionTimer: null, introReady: []
+      clues: [], deletionTimer: null, introReady: [], impostorNames: [] // FIXED: Guardar nombres fijos
     };
     
     socketRoom[socket.id] = code; socket.join(code);
@@ -134,11 +134,9 @@ io.on('connection', (socket) => {
         let myRoleData = null;
         if(room.phase !== 'lobby' && room.roles[oldSocketId]) {
             room.roles[socket.id] = room.roles[oldSocketId]; 
-            // Si el ID cambia, actualizamos el mapa de roles
             delete room.roles[oldSocketId];
             
             const isImp = room.roles[socket.id] === 'impostor';
-            // Buscar compañeros impostores para reenviarlos
             const imps = room.players.filter(p => room.roles[p.id] === 'impostor' && p.id !== socket.id).map(p => p.name);
             const catName = getCategoryName(room.secretCategory);
 
@@ -175,9 +173,7 @@ io.on('connection', (socket) => {
       if(pIndex > -1) {
           const player = room.players[pIndex];
           room.players.splice(pIndex, 1);
-          // Avisar al kickeado
           io.to(targetId).emit('kicked');
-          // Forzar desconexión del socket de la sala
           const targetSocket = io.sockets.sockets.get(targetId);
           if(targetSocket) { targetSocket.leave(room.code); delete socketRoom[targetId]; }
           emitRoomState(room);
@@ -201,7 +197,7 @@ io.on('connection', (socket) => {
     if (room.players.length < 3) return; 
     
     clearRoomTimer(room);
-    room.players.forEach(p => p.isDead = false); room.votes = {}; room.spoken = {}; room.clues = []; room.introReady = [];
+    room.players.forEach(p => p.isDead = false); room.votes = {}; room.spoken = {}; room.clues = []; room.introReady = []; room.impostorNames = [];
 
     const shuffled = shuffle([...room.players]); room.players = shuffled;
     
@@ -219,6 +215,7 @@ io.on('connection', (socket) => {
         if(impostorIndices.includes(index)) {
             room.roles[p.id] = 'impostor';
             impostorIds.push(p);
+            room.impostorNames.push(p.name); // FIXED: Guardar nombres
         } else {
             room.roles[p.id] = 'crew';
         }
@@ -234,7 +231,6 @@ io.on('connection', (socket) => {
     
     room.players.forEach(p => {
       const isImp = room.roles[p.id] === 'impostor';
-      // Lista de otros impostores (sin incluirse a uno mismo)
       const partners = impostorIds.filter(imp => imp.id !== p.id).map(imp => imp.name);
       
       io.to(p.id).emit('privateRole', {
@@ -254,7 +250,6 @@ io.on('connection', (socket) => {
       if(!room || room.phase !== 'word') return;
       if(!room.introReady.includes(socket.id)) room.introReady.push(socket.id);
       
-      // Si TODOS están listos, saltar
       const living = room.players.filter(p => !p.disconnected);
       if(room.introReady.length >= living.length) {
           clearRoomTimer(room);
@@ -392,11 +387,14 @@ function finishVoting(room, reason) {
       result = 'impostor'; resReason = "¡Impostores dominan la nave (Mayoría)!"; 
   }
 
-  io.to(room.code).emit('roundResult', { result, secretWord: room.secretWord, reason: resReason, impostors: room.players.filter(p=>room.roles[p.id]==='impostor').map(p=>p.name) });
+  // FIXED: Usar lista fija de nombres para asegurar que se muestren
+  const finalImpostors = room.impostorNames || [];
+
+  io.to(room.code).emit('roundResult', { result, secretWord: room.secretWord, reason: resReason, impostors: finalImpostors });
   
   setTimeout(() => {
     if (!rooms[room.code]) return;
-    clearRoomTimer(room); // Asegura limpieza
+    clearRoomTimer(room);
     
     if (result === 'crew' || result === 'impostor') {
         resetToLobby(room);
@@ -419,7 +417,7 @@ function finishVoting(room, reason) {
 }
 
 function resetToLobby(room) { 
-    clearRoomTimer(room); // <--- IMPORTANTE: Mata el reloj fantasma
+    clearRoomTimer(room);
     room.phase = 'lobby'; 
     room.timerText = '--'; 
     room.votes = {}; 
@@ -428,8 +426,9 @@ function resetToLobby(room) {
     room.currentTurnId = null; 
     room.clues = []; 
     room.introReady = [];
+    room.impostorNames = [];
     emitRoomState(room); 
 }
 
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server 1.5 Stable en puerto ${PORT}`));
+httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server 1.5.1 Stable en puerto ${PORT}`));
