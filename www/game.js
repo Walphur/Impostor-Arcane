@@ -17,18 +17,10 @@ let wakeLock = null;
 const qs = (id) => document.getElementById(id);
 function playSound(id) { const audio = qs(id); if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); } }
 
-// --- NUEVOS ICONOS RELLENOS (MEJOR VISIBILIDAD) ---
 const SVG_ICONS = {
-    // Trofeo Sólido
     win: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#4ade80"><path d="M12 2a10 10 0 0 1 .38 19.996L12 22a10 10 0 0 1-.38-19.996L12 2Zm0 2a8 8 0 0 0-8 8c0 4.418 3.582 8 8 8s8-3.582 8-8-3.582-8-8-8Zm4 3h-2v5.5a2.5 2.5 0 0 1-5 0V7H7v5.5a4.5 4.5 0 0 0 9 0V7ZM8.5 16h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1Z"/></svg>',
-    
-    // Calavera Sólida
     lose: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ef4444"><path d="M12 2a9 9 0 0 0-9 9c0 2.3 1.2 4.5 3 6v2a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-2c1.8-1.5 3-3.7 3-6a9 9 0 0 0-9-9zm-3 8a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm6 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm-3 8c-1.5 0-2.8-.8-3.5-2h7c-.7 1.2-2 2-3.5 2z"/></svg>',
-    
-    // Balanza Sólida
     tie: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#facc15"><path d="M12 2a1 1 0 0 1 1 1v3h6a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1h-1v5a3 3 0 0 1-6 0V9H4v5a3 3 0 0 1-6 0V9H6V8a1 1 0 0 1 1-1h4V3a1 1 0 0 1 1-1zm6 8v3a1 1 0 0 0 2 0v-3h-2zM4 10v3a1 1 0 0 0 2 0v-3H4z"/></svg>',
-    
-    // Bota Sólida
     boot: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f97316"><path d="M5 2a3 3 0 0 0-3 3v14a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3V9l-6-7H5zm11 12h-4v-2h4v2zm0-4h-4V8h4v2z"/></svg>'
 };
 
@@ -238,19 +230,24 @@ window.adjustValue = function(id, d) {
 // --- FIX: CONTROLES DIRECTOS EN LOBBY CON MEJOR CHEQUEO ---
 window.changeLobbySetting = function(key, d) {
     if(!isHost || !currentRoom) return;
+    
+    // --- FIX: Valores por defecto si vienen indefinidos ---
+    const curPlayers = currentRoom.maxPlayers || 10;
+    const curImps = currentRoom.impostors || 2;
+    const curTime = (currentRoom.config && currentRoom.config.voteTime) ? currentRoom.config.voteTime / 1000 : 120;
+
     playSound('soundClick');
     let v;
     if(key === 'maxPlayers') {
-        v = Math.min(15, Math.max(3, currentRoom.maxPlayers + d));
+        v = Math.min(15, Math.max(3, curPlayers + d));
         socket.emit('updateSettings', { maxPlayers: v });
     }
     else if(key === 'impostors') {
-        v = Math.min(4, Math.max(1, currentRoom.impostors + d));
+        v = Math.min(4, Math.max(1, curImps + d));
         socket.emit('updateSettings', { impostors: v });
     }
     else if(key === 'timeVote') {
-        const currentSecs = currentRoom.config.voteTime / 1000;
-        v = Math.min(300, Math.max(60, currentSecs + d));
+        v = Math.min(300, Math.max(60, curTime + d));
         socket.emit('updateSettings', { voteTime: v });
     }
 };

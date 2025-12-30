@@ -69,6 +69,7 @@ function serializeRoom(room) {
   return {
     code: room.code, hostId: room.hostId, phase: room.phase, mode: room.mode,
     config: room.config, 
+    maxPlayers: room.maxPlayers, // --- FIX: AHORA SÍ ENVIAMOS ESTE DATO ---
     players: room.players.map(p => ({ 
         id: p.id, userId: p.userId, name: p.name, color: p.color, isDead: p.isDead, disconnected: p.disconnected 
     })),
@@ -76,7 +77,7 @@ function serializeRoom(room) {
     votes: room.votes, impostors: room.impostors, discordLink: room.discordLink,
     clues: room.clues || [],
     introReady: room.introReady || [],
-    impostorNames: room.impostorNames || [] // Lista fija
+    impostorNames: room.impostorNames || []
   };
 }
 function emitRoomState(room) { if (room) io.to(room.code).emit('roomState', serializeRoom(room)); }
@@ -131,16 +132,11 @@ io.on('connection', (socket) => {
         if (room.hostId === oldSocketId) room.hostId = socket.id;
         if (room.currentTurnId === oldSocketId) room.currentTurnId = socket.id;
 
-        // Recuperar Rol al reconectar
         let myRoleData = null;
         if(room.phase !== 'lobby' && room.roles[socket.id]) {
             const isImp = room.roles[socket.id] === 'impostor';
             const catName = getCategoryName(room.secretCategory);
-            
-            // Buscar partners
-            const partners = room.players
-                .filter(p => room.roles[p.id] === 'impostor' && p.id !== socket.id)
-                .map(p => p.name);
+            const partners = room.players.filter(p => room.roles[p.id] === 'impostor' && p.id !== socket.id).map(p => p.name);
 
             myRoleData = { 
                 role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', 
@@ -150,7 +146,6 @@ io.on('connection', (socket) => {
                 partners: isImp ? partners : []
             };
         } else if (room.phase !== 'lobby' && room.roles[oldSocketId]) {
-             // Caso migración de ID viejo
              room.roles[socket.id] = room.roles[oldSocketId];
              delete room.roles[oldSocketId];
              const isImp = room.roles[socket.id] === 'impostor';
@@ -202,7 +197,8 @@ io.on('connection', (socket) => {
     const room = getRoom(socket.id);
     if(!room || room.hostId !== socket.id || room.phase !== 'lobby') return;
     
-    if(data.impostors) room.impostors = Math.min(room.players.length - 1, Math.max(1, parseInt(data.impostors)));
+    // --- FIX: PERMITIR CONFIGURAR LIBREMENTE EN LOBBY ---
+    if(data.impostors) room.impostors = Math.min(4, Math.max(1, parseInt(data.impostors))); // Sin limite por jugadores aun
     if(data.maxPlayers) room.maxPlayers = Math.min(15, Math.max(3, parseInt(data.maxPlayers)));
     if(data.voteTime) room.config.voteTime = parseInt(data.voteTime) * 1000;
     
@@ -220,6 +216,7 @@ io.on('connection', (socket) => {
     const shuffled = shuffle([...room.players]); room.players = shuffled;
     
     const activeCount = room.players.length;
+    // --- FIX: APLICAR LIMITE DE IMPOSTORES AL INICIAR ---
     const actualImpostors = Math.min(room.impostors, Math.max(1, activeCount - 1));
 
     const possibleImpostorIndices = [];
@@ -272,7 +269,6 @@ io.on('connection', (socket) => {
           clearRoomTimer(room);
           room.phase = 'turn'; room.turnIndex = -1; nextTurn(room);
       } else {
-          // Si no todos están listos, igual emitimos estado para actualizar el botón en los clientes
           emitRoomState(room);
       }
   });
@@ -318,13 +314,9 @@ io.on('connection', (socket) => {
     
     player.disconnected = true; 
     
-    // --- FIX: MIGRACIÓN DE HOST INMEDIATA ---
     if (room.hostId === player.id) {
         const active = room.players.find(p => !p.disconnected && p.id !== socket.id);
-        if(active) {
-            room.hostId = active.id;
-            emitRoomState(room); // Notificar nuevo host ya
-        }
+        if(active) { room.hostId = active.id; emitRoomState(room); }
     }
     
     player.disconnectTimeout = setTimeout(() => {
@@ -355,8 +347,6 @@ function getCategoryName(id) {
 function nextTurn(room) {
   clearRoomTimer(room);
   const living = room.players.map((p, i) => ({p, i})).filter(o => !o.p.isDead && !o.p.disconnected);
-  
-  // FIX: Verificación estricta de final de juego antes de turno
   if (living.length < 3) return finishVoting(room, 'No quedan suficientes jugadores');
 
   let nextIdx = 0;
@@ -406,7 +396,6 @@ function finishVoting(room, reason) {
       result = 'tie'; 
   }
 
-  // --- LOGICA MATEMATICA CORREGIDA ---
   const impsAlive = room.players.filter(p => !p.isDead && !p.disconnected && room.roles[p.id] === 'impostor').length;
   const crewAlive = room.players.filter(p => !p.isDead && !p.disconnected && room.roles[p.id] === 'crew').length;
 
@@ -415,7 +404,6 @@ function finishVoting(room, reason) {
   } else if (impsAlive >= crewAlive) { 
       result = 'impostor'; resReason = "¡Impostores dominan la nave (Mayoría)!"; 
   } else if (crewAlive + impsAlive < 3) {
-      // Caso borde: quedan 2 personas y 1 es impostor (empate tecnico, gana impostor)
       result = 'impostor'; resReason = "¡Solo quedan 2! Impostor gana.";
   }
 
@@ -463,4 +451,4 @@ function resetToLobby(room) {
 }
 
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server 1.9 Fix en puerto ${PORT}`));
+httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server 2.2 Fix en puerto ${PORT}`));
