@@ -17,15 +17,19 @@ let wakeLock = null;
 const qs = (id) => document.getElementById(id);
 function playSound(id) { const audio = qs(id); if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); } }
 
-// --- NUEVOS SVGs HD (ESTILO NEON) ---
+// --- NUEVOS ICONOS RELLENOS (MEJOR VISIBILIDAD) ---
 const SVG_ICONS = {
-    win: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8m-4-9v9m0-9a5 5 0 0 0-5-5V6a5 5 0 0 1 10 0v10a5 5 0 0 0-5 5zm0-9a5 5 0 0 1-5-5h10a5 5 0 0 1-5 5z"/><path d="M12 2a3 3 0 0 0-3 3v1a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/></svg>',
+    // Trofeo Sólido
+    win: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#4ade80"><path d="M12 2a10 10 0 0 1 .38 19.996L12 22a10 10 0 0 1-.38-19.996L12 2Zm0 2a8 8 0 0 0-8 8c0 4.418 3.582 8 8 8s8-3.582 8-8-3.582-8-8-8Zm4 3h-2v5.5a2.5 2.5 0 0 1-5 0V7H7v5.5a4.5 4.5 0 0 0 9 0V7ZM8.5 16h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1Z"/></svg>',
     
-    lose: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h.01M15 12h.01M12 2a9 9 0 0 1 9 9c0 2.3-1 4.5-2.6 6.1L16 19.5l-2 2-2-2-2.4-2.4A9 9 0 0 1 3 11a9 9 0 0 1 9-9z"/><path d="M10 16s1 1 2 1 2-1 2-1"/></svg>',
+    // Calavera Sólida
+    lose: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ef4444"><path d="M12 2a9 9 0 0 0-9 9c0 2.3 1.2 4.5 3 6v2a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-2c1.8-1.5 3-3.7 3-6a9 9 0 0 0-9-9zm-3 8a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm6 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm-3 8c-1.5 0-2.8-.8-3.5-2h7c-.7 1.2-2 2-3.5 2z"/></svg>',
     
-    tie: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18m-9-6l9-3 9 3"/><path d="M3 15h18"/><path d="M5 21h14"/></svg>',
+    // Balanza Sólida
+    tie: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#facc15"><path d="M12 2a1 1 0 0 1 1 1v3h6a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1h-1v5a3 3 0 0 1-6 0V9H4v5a3 3 0 0 1-6 0V9H6V8a1 1 0 0 1 1-1h4V3a1 1 0 0 1 1-1zm6 8v3a1 1 0 0 0 2 0v-3h-2zM4 10v3a1 1 0 0 0 2 0v-3H4z"/></svg>',
     
-    boot: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h10c1.5 0 3-1.5 3-3V9a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10c0 1.5 1.5 3 3 3z"/><path d="M4 14h13"/><path d="M8 2v5"/><path d="M16 2v5"/></svg>'
+    // Bota Sólida
+    boot: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f97316"><path d="M5 2a3 3 0 0 0-3 3v14a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3V9l-6-7H5zm11 12h-4v-2h4v2zm0-4h-4V8h4v2z"/></svg>'
 };
 
 async function requestWakeLock() {
@@ -231,9 +235,10 @@ window.adjustValue = function(id, d) {
     if(isHost && currentRoom && currentPhase === 'lobby') { socket.emit('updateSettings', { [id]: v }); }
 };
 
-// NUEVA FUNCIÓN: CONTROLES DIRECTOS EN LOBBY
+// --- FIX: CONTROLES DIRECTOS EN LOBBY CON MEJOR CHEQUEO ---
 window.changeLobbySetting = function(key, d) {
     if(!isHost || !currentRoom) return;
+    playSound('soundClick');
     let v;
     if(key === 'maxPlayers') {
         v = Math.min(15, Math.max(3, currentRoom.maxPlayers + d));
@@ -248,7 +253,6 @@ window.changeLobbySetting = function(key, d) {
         v = Math.min(300, Math.max(60, currentSecs + d));
         socket.emit('updateSettings', { voteTime: v });
     }
-    playSound('soundClick');
 };
 
 function createRoom() {
@@ -306,7 +310,6 @@ socket.on('roundResult', (data) => {
   }
   s.innerText = data.reason;
   
-  // Botón dinámico
   const btn = qs('btnBackToLobby');
   if (data.result === 'ejected' || data.result === 'tie') {
       btn.innerText = "SIGUIENTE RONDA...";
@@ -335,17 +338,15 @@ function updateGameView(room) {
   if(currentPhase === 'lobby') {
       resetLocalGameData();
       
-      // --- ACTUALIZAR CONTROLES DEL LOBBY (HOST) ---
-      const lp = qs('lobbyPlayersVal'); if(lp) lp.innerText = room.maxPlayers;
-      const li = qs('lobbyImpostorsVal'); if(li) li.innerText = room.impostors;
+      const lp = qs('lobbyPlayersVal'); if(lp && room.maxPlayers) lp.innerText = room.maxPlayers;
+      const li = qs('lobbyImpostorsVal'); if(li && room.impostors) li.innerText = room.impostors;
       const lt = qs('lobbyTimeVal'); if(lt && room.config) lt.innerText = room.config.voteTime / 1000;
       
-      // Habilitar/Deshabilitar botones segun Host
-      const ctrls = document.querySelectorAll('.lobby-config-row button');
-      ctrls.forEach(btn => {
-          btn.disabled = !isHost;
-          btn.style.opacity = isHost ? '1' : '0.5';
-      });
+      // --- FIX: OCULTAR PANEL PARA NO-HOST ---
+      const hostPanel = qs('hostControlsArea');
+      if(hostPanel) {
+          hostPanel.style.display = isHost ? 'block' : 'none';
+      }
 
       setDisplay('viewLobby', true); 
       const st = document.getElementById('statusText'); if(st) st.innerHTML = isHost ? "Inicia cuando estén listos." : `Esperando al Host...`; 
