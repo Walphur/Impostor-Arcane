@@ -17,19 +17,12 @@ let wakeLock = null;
 const qs = (id) => document.getElementById(id);
 function playSound(id) { const audio = qs(id); if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); } }
 
-// --- ICONOS DE LÍNEA (NEÓN) - MEJOR CALIDAD ---
-const SVG_ICONS = {
-    // Trofeo Neón
-    win: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>',
-    
-    // Calavera Neón (Estilo Cyber)
-    lose: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M8 20v2h8v-2"/><path d="M12.5 17l-.5-1-.5 1h1z"/><path d="M16 20a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20"/></svg>',
-    
-    // Balanza Neón
-    tie: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>',
-    
-    // Esposas/Salida Neón
-    boot: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>'
+// --- CAMBIO: AHORA USA TUS IMÁGENES PNG ---
+const IMG_ICONS = {
+    win: '<img src="images/victoria_trofeo.png" class="result-img" alt="Victoria">',
+    lose: '<img src="images/derrota_calavera.png" class="result-img" alt="Derrota">',
+    tie: '<img src="images/empate_balanza.png" class="result-img" alt="Empate">',
+    boot: '<img src="images/accion_puerta.png" class="result-img" alt="Expulsado">'
 };
 
 async function requestWakeLock() {
@@ -95,7 +88,11 @@ async function handleCreateRoomFlow() {
 document.addEventListener('DOMContentLoaded', async () => {
   if (isPremium) unlockedCategories = new Set(CATEGORIES_DATA.map(c => c.id));
   await initAdMob(); 
-  renderCategoriesGrid(); 
+  
+  // --- PROTECCIÓN CONTRA EL ERROR NULL ---
+  const grid = qs('categoriesGrid');
+  if(grid) renderCategoriesGrid(); 
+  
   updateCategoriesSummary(); 
   setupEventListeners();
   const savedName = localStorage.getItem('playerName'); if(savedName) { qs('hostName').value = savedName; qs('joinName').value = savedName; }
@@ -220,6 +217,7 @@ function updateCategoriesSummary() {
     if(el) el.innerText = CATEGORIES_DATA.filter(c => selectedCategories.has(c.id)).map(c => c.name).join(', '); 
 }
 
+// FUNCION DE CREACIÓN
 window.adjustValue = function(id, d) { 
     const i = qs(id); if(!i) return;
     let v = parseInt(i.value); 
@@ -282,12 +280,14 @@ socket.on('roundResult', (data) => {
 
   if (data.result === 'tie') { 
       playSound('soundLose'); 
-      t.innerText = "Nadie Expulsado"; t.style.color = "#facc15"; i.innerHTML = SVG_ICONS.tie; 
+      t.innerText = "Nadie Expulsado"; t.style.color = "#facc15"; 
+      i.innerHTML = IMG_ICONS.tie; // USO DE IMAGEN
       if(detailsBox) detailsBox.style.display = 'none';
   } 
   else if (data.result === 'ejected') {
       playSound('soundLose'); 
-      t.innerText = "EXPULSADO"; t.style.color = "#f97316"; i.innerHTML = SVG_ICONS.boot;
+      t.innerText = "EXPULSADO"; t.style.color = "#f97316"; 
+      i.innerHTML = IMG_ICONS.boot; // USO DE IMAGEN
       if(detailsBox) detailsBox.style.display = 'none';
   }
   else {
@@ -296,8 +296,16 @@ socket.on('roundResult', (data) => {
       qs('finalImpostors').innerText = data.impostors.join(', '); 
       
       const iWon = (data.result === 'crew' && myRole === 'TRIPULANTE') || (data.result === 'impostor' && myRole === 'IMPOSTOR');
-      if(iWon) { playSound('soundWin'); t.innerText = "¡VICTORIA!"; t.style.color = "#4ade80"; i.innerHTML = SVG_ICONS.win; } 
-      else { playSound('soundLose'); t.innerText = "DERROTA"; t.style.color = "#ef4444"; i.innerHTML = SVG_ICONS.lose; } 
+      if(iWon) { 
+          playSound('soundWin'); 
+          t.innerText = "¡VICTORIA!"; t.style.color = "#4ade80"; 
+          i.innerHTML = IMG_ICONS.win; // USO DE IMAGEN
+      } 
+      else { 
+          playSound('soundLose'); 
+          t.innerText = "DERROTA"; t.style.color = "#ef4444"; 
+          i.innerHTML = IMG_ICONS.lose; // USO DE IMAGEN
+      } 
   }
   s.innerText = data.reason;
   
@@ -329,7 +337,7 @@ function updateGameView(room) {
   if(currentPhase === 'lobby') {
       resetLocalGameData();
       
-      // --- FIX: CERRAR CARTEL AUTOMÁTICAMENTE ---
+      // AUTO CIERRE DE OVERLAY SI VUELVE A LOBBY
       const overlay = document.getElementById('ejectionOverlay');
       if(overlay) overlay.style.display = 'none';
 

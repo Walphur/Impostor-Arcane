@@ -10,6 +10,15 @@ body {
     color: #e5e7eb; height: 100vh; overflow: hidden; user-select: none; -webkit-user-select: none; 
 }
 
+/* --- NUEVO: CLASE PARA TUS IMÁGENES --- */
+.result-img {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    margin-bottom: 15px;
+    filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); /* Brillo suave */
+}
+
 /* --- BOTONES --- */
 .btn-main { border-radius: 12px; padding: 14px 20px; font-weight: 700; font-size: 1rem; transition: transform 0.1s; border: none; cursor: pointer; touch-action: manipulation; }
 .btn-main:active { transform: scale(0.96); } 
