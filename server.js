@@ -75,7 +75,8 @@ function serializeRoom(room) {
     currentTurnId: room.currentTurnId, timerText: room.timerText, remaining: room.remaining,
     votes: room.votes, impostors: room.impostors, discordLink: room.discordLink,
     clues: room.clues || [],
-    introReady: room.introReady || []
+    introReady: room.introReady || [],
+    impostorNames: room.impostorNames || [] // Lista fija
   };
 }
 function emitRoomState(room) { if (room) io.to(room.code).emit('roomState', serializeRoom(room)); }
@@ -132,22 +133,39 @@ io.on('connection', (socket) => {
 
         // Recuperar Rol al reconectar
         let myRoleData = null;
-        if(room.phase !== 'lobby' && room.roles[oldSocketId]) {
-            room.roles[socket.id] = room.roles[oldSocketId]; 
-            delete room.roles[oldSocketId];
-            
+        if(room.phase !== 'lobby' && room.roles[socket.id]) {
             const isImp = room.roles[socket.id] === 'impostor';
-            const imps = room.players.filter(p => room.roles[p.id] === 'impostor' && p.id !== socket.id).map(p => p.name);
             const catName = getCategoryName(room.secretCategory);
+            
+            // Buscar partners
+            const partners = room.players
+                .filter(p => room.roles[p.id] === 'impostor' && p.id !== socket.id)
+                .map(p => p.name);
 
             myRoleData = { 
                 role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', 
                 word: isImp ? '???' : room.secretWord, 
                 hint: isImp ? 'Finge saber.' : 'Escribe una pista.',
                 category: catName,
-                partners: isImp ? imps : []
+                partners: isImp ? partners : []
+            };
+        } else if (room.phase !== 'lobby' && room.roles[oldSocketId]) {
+             // Caso migración de ID viejo
+             room.roles[socket.id] = room.roles[oldSocketId];
+             delete room.roles[oldSocketId];
+             const isImp = room.roles[socket.id] === 'impostor';
+             const catName = getCategoryName(room.secretCategory);
+             const partners = room.players.filter(p => room.roles[p.id] === 'impostor' && p.id !== socket.id).map(p => p.name);
+             
+             myRoleData = { 
+                role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', 
+                word: isImp ? '???' : room.secretWord, 
+                hint: isImp ? 'Finge saber.' : 'Escribe una pista.',
+                category: catName,
+                partners: isImp ? partners : []
             };
         }
+
         socket.join(code);
         cb({ ok: true, roomCode: code, me: { id: socket.id }, isHost: (room.hostId === socket.id), discordLink: room.discordLink, room: serializeRoom(room) });
         if(myRoleData) socket.emit('privateRole', myRoleData);
@@ -197,14 +215,11 @@ io.on('connection', (socket) => {
     if (room.players.length < 3) return; 
     
     clearRoomTimer(room);
-    // RESET PROFUNDO DE VARIABLES DE RONDA
-    room.players.forEach(p => p.isDead = false); 
-    room.votes = {}; room.spoken = {}; room.clues = []; room.introReady = []; room.impostorNames = []; room.roles = {};
+    room.players.forEach(p => p.isDead = false); room.votes = {}; room.spoken = {}; room.clues = []; room.introReady = []; room.impostorNames = []; room.roles = {};
 
     const shuffled = shuffle([...room.players]); room.players = shuffled;
     
     const activeCount = room.players.length;
-    // Asegurar que no hay más impostores que jugadores - 1
     const actualImpostors = Math.min(room.impostors, Math.max(1, activeCount - 1));
 
     const possibleImpostorIndices = [];
@@ -256,6 +271,9 @@ io.on('connection', (socket) => {
       if(room.introReady.length >= living.length) {
           clearRoomTimer(room);
           room.phase = 'turn'; room.turnIndex = -1; nextTurn(room);
+      } else {
+          // Si no todos están listos, igual emitimos estado para actualizar el botón en los clientes
+          emitRoomState(room);
       }
   });
 
@@ -300,6 +318,15 @@ io.on('connection', (socket) => {
     
     player.disconnected = true; 
     
+    // --- FIX: MIGRACIÓN DE HOST INMEDIATA ---
+    if (room.hostId === player.id) {
+        const active = room.players.find(p => !p.disconnected && p.id !== socket.id);
+        if(active) {
+            room.hostId = active.id;
+            emitRoomState(room); // Notificar nuevo host ya
+        }
+    }
+    
     player.disconnectTimeout = setTimeout(() => {
         if (!rooms[room.code]) return;
         const idx = room.players.indexOf(player);
@@ -310,10 +337,6 @@ io.on('connection', (socket) => {
                  delete rooms[room.code];
                  if (room.discordChannelId && discordClient) { try { discordClient.channels.fetch(room.discordChannelId).then(c => c?.delete()); } catch(e){} }
             } else {
-                if (room.hostId === player.id) {
-                    const active = room.players.find(p => !p.disconnected);
-                    if(active) room.hostId = active.id;
-                }
                 emitRoomState(room);
             }
         }
@@ -332,7 +355,10 @@ function getCategoryName(id) {
 function nextTurn(room) {
   clearRoomTimer(room);
   const living = room.players.map((p, i) => ({p, i})).filter(o => !o.p.isDead && !o.p.disconnected);
-  if (living.length === 0) return finishVoting(room, 'No quedan jugadores activos');
+  
+  // FIX: Verificación estricta de final de juego antes de turno
+  if (living.length < 3) return finishVoting(room, 'No quedan suficientes jugadores');
+
   let nextIdx = 0;
   if (room.turnIndex !== -1) {
     const currentPos = living.findIndex(o => o.i === room.turnIndex);
@@ -380,13 +406,17 @@ function finishVoting(room, reason) {
       result = 'tie'; 
   }
 
-  const impsAlive = room.players.filter(p => !p.isDead && room.roles[p.id] === 'impostor').length;
-  const crewAlive = room.players.filter(p => !p.isDead && room.roles[p.id] === 'crew').length;
+  // --- LOGICA MATEMATICA CORREGIDA ---
+  const impsAlive = room.players.filter(p => !p.isDead && !p.disconnected && room.roles[p.id] === 'impostor').length;
+  const crewAlive = room.players.filter(p => !p.isDead && !p.disconnected && room.roles[p.id] === 'crew').length;
 
   if (impsAlive === 0) { 
       result = 'crew'; resReason = "¡TODOS los impostores eliminados!"; 
   } else if (impsAlive >= crewAlive) { 
       result = 'impostor'; resReason = "¡Impostores dominan la nave (Mayoría)!"; 
+  } else if (crewAlive + impsAlive < 3) {
+      // Caso borde: quedan 2 personas y 1 es impostor (empate tecnico, gana impostor)
+      result = 'impostor'; resReason = "¡Solo quedan 2! Impostor gana.";
   }
 
   const finalImpostors = room.impostorNames || [];
@@ -414,7 +444,7 @@ function finishVoting(room, reason) {
             startTimer(room, room.config.turnTime / 1000, (r) => avanzarDesdeTurno(r));
         } else resetToLobby(room);
     }
-  }, 10000); 
+  }, 8000); 
 }
 
 function resetToLobby(room) { 
@@ -433,4 +463,4 @@ function resetToLobby(room) {
 }
 
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server 1.5.2 Stable en puerto ${PORT}`));
+httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server 1.9 Fix en puerto ${PORT}`));

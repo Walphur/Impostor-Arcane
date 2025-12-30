@@ -10,7 +10,6 @@ let myId = null; let isHost = false; let currentRoom = null; let currentPhase = 
 let selectedCategories = new Set(['lugares', 'comidas', 'objetos']);
 let isPremium = localStorage.getItem('isPremium') === 'true';
 let unlockedCategories = new Set(JSON.parse(localStorage.getItem('videoUnlocks') || '[]')); 
-// VARIABLES LOCALES DE PARTIDA
 let myRole = null; let myWord = null; let myHint = null; let myCategory = null; let myPartners = [];
 const MAX_VIDEO_UNLOCKS = 2; 
 let wakeLock = null; 
@@ -18,12 +17,17 @@ let wakeLock = null;
 const qs = (id) => document.getElementById(id);
 function playSound(id) { const audio = qs(id); if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); } }
 
-// --- NUEVOS ICONOS (DERROTA = CALAVERA) ---
+// --- NUEVOS ICONOS V1.9 ---
 const SVG_ICONS = {
     win: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>',
-    lose: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c-4 0-7 3-7 7 0 2 1 4 2 6 0 4 3 7 5 7 2 0 5-3 5-7 0-2 1-4 2-6-3 0-6-3-7-7z"/><path d="M9 11h.01"/><path d="M15 11h.01"/><path d="M10 16a4 4 0 0 0 4 0"/></svg>',
+    
+    // Calavera para DERROTA (Crew pierde)
+    lose: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M8 20v2h8v-2"/><path d="M12.5 17l-.5-1-.5 1h1z"/><path d="M16 20a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20"/></svg>',
+    
     tie: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>',
-    boot: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16v-4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v4"/><path d="M22 16v-4h-2a2 2 0 0 0-2 2v2"/><path d="M2 16v-4h2a2 2 0 0 1 2 2v2"/><path d="M4 22h16a2 2 0 0 0 2-2V16H2v4a2 2 0 0 0 2 2z"/></svg>'
+    
+    // Esposas para EJECTED (Alguien expulsado)
+    boot: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="6" width="4" height="6" rx="2"/><rect x="6" y="6" width="4" height="6" rx="2"/><path d="M14 8h-4"/><path d="M6 12v6a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2v-6"/><path d="M14 12v6a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2v-6"/></svg>'
 };
 
 async function requestWakeLock() {
@@ -281,6 +285,15 @@ socket.on('roundResult', (data) => {
       else { playSound('soundLose'); t.innerText = "DERROTA"; t.style.color = "#ef4444"; i.innerHTML = SVG_ICONS.lose; } 
   }
   s.innerText = data.reason;
+  
+  // Ajustar botón continuar según el resultado
+  const btn = qs('btnBackToLobby');
+  if (data.result === 'ejected' || data.result === 'tie') {
+      btn.innerText = "SIGUIENTE RONDA...";
+  } else {
+      btn.innerText = "VOLVER AL LOBBY";
+  }
+  
   qs('ejectionOverlay').style.display = 'flex';
 });
 
@@ -300,9 +313,7 @@ function updateGameView(room) {
   setTxt('currentImpostorsCount', room.impostors);
 
   if(currentPhase === 'lobby') {
-      // --- FIX CRÍTICO: LIMPIAR DATOS VIEJOS AL VOLVER AL LOBBY ---
       resetLocalGameData();
-      
       const pDisplay = qs('displayPlayers'); if(pDisplay) pDisplay.innerText = room.maxPlayers;
       const iDisplay = qs('displayImpostors'); if(iDisplay) iDisplay.innerText = room.impostors;
       const vDisplay = qs('displayVoteTime'); if(vDisplay && room.config) vDisplay.innerText = room.config.voteTime / 1000;
@@ -313,7 +324,12 @@ function updateGameView(room) {
   else if (currentPhase === 'word') { 
       setDisplay('viewWord', true); 
       updateWordCard(); 
-      qs('btnReady').style.display = 'block'; 
+      // FIX: Check if I am ready
+      if(room.introReady && room.introReady.includes(myId)) {
+          qs('btnReady').style.display = 'none'; 
+      } else {
+          qs('btnReady').style.display = 'block'; 
+      }
       setTxt('statusText', "Memorizando roles..."); 
   } 
   else if (currentPhase === 'turn') { 
