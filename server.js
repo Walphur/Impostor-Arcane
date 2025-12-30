@@ -99,7 +99,7 @@ io.on('connection', (socket) => {
       config: { turnTime: 30000, voteTime: (parseInt(data.voteTime) || 120) * 1000 },
       players: [{ id: socket.id, userId: userId, name: data.name || 'Host', color: assignColor({players:[]}), isDead: false, disconnected: false }],
       phase: 'lobby', roles: {}, votes: {}, spoken: {}, discordLink, discordChannelId, timerText: '--',
-      clues: [], deletionTimer: null, introReady: [], impostorNames: [] // FIXED: Guardar nombres fijos
+      clues: [], deletionTimer: null, introReady: [], impostorNames: [] 
     };
     
     socketRoom[socket.id] = code; socket.join(code);
@@ -197,25 +197,27 @@ io.on('connection', (socket) => {
     if (room.players.length < 3) return; 
     
     clearRoomTimer(room);
-    room.players.forEach(p => p.isDead = false); room.votes = {}; room.spoken = {}; room.clues = []; room.introReady = []; room.impostorNames = [];
+    // RESET PROFUNDO DE VARIABLES DE RONDA
+    room.players.forEach(p => p.isDead = false); 
+    room.votes = {}; room.spoken = {}; room.clues = []; room.introReady = []; room.impostorNames = []; room.roles = {};
 
     const shuffled = shuffle([...room.players]); room.players = shuffled;
     
     const activeCount = room.players.length;
-    if(room.impostors >= activeCount) room.impostors = Math.max(1, activeCount - 1);
+    // Asegurar que no hay más impostores que jugadores - 1
+    const actualImpostors = Math.min(room.impostors, Math.max(1, activeCount - 1));
 
     const possibleImpostorIndices = [];
-    for(let i = 1; i < activeCount; i++) possibleImpostorIndices.push(i);
+    for(let i = 0; i < activeCount; i++) possibleImpostorIndices.push(i);
     const shuffledIndices = shuffle(possibleImpostorIndices);
-    const impostorIndices = shuffledIndices.slice(0, room.impostors);
+    const impostorIndices = shuffledIndices.slice(0, actualImpostors);
 
-    room.roles = {};
     const impostorIds = [];
     room.players.forEach((p, index) => { 
         if(impostorIndices.includes(index)) {
             room.roles[p.id] = 'impostor';
             impostorIds.push(p);
-            room.impostorNames.push(p.name); // FIXED: Guardar nombres
+            room.impostorNames.push(p.name);
         } else {
             room.roles[p.id] = 'crew';
         }
@@ -387,7 +389,6 @@ function finishVoting(room, reason) {
       result = 'impostor'; resReason = "¡Impostores dominan la nave (Mayoría)!"; 
   }
 
-  // FIXED: Usar lista fija de nombres para asegurar que se muestren
   const finalImpostors = room.impostorNames || [];
 
   io.to(room.code).emit('roundResult', { result, secretWord: room.secretWord, reason: resReason, impostors: finalImpostors });
@@ -427,8 +428,9 @@ function resetToLobby(room) {
     room.clues = []; 
     room.introReady = [];
     room.impostorNames = [];
+    room.roles = {};
     emitRoomState(room); 
 }
 
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server 1.5.1 Stable en puerto ${PORT}`));
+httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server 1.5.2 Stable en puerto ${PORT}`));

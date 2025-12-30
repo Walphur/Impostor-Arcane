@@ -10,6 +10,7 @@ let myId = null; let isHost = false; let currentRoom = null; let currentPhase = 
 let selectedCategories = new Set(['lugares', 'comidas', 'objetos']);
 let isPremium = localStorage.getItem('isPremium') === 'true';
 let unlockedCategories = new Set(JSON.parse(localStorage.getItem('videoUnlocks') || '[]')); 
+// VARIABLES LOCALES DE PARTIDA
 let myRole = null; let myWord = null; let myHint = null; let myCategory = null; let myPartners = [];
 const MAX_VIDEO_UNLOCKS = 2; 
 let wakeLock = null; 
@@ -17,9 +18,10 @@ let wakeLock = null;
 const qs = (id) => document.getElementById(id);
 function playSound(id) { const audio = qs(id); if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); } }
 
+// --- NUEVOS ICONOS (DERROTA = CALAVERA) ---
 const SVG_ICONS = {
     win: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>',
-    lose: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 3 2 3-2 3-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>',
+    lose: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c-4 0-7 3-7 7 0 2 1 4 2 6 0 4 3 7 5 7 2 0 5-3 5-7 0-2 1-4 2-6-3 0-6-3-7-7z"/><path d="M9 11h.01"/><path d="M15 11h.01"/><path d="M10 16a4 4 0 0 0 4 0"/></svg>',
     tie: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>',
     boot: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16v-4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v4"/><path d="M22 16v-4h-2a2 2 0 0 0-2 2v2"/><path d="M2 16v-4h2a2 2 0 0 1 2 2v2"/><path d="M4 22h16a2 2 0 0 0 2-2V16H2v4a2 2 0 0 0 2 2z"/></svg>'
 };
@@ -87,10 +89,7 @@ async function handleCreateRoomFlow() {
 document.addEventListener('DOMContentLoaded', async () => {
   if (isPremium) unlockedCategories = new Set(CATEGORIES_DATA.map(c => c.id));
   await initAdMob(); 
-  
-  // --- ARREGLO CRÍTICO: Prevenir error si el HTML no está listo ---
   renderCategoriesGrid(); 
-  
   updateCategoriesSummary(); 
   setupEventListeners();
   const savedName = localStorage.getItem('playerName'); if(savedName) { qs('hostName').value = savedName; qs('joinName').value = savedName; }
@@ -116,11 +115,9 @@ function setupEventListeners() {
   const screens = ['screenHome', 'screenCreate', 'screenJoin', 'screenCategories', 'screenPremium'];
   const show = (id) => screens.forEach(s => { const el = qs(s); if(el) el.style.display = (s === id ? 'flex' : 'none'); });
 
-  // Botones Home
   const btnCreate = qs('btnGoCreate'); if(btnCreate) btnCreate.onclick = () => { playSound('soundClick'); show('screenCreate'); };
   const btnJoin = qs('btnGoJoin'); if(btnJoin) btnJoin.onclick = () => { playSound('soundClick'); show('screenJoin'); };
   
-  // Botones navegación
   const backCreate = qs('backFromCreate'); if(backCreate) backCreate.onclick = () => { playSound('soundClick'); show('screenHome'); };
   const backJoin = qs('backFromJoin'); if(backJoin) backJoin.onclick = () => { playSound('soundClick'); show('screenHome'); };
   
@@ -128,14 +125,12 @@ function setupEventListeners() {
   const backCat = qs('backFromCategories'); if(backCat) backCat.onclick = () => { playSound('soundClick'); show('screenCreate'); };
   const btnSaveCat = qs('btnSaveCategories'); if(btnSaveCat) btnSaveCat.onclick = () => { playSound('soundClick'); updateCategoriesSummary(); show('screenCreate'); };
   
-  // Botones Premium y Ayuda
   const btnHow = qs('btnHowToPlay'); if(btnHow) btnHow.onclick = () => qs('howToPlayOverlay').style.display = 'flex';
   const btnCloseHow = qs('btnCloseHowToPlay'); if(btnCloseHow) btnCloseHow.onclick = () => qs('howToPlayOverlay').style.display = 'none';
 
   const btnPrem = qs('btnPremium'); if(btnPrem) btnPrem.onclick = () => { playSound('soundClick'); show('screenPremium'); };
   const btnBackPrem = qs('btnBackFromPremium'); if(btnBackPrem) btnBackPrem.onclick = () => { playSound('soundClick'); show('screenHome'); };
   
-  // Acciones Principales
   const btnCreateRoom = qs('btnCreateRoom'); if(btnCreateRoom) btnCreateRoom.onclick = () => { playSound('soundClick'); handleCreateRoomFlow(); };
   const btnJoinRoom = qs('btnJoinRoom'); if(btnJoinRoom) btnJoinRoom.onclick = () => { playSound('soundClick'); joinRoom(); };
   
@@ -200,8 +195,7 @@ function setupEventListeners() {
 
 function renderCategoriesGrid() {
   const grid = qs('categoriesGrid'); 
-  if(!grid) return; // --- AQUÍ ESTABA EL ERROR: Si no encuentra el grid, salía error y mataba todo el script ---
-  
+  if(!grid) return; 
   grid.innerHTML = '';
   CATEGORIES_DATA.forEach(cat => {
     const btn = document.createElement('div');
@@ -306,57 +300,16 @@ function updateGameView(room) {
   setTxt('currentImpostorsCount', room.impostors);
 
   if(currentPhase === 'lobby') {
+      // --- FIX CRÍTICO: LIMPIAR DATOS VIEJOS AL VOLVER AL LOBBY ---
+      resetLocalGameData();
+      
       const pDisplay = qs('displayPlayers'); if(pDisplay) pDisplay.innerText = room.maxPlayers;
       const iDisplay = qs('displayImpostors'); if(iDisplay) iDisplay.innerText = room.impostors;
       const vDisplay = qs('displayVoteTime'); if(vDisplay && room.config) vDisplay.innerText = room.config.voteTime / 1000;
       const btns = document.querySelectorAll('.mini-controls button'); btns.forEach(b => b.disabled = !isHost);
-  }
-
-  const list = document.getElementById('playersList');
-  if (list) {
-      list.innerHTML = ''; 
-      (room.players || []).forEach(p => {
-        try {
-            const pName = p.name ? p.name : 'Agente'; 
-            const pColor = p.color ? p.color : '#64748b';
-            const initial = pName.charAt(0).toUpperCase();
-            const row = document.createElement('div'); row.className = 'player-row';
-            
-            if(p.isDead) row.style.opacity = '0.5';
-            if(p.disconnected) row.style.border = '1px dashed #ef4444'; 
-            else if(room.currentTurnId === p.id) row.style.border = '1px solid #3b82f6';
-
-            const badge = p.id === room.hostId ? '<span style="font-size:0.6rem;background:#ffffff20;padding:2px 6px;border-radius:4px;margin-left:auto;">HOST</span>' : '';
-            const discIcon = p.disconnected ? '🔌' : '';
-            const deadIcon = p.isDead ? '💀' : '';
-            
-            // BOTON KICK CENTRADO
-            let kickBtn = '';
-            if(isHost && currentPhase === 'lobby' && p.id !== myId) {
-                kickBtn = `<div style="display:flex; align-items:center; justify-content:center; width:30px;"><button class="btn-kick" onclick="socket.emit('kickPlayer', '${p.id}')">✖</button></div>`;
-            }
-
-            row.innerHTML = `<div style="display:flex;align-items:center;"><div style="width:28px;height:28px;background:${pColor};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#000;font-size:0.8rem;">${initial}</div><div style="font-weight:600;font-size:0.9rem;margin-left:10px; color:#fff;">${pName} ${discIcon} ${deadIcon}</div></div><div style="display:flex;align-items:center;gap:5px;">${badge}${kickBtn}</div>`;
-            list.appendChild(row);
-        } catch (err) {}
-      });
-  }
-
-  const btnStart = document.getElementById('btnStartRound'); 
-  if (btnStart) {
-      if (isHost && currentPhase === 'lobby') btnStart.style.display = 'block';
-      else btnStart.style.display = 'none';
-  }
-  
-  const btnDiscord = document.getElementById('btnDiscord'); if (btnDiscord) btnDiscord.style.display = room.discordLink ? 'flex' : 'none';
-  const btnCancel = document.getElementById('btnCancelRound'); if(btnCancel) btnCancel.style.display = (isHost && currentPhase !== 'lobby') ? 'block' : 'none';
-
-  ['viewLobby', 'viewWord', 'viewTurn', 'viewVote'].forEach(v => setDisplay(v, false));
-
-  if (currentPhase === 'lobby') { 
       setDisplay('viewLobby', true); 
       const st = document.getElementById('statusText'); if(st) st.innerHTML = isHost ? "Inicia cuando estén listos." : `Esperando al Host...`; 
-  } 
+  }
   else if (currentPhase === 'word') { 
       setDisplay('viewWord', true); 
       updateWordCard(); 
@@ -396,11 +349,69 @@ function updateGameView(room) {
       renderVoteGrid(room); 
       setTxt('statusText', "Votación en curso."); 
   }
+
+  // LISTA JUGADORES
+  const list = document.getElementById('playersList');
+  if (list) {
+      list.innerHTML = ''; 
+      (room.players || []).forEach(p => {
+        try {
+            const pName = p.name ? p.name : 'Agente'; 
+            const pColor = p.color ? p.color : '#64748b';
+            const initial = pName.charAt(0).toUpperCase();
+            const row = document.createElement('div'); row.className = 'player-row';
+            
+            if(p.isDead) row.style.opacity = '0.5';
+            if(p.disconnected) row.style.border = '1px dashed #ef4444'; 
+            else if(room.currentTurnId === p.id) row.style.border = '1px solid #3b82f6';
+
+            const badge = p.id === room.hostId ? '<span style="font-size:0.6rem;background:#ffffff20;padding:2px 6px;border-radius:4px;margin-left:auto;">HOST</span>' : '';
+            const discIcon = p.disconnected ? '🔌' : '';
+            const deadIcon = p.isDead ? '💀' : '';
+            
+            let kickBtn = '';
+            if(isHost && currentPhase === 'lobby' && p.id !== myId) {
+                kickBtn = `<div style="display:flex; align-items:center; justify-content:center; width:30px;"><button class="btn-kick" onclick="socket.emit('kickPlayer', '${p.id}')">✖</button></div>`;
+            }
+
+            row.innerHTML = `<div style="display:flex;align-items:center;"><div style="width:28px;height:28px;background:${pColor};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#000;font-size:0.8rem;">${initial}</div><div style="font-weight:600;font-size:0.9rem;margin-left:10px; color:#fff;">${pName} ${discIcon} ${deadIcon}</div></div><div style="display:flex;align-items:center;gap:5px;">${badge}${kickBtn}</div>`;
+            list.appendChild(row);
+        } catch (err) {}
+      });
+  }
+
+  const btnStart = document.getElementById('btnStartRound'); 
+  if (btnStart) {
+      if (isHost && currentPhase === 'lobby') btnStart.style.display = 'block';
+      else btnStart.style.display = 'none';
+  }
+  
+  const btnDiscord = document.getElementById('btnDiscord'); if (btnDiscord) btnDiscord.style.display = room.discordLink ? 'flex' : 'none';
+  const btnCancel = document.getElementById('btnCancelRound'); if(btnCancel) btnCancel.style.display = (isHost && currentPhase !== 'lobby') ? 'block' : 'none';
+
+  // VISIBILIDAD PANELES
+  ['viewLobby', 'viewWord', 'viewTurn', 'viewVote'].forEach(v => {
+      const el = qs(v);
+      if(currentPhase === 'lobby' && v === 'viewLobby') el.style.display = 'block';
+      else if(currentPhase === 'word' && v === 'viewWord') el.style.display = 'block';
+      else if(currentPhase === 'turn' && v === 'viewTurn') el.style.display = 'block';
+      else if(currentPhase === 'vote' && v === 'viewVote') el.style.display = 'block';
+      else el.style.display = 'none';
+  });
+}
+
+function resetLocalGameData() {
+    myRole = null; myWord = null; myHint = null; myCategory = null; myPartners = [];
+    const card = qs('secretCardInner'); 
+    if(card) {
+        card.classList.remove('flipped');
+        card.classList.remove('impostor-card');
+    }
 }
 
 function updateWordCard() { 
-    const rt = qs('roleTitle'); if(rt) rt.innerText = myRole; 
-    const sw = qs('secretWordDisplay'); if(sw) sw.innerText = myWord; 
+    const rt = qs('roleTitle'); if(rt) rt.innerText = myRole || '...'; 
+    const sw = qs('secretWordDisplay'); if(sw) sw.innerText = myWord || '...'; 
     const wh = qs('wordHint'); 
     
     if(myRole === 'IMPOSTOR') {
@@ -408,9 +419,9 @@ function updateWordCard() {
         if(myPartners && myPartners.length > 0) {
             partnersText = `<br><span style="color:#f87171; font-size:0.8rem;">Aliados: ${myPartners.join(', ')}</span>`;
         }
-        if(wh) wh.innerHTML = `${myHint}<br><span style="color:#fbbf24; font-weight:bold;">Categoría: ${myCategory}</span>${partnersText}`;
+        if(wh) wh.innerHTML = `${myHint || ''}<br><span style="color:#fbbf24; font-weight:bold;">Categoría: ${myCategory || ''}</span>${partnersText}`;
     } else {
-        if(wh) wh.innerText = myHint;
+        if(wh) wh.innerText = myHint || '...';
     }
 }
 
