@@ -19,12 +19,22 @@ body {
 .btn-secondary:hover { border-color: #94a3b8; color: #fff; }
 .btn-big { width: 100%; font-size: 1.1rem; padding: 16px; display: block; }
 
-/* FIXED: Botones compactos para la ronda de turnos */
+/* Botones compactos para la ronda de turnos */
 .btn-compact { 
     padding: 10px 15px; 
     font-size: 0.9rem; 
     border-radius: 8px;
     height: 100%;
+}
+
+/* NUEVO: Botón de barra pequeña (Cómo Jugar) */
+.btn-small-bar {
+    width: 100%;
+    padding: 10px;
+    font-size: 0.9rem;
+    margin-top: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .btn-gold { background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%); color: #fff; font-weight: 700; border: none; border-radius: 12px; box-shadow: 0 4px 0 #92400e; text-transform: uppercase; letter-spacing: 1px; transition: all 0.1s; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
@@ -37,7 +47,7 @@ body {
 .btn-exit-arrow { width: 14px; height: 14px; filter: invert(1); margin-right: 6px; }
 .discord-icon-svg { width: 20px; height: 20px; margin-right: 6px; fill: currentColor; }
 
-/* NUEVO: Botón Kick */
+/* Botón Kick */
 .btn-kick { background: none; border: 1px solid #ef4444; color: #ef4444; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.8rem; font-weight: bold; margin: 0; padding: 0; }
 .btn-kick:active { background: #ef4444; color: white; }
 
@@ -128,7 +138,7 @@ body {
 .loading-dots span:nth-child(3) { animation-delay: 1s; }
 @keyframes dots { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
 
-/* FIXED: Ocultar solo el texto, dejar el icono en movil */
+/* Ocultar solo el texto, dejar el icono en movil */
 @media (max-width: 768px) {
   .main-grid { grid-template-columns: 1fr; } 
   .config-counters { grid-template-columns: 1fr; }

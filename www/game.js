@@ -65,7 +65,7 @@ const CATEGORIES_DATA = [
   { id: 'profesiones', premium: true, name: 'Profesiones', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f472b6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>' },
   { id: 'deportes', premium: true, name: 'Deportes', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>' },
   { id: 'tecnologia', premium: true, name: 'Tecnología', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>' },
-  { id: 'fantasia', premium: true, name: 'Fantasía', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L12 3Z"/></svg>' }
+  { id: 'fantasia', premium: true, name: 'Fantasía', icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>' }
 ];
 
 async function initAdMob() {
@@ -86,7 +86,13 @@ async function handleCreateRoomFlow() {
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (isPremium) unlockedCategories = new Set(CATEGORIES_DATA.map(c => c.id));
-  await initAdMob(); renderCategoriesGrid(); updateCategoriesSummary(); setupEventListeners();
+  await initAdMob(); 
+  
+  // --- ARREGLO CRÍTICO: Prevenir error si el HTML no está listo ---
+  renderCategoriesGrid(); 
+  
+  updateCategoriesSummary(); 
+  setupEventListeners();
   const savedName = localStorage.getItem('playerName'); if(savedName) { qs('hostName').value = savedName; qs('joinName').value = savedName; }
   setupModeSelectors(); 
   requestWakeLock();
@@ -95,11 +101,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupModeSelectors() {
     const modes = ['modeText', 'modeGroup', 'modeDiscord'];
     modes.forEach(m => {
-        qs(m).addEventListener('click', () => {
-            modes.forEach(om => qs(om).classList.remove('selected-mode'));
-            qs(m).classList.add('selected-mode');
-            playSound('soundClick');
-        });
+        const el = qs(m);
+        if(el) {
+            el.addEventListener('click', () => {
+                modes.forEach(om => qs(om).classList.remove('selected-mode'));
+                el.classList.add('selected-mode');
+                playSound('soundClick');
+            });
+        }
     });
 }
 
@@ -107,48 +116,64 @@ function setupEventListeners() {
   const screens = ['screenHome', 'screenCreate', 'screenJoin', 'screenCategories', 'screenPremium'];
   const show = (id) => screens.forEach(s => { const el = qs(s); if(el) el.style.display = (s === id ? 'flex' : 'none'); });
 
-  qs('btnGoCreate').onclick = () => { playSound('soundClick'); show('screenCreate'); };
-  qs('btnGoJoin').onclick = () => { playSound('soundClick'); show('screenJoin'); };
-  qs('backFromCreate').onclick = () => { playSound('soundClick'); show('screenHome'); };
-  qs('backFromJoin').onclick = () => { playSound('soundClick'); show('screenHome'); };
-  qs('btnOpenCategories').onclick = () => { playSound('soundClick'); show('screenCategories'); };
-  qs('backFromCategories').onclick = () => { playSound('soundClick'); show('screenCreate'); };
-  qs('btnSaveCategories').onclick = () => { playSound('soundClick'); updateCategoriesSummary(); show('screenCreate'); };
+  // Botones Home
+  const btnCreate = qs('btnGoCreate'); if(btnCreate) btnCreate.onclick = () => { playSound('soundClick'); show('screenCreate'); };
+  const btnJoin = qs('btnGoJoin'); if(btnJoin) btnJoin.onclick = () => { playSound('soundClick'); show('screenJoin'); };
   
-  qs('btnHowToPlay').onclick = () => qs('howToPlayOverlay').style.display = 'flex';
-  qs('btnCloseHowToPlay').onclick = () => qs('howToPlayOverlay').style.display = 'none';
+  // Botones navegación
+  const backCreate = qs('backFromCreate'); if(backCreate) backCreate.onclick = () => { playSound('soundClick'); show('screenHome'); };
+  const backJoin = qs('backFromJoin'); if(backJoin) backJoin.onclick = () => { playSound('soundClick'); show('screenHome'); };
+  
+  const btnOpenCat = qs('btnOpenCategories'); if(btnOpenCat) btnOpenCat.onclick = () => { playSound('soundClick'); show('screenCategories'); };
+  const backCat = qs('backFromCategories'); if(backCat) backCat.onclick = () => { playSound('soundClick'); show('screenCreate'); };
+  const btnSaveCat = qs('btnSaveCategories'); if(btnSaveCat) btnSaveCat.onclick = () => { playSound('soundClick'); updateCategoriesSummary(); show('screenCreate'); };
+  
+  // Botones Premium y Ayuda
+  const btnHow = qs('btnHowToPlay'); if(btnHow) btnHow.onclick = () => qs('howToPlayOverlay').style.display = 'flex';
+  const btnCloseHow = qs('btnCloseHowToPlay'); if(btnCloseHow) btnCloseHow.onclick = () => qs('howToPlayOverlay').style.display = 'none';
 
   const btnPrem = qs('btnPremium'); if(btnPrem) btnPrem.onclick = () => { playSound('soundClick'); show('screenPremium'); };
   const btnBackPrem = qs('btnBackFromPremium'); if(btnBackPrem) btnBackPrem.onclick = () => { playSound('soundClick'); show('screenHome'); };
   
-  qs('btnCreateRoom').onclick = () => { playSound('soundClick'); handleCreateRoomFlow(); };
-  qs('btnJoinRoom').onclick = () => { playSound('soundClick'); joinRoom(); };
+  // Acciones Principales
+  const btnCreateRoom = qs('btnCreateRoom'); if(btnCreateRoom) btnCreateRoom.onclick = () => { playSound('soundClick'); handleCreateRoomFlow(); };
+  const btnJoinRoom = qs('btnJoinRoom'); if(btnJoinRoom) btnJoinRoom.onclick = () => { playSound('soundClick'); joinRoom(); };
   
-  qs('btnStartRound').onclick = () => { 
+  const btnStart = qs('btnStartRound');
+  if(btnStart) btnStart.onclick = () => { 
       if(isHost) {
           if(currentRoom && currentRoom.players.length < 3) return showModal("Faltan Jugadores", "Se necesitan mínimo 3 para jugar.");
           showModal("¿Iniciar Partida?", "Todos recibirán sus roles.", () => socket.emit('startRound'));
       }
   };
   
-  qs('btnExit').onclick = () => { showModal("¿Salir?", "Volverás al menú principal.", () => location.reload()); };
-  qs('btnBackToLobby').onclick = () => { qs('ejectionOverlay').style.display = 'none'; if(currentRoom) updateGameView(currentRoom); };
-  qs('btnReady').onclick = () => { socket.emit('skipIntro'); qs('btnReady').style.display='none'; };
+  const btnExit = qs('btnExit'); if(btnExit) btnExit.onclick = () => { showModal("¿Salir?", "Volverás al menú principal.", () => location.reload()); };
+  const btnBackLobby = qs('btnBackToLobby'); if(btnBackLobby) btnBackLobby.onclick = () => { qs('ejectionOverlay').style.display = 'none'; if(currentRoom) updateGameView(currentRoom); };
+  const btnReady = qs('btnReady'); if(btnReady) btnReady.onclick = () => { socket.emit('skipIntro'); qs('btnReady').style.display='none'; };
 
   const copyBtn = qs('btnCopyCode');
-  copyBtn.onclick = () => { 
-      const code = qs('roomCodeDisplay').innerText; 
-      if(code !== '------') { 
-          navigator.clipboard.writeText(code); 
-          copyBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'; 
-          setTimeout(() => { copyBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>'; }, 2000); 
-      } 
-  };
+  if(copyBtn) {
+      copyBtn.onclick = () => { 
+          const code = qs('roomCodeDisplay').innerText; 
+          if(code !== '------') { 
+              navigator.clipboard.writeText(code); 
+              copyBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'; 
+              setTimeout(() => { copyBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>'; }, 2000); 
+          } 
+      };
+  }
 
-  qs('btnSkipVote').onclick = () => { if(!currentRoom || currentPhase !== 'vote') return; socket.emit('submitVote', { targetId: 'skip' }); qs('voteSubtitle').innerText = 'Votaste saltar.'; qs('btnSkipVote').style.opacity = '0.5'; };
-  qs('btnEndTurn').onclick = () => { if(currentRoom && currentPhase === 'turn') socket.emit('endTurnEarly'); };
-  qs('btnDiscord').onclick = () => { if(currentRoom?.discordLink) window.open(currentRoom.discordLink, '_blank'); };
-  qs('btnSendClue').onclick = () => { const input = qs('inputClue'); const text = input.value.trim(); if(!text) return; socket.emit('submitClue', { text: text }); input.value = ''; };
+  const btnSkip = qs('btnSkipVote');
+  if(btnSkip) btnSkip.onclick = () => { if(!currentRoom || currentPhase !== 'vote') return; socket.emit('submitVote', { targetId: 'skip' }); qs('voteSubtitle').innerText = 'Votaste saltar.'; qs('btnSkipVote').style.opacity = '0.5'; };
+  
+  const btnEnd = qs('btnEndTurn');
+  if(btnEnd) btnEnd.onclick = () => { if(currentRoom && currentPhase === 'turn') socket.emit('endTurnEarly'); };
+  
+  const btnDiscord = qs('btnDiscord');
+  if(btnDiscord) btnDiscord.onclick = () => { if(currentRoom?.discordLink) window.open(currentRoom.discordLink, '_blank'); };
+  
+  const btnSend = qs('btnSendClue');
+  if(btnSend) btnSend.onclick = () => { const input = qs('inputClue'); const text = input.value.trim(); if(!text) return; socket.emit('submitClue', { text: text }); input.value = ''; };
 
   const btnCancel = document.getElementById('btnCancelRound');
   if(btnCancel) btnCancel.onclick = () => { showModal("¿Cancelar Ronda?", "Volverán todos al Lobby.", () => socket.emit('cancelRound')); };
@@ -174,7 +199,10 @@ function setupEventListeners() {
 }
 
 function renderCategoriesGrid() {
-  const grid = qs('categoriesGrid'); grid.innerHTML = '';
+  const grid = qs('categoriesGrid'); 
+  if(!grid) return; // --- AQUÍ ESTABA EL ERROR: Si no encuentra el grid, salía error y mataba todo el script ---
+  
+  grid.innerHTML = '';
   CATEGORIES_DATA.forEach(cat => {
     const btn = document.createElement('div');
     const isSelected = selectedCategories.has(cat.id); const isLocked = cat.premium && !unlockedCategories.has(cat.id);
@@ -187,10 +215,14 @@ function renderCategoriesGrid() {
   });
 }
 
-function updateCategoriesSummary() { qs('categoriesSummary').innerText = CATEGORIES_DATA.filter(c => selectedCategories.has(c.id)).map(c => c.name).join(', '); }
+function updateCategoriesSummary() { 
+    const el = qs('categoriesSummary');
+    if(el) el.innerText = CATEGORIES_DATA.filter(c => selectedCategories.has(c.id)).map(c => c.name).join(', '); 
+}
 
 window.adjustValue = function(id, d) { 
-    const i = qs(id); let v = parseInt(i.value); 
+    const i = qs(id); if(!i) return;
+    let v = parseInt(i.value); 
     if(id==='maxPlayers') v = Math.min(15, Math.max(3, v + d)); 
     if(id==='impostors') v = Math.min(4, Math.max(1, v + d)); 
     if(id==='timeVote') v = Math.min(300, Math.max(60, v + d)); 
@@ -204,8 +236,8 @@ window.adjustValue = function(id, d) {
 function createRoom() {
   if(selectedCategories.size === 0) return alert('Elige categorías');
   let mode = 'group'; 
-  if(qs('modeText').classList.contains('selected-mode')) mode = 'text';
-  else if(qs('modeDiscord').classList.contains('selected-mode')) mode = 'discord';
+  const mt = qs('modeText'); if(mt && mt.classList.contains('selected-mode')) mode = 'text';
+  const md = qs('modeDiscord'); if(md && md.classList.contains('selected-mode')) mode = 'discord';
   socket.emit('createRoom', { name: qs('hostName').value || 'Agente', maxPlayers: qs('maxPlayers').value, impostors: qs('impostors').value, categories: Array.from(selectedCategories), voteTime: qs('timeVote').value, mode: mode, userId: MY_DEVICE_ID }, handleJoin);
 }
 function joinRoom() { socket.emit('joinRoom', { name: qs('joinName').value || 'Agente', roomCode: qs('joinCode').value, userId: MY_DEVICE_ID }, handleJoin); }
@@ -298,7 +330,7 @@ function updateGameView(room) {
             const discIcon = p.disconnected ? '🔌' : '';
             const deadIcon = p.isDead ? '💀' : '';
             
-            // FIXED: Centrado del botón Kick
+            // BOTON KICK CENTRADO
             let kickBtn = '';
             if(isHost && currentPhase === 'lobby' && p.id !== myId) {
                 kickBtn = `<div style="display:flex; align-items:center; justify-content:center; width:30px;"><button class="btn-kick" onclick="socket.emit('kickPlayer', '${p.id}')">✖</button></div>`;
