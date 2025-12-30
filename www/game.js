@@ -17,7 +17,6 @@ let wakeLock = null;
 const qs = (id) => document.getElementById(id);
 function playSound(id) { const audio = qs(id); if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); } }
 
-// --- CAMBIO: AHORA USA TUS IMÁGENES PNG ---
 const IMG_ICONS = {
     win: '<img src="images/victoria_trofeo.png" class="result-img" alt="Victoria">',
     lose: '<img src="images/derrota_calavera.png" class="result-img" alt="Derrota">',
@@ -88,11 +87,7 @@ async function handleCreateRoomFlow() {
 document.addEventListener('DOMContentLoaded', async () => {
   if (isPremium) unlockedCategories = new Set(CATEGORIES_DATA.map(c => c.id));
   await initAdMob(); 
-  
-  // --- PROTECCIÓN CONTRA EL ERROR NULL ---
-  const grid = qs('categoriesGrid');
-  if(grid) renderCategoriesGrid(); 
-  
+  const grid = qs('categoriesGrid'); if(grid) renderCategoriesGrid(); 
   updateCategoriesSummary(); 
   setupEventListeners();
   const savedName = localStorage.getItem('playerName'); if(savedName) { qs('hostName').value = savedName; qs('joinName').value = savedName; }
@@ -116,7 +111,11 @@ function setupModeSelectors() {
 
 function setupEventListeners() {
   const screens = ['screenHome', 'screenCreate', 'screenJoin', 'screenCategories', 'screenPremium'];
-  const show = (id) => screens.forEach(s => { const el = qs(s); if(el) el.style.display = (s === id ? 'flex' : 'none'); });
+  const show = (id) => {
+      screens.forEach(s => { const el = qs(s); if(el) el.style.display = (s === id ? 'flex' : 'none'); });
+      // --- NUEVO: REFRESCAR LISTA SI ENTRO A JOIN ---
+      if(id === 'screenJoin') refreshPublicRooms();
+  };
 
   const btnCreate = qs('btnGoCreate'); if(btnCreate) btnCreate.onclick = () => { playSound('soundClick'); show('screenCreate'); };
   const btnJoin = qs('btnGoJoin'); if(btnJoin) btnJoin.onclick = () => { playSound('soundClick'); show('screenJoin'); };
@@ -196,6 +195,35 @@ function setupEventListeners() {
   }
 }
 
+// --- NUEVO: FUNCIONES DE LISTA DE SALAS ---
+function refreshPublicRooms() {
+    socket.emit('getPublicRooms');
+}
+socket.on('publicRoomsList', (rooms) => {
+    const list = qs('publicRoomsContainer');
+    if(!list) return;
+    list.innerHTML = '';
+    if(rooms.length === 0) {
+        list.innerHTML = '<div style="color:#64748b; font-style:italic; padding:10px;">No hay salas públicas ahora.</div>';
+        return;
+    }
+    rooms.forEach(r => {
+        const div = document.createElement('div');
+        div.className = 'player-row'; // Reusamos estilo de fila
+        div.style.cursor = 'pointer';
+        div.innerHTML = `<div style="flex:1;">
+            <div style="font-weight:bold; color:#fff;">${r.name}</div>
+            <div style="font-size:0.75rem; color:#94a3b8;">${r.players}/${r.max} - ${r.mode === 'discord' ? '🎧 Discord' : (r.mode === 'text' ? '📝 Chat' : '🗣️ Grupo')}</div>
+        </div>
+        <button class="btn-main btn-primary" style="padding:6px 12px; font-size:0.8rem;">UNIRSE</button>`;
+        div.onclick = () => {
+            qs('joinCode').value = r.code;
+            joinRoom();
+        };
+        list.appendChild(div);
+    });
+});
+
 function renderCategoriesGrid() {
   const grid = qs('categoriesGrid'); 
   if(!grid) return; 
@@ -217,19 +245,8 @@ function updateCategoriesSummary() {
     if(el) el.innerText = CATEGORIES_DATA.filter(c => selectedCategories.has(c.id)).map(c => c.name).join(', '); 
 }
 
-// FUNCION DE CREACIÓN
-window.adjustValue = function(id, d) { 
-    const i = qs(id); if(!i) return;
-    let v = parseInt(i.value); 
-    if(id==='maxPlayers') v = Math.min(15, Math.max(3, v + d)); 
-    if(id==='impostors') v = Math.min(4, Math.max(1, v + d)); 
-    if(id==='timeVote') v = Math.min(300, Math.max(60, v + d)); 
-    i.value = v; 
-    if(id==='maxPlayers') qs('displayPlayers').innerText=v; 
-    if(id==='impostors') qs('displayImpostors').innerText=v; 
-    if(id==='timeVote') qs('displayVoteTime').innerText=v;
-    if(isHost && currentRoom && currentPhase === 'lobby') { socket.emit('updateSettings', { [id]: v }); }
-};
+// --- FIX: AHORA SOLO SIRVE PARA EL LOBBY, YA NO PARA CREAR ---
+window.adjustValue = function(id, d) { /* Esta función queda obsoleta en create screen pero útil si quisieras reusarla */ };
 
 window.changeLobbySetting = function(key, d) {
     if(!isHost || !currentRoom) return;
@@ -249,7 +266,18 @@ function createRoom() {
   let mode = 'group'; 
   const mt = qs('modeText'); if(mt && mt.classList.contains('selected-mode')) mode = 'text';
   const md = qs('modeDiscord'); if(md && md.classList.contains('selected-mode')) mode = 'discord';
-  socket.emit('createRoom', { name: qs('hostName').value || 'Agente', maxPlayers: qs('maxPlayers').value, impostors: qs('impostors').value, categories: Array.from(selectedCategories), voteTime: qs('timeVote').value, mode: mode, userId: MY_DEVICE_ID }, handleJoin);
+  
+  // LEER CHECKBOX DE PRIVACIDAD
+  const isPublic = qs('chkPublicRoom') ? qs('chkPublicRoom').checked : false;
+
+  // FIX: YA NO ENVIAMOS SETTINGS (Usamos defaults del server)
+  socket.emit('createRoom', { 
+      name: qs('hostName').value || 'Agente', 
+      categories: Array.from(selectedCategories), 
+      mode: mode,
+      isPublic: isPublic, // Nuevo param
+      userId: MY_DEVICE_ID 
+  }, handleJoin);
 }
 function joinRoom() { socket.emit('joinRoom', { name: qs('joinName').value || 'Agente', roomCode: qs('joinCode').value, userId: MY_DEVICE_ID }, handleJoin); }
 function handleJoin(res) {
@@ -280,14 +308,12 @@ socket.on('roundResult', (data) => {
 
   if (data.result === 'tie') { 
       playSound('soundLose'); 
-      t.innerText = "Nadie Expulsado"; t.style.color = "#facc15"; 
-      i.innerHTML = IMG_ICONS.tie; // USO DE IMAGEN
+      t.innerText = "Nadie Expulsado"; t.style.color = "#facc15"; i.innerHTML = IMG_ICONS.tie; 
       if(detailsBox) detailsBox.style.display = 'none';
   } 
   else if (data.result === 'ejected') {
       playSound('soundLose'); 
-      t.innerText = "EXPULSADO"; t.style.color = "#f97316"; 
-      i.innerHTML = IMG_ICONS.boot; // USO DE IMAGEN
+      t.innerText = "EXPULSADO"; t.style.color = "#f97316"; i.innerHTML = IMG_ICONS.boot; 
       if(detailsBox) detailsBox.style.display = 'none';
   }
   else {
@@ -296,16 +322,8 @@ socket.on('roundResult', (data) => {
       qs('finalImpostors').innerText = data.impostors.join(', '); 
       
       const iWon = (data.result === 'crew' && myRole === 'TRIPULANTE') || (data.result === 'impostor' && myRole === 'IMPOSTOR');
-      if(iWon) { 
-          playSound('soundWin'); 
-          t.innerText = "¡VICTORIA!"; t.style.color = "#4ade80"; 
-          i.innerHTML = IMG_ICONS.win; // USO DE IMAGEN
-      } 
-      else { 
-          playSound('soundLose'); 
-          t.innerText = "DERROTA"; t.style.color = "#ef4444"; 
-          i.innerHTML = IMG_ICONS.lose; // USO DE IMAGEN
-      } 
+      if(iWon) { playSound('soundWin'); t.innerText = "¡VICTORIA!"; t.style.color = "#4ade80"; i.innerHTML = IMG_ICONS.win; } 
+      else { playSound('soundLose'); t.innerText = "DERROTA"; t.style.color = "#ef4444"; i.innerHTML = IMG_ICONS.lose; } 
   }
   s.innerText = data.reason;
   
@@ -336,8 +354,6 @@ function updateGameView(room) {
 
   if(currentPhase === 'lobby') {
       resetLocalGameData();
-      
-      // AUTO CIERRE DE OVERLAY SI VUELVE A LOBBY
       const overlay = document.getElementById('ejectionOverlay');
       if(overlay) overlay.style.display = 'none';
 

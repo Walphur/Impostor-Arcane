@@ -68,27 +68,41 @@ function startTimer(room, seconds, onEnd) {
 function serializeRoom(room) {
   return {
     code: room.code, hostId: room.hostId, phase: room.phase, mode: room.mode,
-    config: room.config, 
-    maxPlayers: room.maxPlayers, 
+    config: room.config, maxPlayers: room.maxPlayers, 
     players: room.players.map(p => ({ 
         id: p.id, userId: p.userId, name: p.name, color: p.color, isDead: p.isDead, disconnected: p.disconnected 
     })),
     currentTurnId: room.currentTurnId, timerText: room.timerText, remaining: room.remaining,
     votes: room.votes, impostors: room.impostors, discordLink: room.discordLink,
-    clues: room.clues || [],
-    introReady: room.introReady || [],
-    impostorNames: room.impostorNames || []
+    clues: room.clues || [], introReady: room.introReady || [], impostorNames: room.impostorNames || []
   };
 }
 function emitRoomState(room) { if (room) io.to(room.code).emit('roomState', serializeRoom(room)); }
 
 io.on('connection', (socket) => {
+  
+  // --- NUEVO: LISTAR SALAS PÚBLICAS ---
+  socket.on('getPublicRooms', () => {
+      const publicRooms = Object.values(rooms)
+          .filter(r => r.isPublic && r.phase === 'lobby' && r.players.length < r.maxPlayers)
+          .map(r => ({
+              code: r.code,
+              name: r.players[0] ? r.players[0].name + "'s Sala" : "Sala Pública",
+              players: r.players.length,
+              max: r.maxPlayers,
+              mode: r.mode
+          }));
+      socket.emit('publicRoomsList', publicRooms);
+  });
+
   socket.on('createRoom', async (data, cb) => {
     const code = generateCode();
-    const maxP = Math.min(15, Math.max(3, parseInt(data.maxPlayers) || 10));
-    const imps = Math.min(maxP - 1, Math.max(1, parseInt(data.impostors) || 2));
+    // Defaults por si vienen vacíos (ahora que quitamos los controles de Crear)
+    const maxP = 10; 
+    const imps = 2;
     const userId = data.userId || socket.id;
     const mode = data.mode || 'group'; 
+    const isPublic = data.isPublic || false; // Nuevo Flag
 
     let discordLink = null; let discordChannelId = null;
     if (mode === 'discord' && discordClient && discordReady) {
@@ -97,8 +111,8 @@ io.on('connection', (socket) => {
     }
 
     rooms[code] = {
-      code, hostId: socket.id, maxPlayers: maxP, impostors: imps, categories: data.categories, mode: mode,
-      config: { turnTime: 30000, voteTime: (parseInt(data.voteTime) || 120) * 1000 },
+      code, hostId: socket.id, maxPlayers: maxP, impostors: imps, categories: data.categories, mode: mode, isPublic: isPublic,
+      config: { turnTime: 30000, voteTime: 120000 },
       players: [{ id: socket.id, userId: userId, name: data.name || 'Host', color: assignColor({players:[]}), isDead: false, disconnected: false }],
       phase: 'lobby', roles: {}, votes: {}, spoken: {}, discordLink, discordChannelId, timerText: '--',
       clues: [], deletionTimer: null, introReady: [], impostorNames: [] 
@@ -120,14 +134,11 @@ io.on('connection', (socket) => {
             clearTimeout(existingPlayer.disconnectTimeout);
             existingPlayer.disconnectTimeout = null;
         }
-
         if (room.deletionTimer) { clearTimeout(room.deletionTimer); room.deletionTimer = null; }
         
         const oldSocketId = existingPlayer.id;
         delete socketRoom[oldSocketId]; socketRoom[socket.id] = code;
-        
-        existingPlayer.id = socket.id; 
-        existingPlayer.disconnected = false; 
+        existingPlayer.id = socket.id; existingPlayer.disconnected = false; 
         
         if (room.hostId === oldSocketId) room.hostId = socket.id;
         if (room.currentTurnId === oldSocketId) room.currentTurnId = socket.id;
@@ -137,28 +148,13 @@ io.on('connection', (socket) => {
             const isImp = room.roles[socket.id] === 'impostor';
             const catName = getCategoryName(room.secretCategory);
             const partners = room.players.filter(p => room.roles[p.id] === 'impostor' && p.id !== socket.id).map(p => p.name);
-
-            myRoleData = { 
-                role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', 
-                word: isImp ? '???' : room.secretWord, 
-                hint: isImp ? 'Finge saber.' : 'Escribe una pista.',
-                category: catName,
-                partners: isImp ? partners : []
-            };
+            myRoleData = { role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', word: isImp ? '???' : room.secretWord, hint: isImp ? 'Finge saber.' : 'Escribe una pista.', category: catName, partners: isImp ? partners : [] };
         } else if (room.phase !== 'lobby' && room.roles[oldSocketId]) {
-             room.roles[socket.id] = room.roles[oldSocketId];
-             delete room.roles[oldSocketId];
+             room.roles[socket.id] = room.roles[oldSocketId]; delete room.roles[oldSocketId];
              const isImp = room.roles[socket.id] === 'impostor';
              const catName = getCategoryName(room.secretCategory);
              const partners = room.players.filter(p => room.roles[p.id] === 'impostor' && p.id !== socket.id).map(p => p.name);
-             
-             myRoleData = { 
-                role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', 
-                word: isImp ? '???' : room.secretWord, 
-                hint: isImp ? 'Finge saber.' : 'Escribe una pista.',
-                category: catName,
-                partners: isImp ? partners : []
-            };
+             myRoleData = { role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', word: isImp ? '???' : room.secretWord, hint: isImp ? 'Finge saber.' : 'Escribe una pista.', category: catName, partners: isImp ? partners : [] };
         }
 
         socket.join(code);
@@ -196,11 +192,9 @@ io.on('connection', (socket) => {
   socket.on('updateSettings', (data) => {
     const room = getRoom(socket.id);
     if(!room || room.hostId !== socket.id || room.phase !== 'lobby') return;
-    
     if(data.impostors) room.impostors = Math.min(4, Math.max(1, parseInt(data.impostors))); 
     if(data.maxPlayers) room.maxPlayers = Math.min(15, Math.max(3, parseInt(data.maxPlayers)));
     if(data.voteTime) room.config.voteTime = parseInt(data.voteTime) * 1000;
-    
     emitRoomState(room);
   });
 
@@ -213,7 +207,6 @@ io.on('connection', (socket) => {
     room.players.forEach(p => p.isDead = false); room.votes = {}; room.spoken = {}; room.clues = []; room.introReady = []; room.impostorNames = []; room.roles = {};
 
     const shuffled = shuffle([...room.players]); room.players = shuffled;
-    
     const activeCount = room.players.length;
     const actualImpostors = Math.min(room.impostors, Math.max(1, activeCount - 1));
 
@@ -244,14 +237,7 @@ io.on('connection', (socket) => {
     room.players.forEach(p => {
       const isImp = room.roles[p.id] === 'impostor';
       const partners = impostorIds.filter(imp => imp.id !== p.id).map(imp => imp.name);
-      
-      io.to(p.id).emit('privateRole', {
-        role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', 
-        word: isImp ? '???' : room.secretWord,
-        hint: isImp ? 'Finge saber.' : 'Escribe una pista.',
-        category: catName,
-        partners: isImp ? partners : []
-      });
+      io.to(p.id).emit('privateRole', { role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', word: isImp ? '???' : room.secretWord, hint: isImp ? 'Finge saber.' : 'Escribe una pista.', category: catName, partners: isImp ? partners : [] });
     });
     emitRoomState(room);
     startTimer(room, 15, (r) => { r.phase = 'turn'; r.turnIndex = -1; nextTurn(r); });
@@ -261,14 +247,11 @@ io.on('connection', (socket) => {
       const room = getRoom(socket.id);
       if(!room || room.phase !== 'word') return;
       if(!room.introReady.includes(socket.id)) room.introReady.push(socket.id);
-      
       const living = room.players.filter(p => !p.disconnected);
       if(room.introReady.length >= living.length) {
           clearRoomTimer(room);
           room.phase = 'turn'; room.turnIndex = -1; nextTurn(room);
-      } else {
-          emitRoomState(room);
-      }
+      } else { emitRoomState(room); }
   });
 
   socket.on('submitClue', (data) => {
@@ -284,13 +267,8 @@ io.on('connection', (socket) => {
   socket.on('submitVote', (data) => {
     const room = getRoom(socket.id); 
     if (!room || room.phase !== 'vote') return;
-    
-    const voter = room.players.find(p => p.id === socket.id);
-    if (!voter || voter.isDead) return;
-
-    room.votes[socket.id] = data.targetId; 
-    emitRoomState(room);
-    
+    const voter = room.players.find(p => p.id === socket.id); if (!voter || voter.isDead) return;
+    room.votes[socket.id] = data.targetId; emitRoomState(room);
     const living = room.players.filter(p => !p.isDead && !p.disconnected).length;
     if (Object.keys(room.votes).length >= living) finishVoting(room, 'Votación finalizada');
   });
@@ -309,14 +287,11 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     const room = getRoom(socket.id); if (!room) return;
     const player = room.players.find(p => p.id === socket.id); if (!player) return;
-    
     player.disconnected = true; 
-    
     if (room.hostId === player.id) {
         const active = room.players.find(p => !p.disconnected && p.id !== socket.id);
         if(active) { room.hostId = active.id; emitRoomState(room); }
     }
-    
     player.disconnectTimeout = setTimeout(() => {
         if (!rooms[room.code]) return;
         const idx = room.players.indexOf(player);
@@ -326,14 +301,10 @@ io.on('connection', (socket) => {
                  clearRoomTimer(room);
                  delete rooms[room.code];
                  if (room.discordChannelId && discordClient) { try { discordClient.channels.fetch(room.discordChannelId).then(c => c?.delete()); } catch(e){} }
-            } else {
-                emitRoomState(room);
-            }
+            } else { emitRoomState(room); }
         }
     }, 60000); 
-
-    delete socketRoom[socket.id]; 
-    emitRoomState(room);
+    delete socketRoom[socket.id]; emitRoomState(room);
   });
 });
 
@@ -346,7 +317,6 @@ function nextTurn(room) {
   clearRoomTimer(room);
   const living = room.players.map((p, i) => ({p, i})).filter(o => !o.p.isDead && !o.p.disconnected);
   if (living.length < 3) return finishVoting(room, 'No quedan suficientes jugadores');
-
   let nextIdx = 0;
   if (room.turnIndex !== -1) {
     const currentPos = living.findIndex(o => o.i === room.turnIndex);
@@ -374,60 +344,38 @@ function finishVoting(room, reason) {
   Object.values(room.votes).forEach(id => { if(id) { counts[id] = (counts[id]||0)+1; if(counts[id]>maxV) maxV=counts[id]; }});
   const candidates = Object.keys(counts).filter(id => counts[id] === maxV);
   let elimId = (candidates.length === 1 && candidates[0] !== 'skip') ? candidates[0] : null;
-
-  let result = 'continue'; 
-  let resReason = reason;
-  
+  let result = 'continue'; let resReason = reason;
   if (elimId) {
     const victim = room.players.find(p => p.id === elimId);
     if(victim) {
         victim.isDead = true;
-        if (room.roles[elimId] === 'impostor') { 
-            resReason = `¡${victim.name} era un Impostor!`; 
-        } else {
-            resReason = `${victim.name} era Inocente.`;
-        }
+        if (room.roles[elimId] === 'impostor') { resReason = `¡${victim.name} era un Impostor!`; } else { resReason = `${victim.name} era Inocente.`; }
         result = 'ejected'; 
     }
-  } else { 
-      resReason = "Nadie fue expulsado (Empate o Skip)."; 
-      result = 'tie'; 
-  }
+  } else { resReason = "Nadie fue expulsado (Empate o Skip)."; result = 'tie'; }
 
   const impsAlive = room.players.filter(p => !p.isDead && !p.disconnected && room.roles[p.id] === 'impostor').length;
   const crewAlive = room.players.filter(p => !p.isDead && !p.disconnected && room.roles[p.id] === 'crew').length;
 
-  if (impsAlive === 0) { 
-      result = 'crew'; resReason = "¡TODOS los impostores eliminados!"; 
-  } else if (impsAlive >= crewAlive) { 
-      result = 'impostor'; resReason = "¡Impostores dominan la nave (Mayoría)!"; 
-  } else if (crewAlive + impsAlive < 3) {
-      result = 'impostor'; resReason = "¡Solo quedan 2! Impostor gana.";
-  }
+  if (impsAlive === 0) { result = 'crew'; resReason = "¡TODOS los impostores eliminados!"; } 
+  else if (impsAlive >= crewAlive) { result = 'impostor'; resReason = "¡Impostores dominan la nave (Mayoría)!"; } 
+  else if (crewAlive + impsAlive < 3) { result = 'impostor'; resReason = "¡Solo quedan 2! Impostor gana."; }
 
   const finalImpostors = room.impostorNames || [];
-
   io.to(room.code).emit('roundResult', { result, secretWord: room.secretWord, reason: resReason, impostors: finalImpostors });
   
-  // FIX: AUTO RETURN TO LOBBY (10s)
   setTimeout(() => {
     if (!rooms[room.code]) return;
     clearRoomTimer(room);
-    
-    if (result === 'crew' || result === 'impostor') {
-        resetToLobby(room);
-    } else {
-        room.votes = {}; 
-        room.spoken = {}; 
-        
+    if (result === 'crew' || result === 'impostor') { resetToLobby(room); } 
+    else {
+        room.votes = {}; room.spoken = {}; 
         const living = room.players.filter(p => !p.isDead && !p.disconnected);
         if (living.length > 0) {
             const nextStartPlayer = living[Math.floor(Math.random() * living.length)];
             room.turnIndex = room.players.findIndex(p => p.id === nextStartPlayer.id);
             room.currentTurnId = nextStartPlayer.id;
-            
-            room.phase = 'turn'; 
-            emitRoomState(room);
+            room.phase = 'turn'; emitRoomState(room);
             startTimer(room, room.config.turnTime / 1000, (r) => avanzarDesdeTurno(r));
         } else resetToLobby(room);
     }
@@ -435,19 +383,9 @@ function finishVoting(room, reason) {
 }
 
 function resetToLobby(room) { 
-    clearRoomTimer(room);
-    room.phase = 'lobby'; 
-    room.timerText = '--'; 
-    room.votes = {}; 
-    room.spoken = {}; 
-    room.turnIndex = -1; 
-    room.currentTurnId = null; 
-    room.clues = []; 
-    room.introReady = [];
-    room.impostorNames = [];
-    room.roles = {};
-    emitRoomState(room); 
+    clearRoomTimer(room); room.phase = 'lobby'; room.timerText = '--'; room.votes = {}; room.spoken = {}; room.turnIndex = -1; 
+    room.currentTurnId = null; room.clues = []; room.introReady = []; room.impostorNames = []; room.roles = {}; emitRoomState(room); 
 }
 
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server 2.3 Stable en puerto ${PORT}`));
+httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server 2.5 en puerto ${PORT}`));
