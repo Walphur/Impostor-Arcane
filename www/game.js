@@ -17,12 +17,19 @@ let wakeLock = null;
 const qs = (id) => document.getElementById(id);
 function playSound(id) { const audio = qs(id); if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); } }
 
-// --- VOLVEMOS A LOS ICONOS DE LINEA (NEÓN) QUE GUSTARON ---
+// --- ICONOS DE LÍNEA (NEÓN) - MEJOR CALIDAD ---
 const SVG_ICONS = {
-    win: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>',
-    lose: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 3 2 3-2 3-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>',
-    tie: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>',
-    boot: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16v-4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v4"/><path d="M22 16v-4h-2a2 2 0 0 0-2 2v2"/><path d="M2 16v-4h2a2 2 0 0 1 2 2v2"/><path d="M4 22h16a2 2 0 0 0 2-2V16H2v4a2 2 0 0 0 2 2z"/></svg>'
+    // Trofeo Neón
+    win: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>',
+    
+    // Calavera Neón (Estilo Cyber)
+    lose: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M8 20v2h8v-2"/><path d="M12.5 17l-.5-1-.5 1h1z"/><path d="M16 20a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20"/></svg>',
+    
+    // Balanza Neón
+    tie: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>',
+    
+    // Esposas/Salida Neón
+    boot: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>'
 };
 
 async function requestWakeLock() {
@@ -213,7 +220,6 @@ function updateCategoriesSummary() {
     if(el) el.innerText = CATEGORIES_DATA.filter(c => selectedCategories.has(c.id)).map(c => c.name).join(', '); 
 }
 
-// FUNCION DE CREACIÓN
 window.adjustValue = function(id, d) { 
     const i = qs(id); if(!i) return;
     let v = parseInt(i.value); 
@@ -229,25 +235,15 @@ window.adjustValue = function(id, d) {
 
 window.changeLobbySetting = function(key, d) {
     if(!isHost || !currentRoom) return;
-    
     const curPlayers = currentRoom.maxPlayers || 10;
     const curImps = currentRoom.impostors || 2;
     const curTime = (currentRoom.config && currentRoom.config.voteTime) ? currentRoom.config.voteTime / 1000 : 120;
 
     playSound('soundClick');
     let v;
-    if(key === 'maxPlayers') {
-        v = Math.min(15, Math.max(3, curPlayers + d));
-        socket.emit('updateSettings', { maxPlayers: v });
-    }
-    else if(key === 'impostors') {
-        v = Math.min(4, Math.max(1, curImps + d));
-        socket.emit('updateSettings', { impostors: v });
-    }
-    else if(key === 'timeVote') {
-        v = Math.min(300, Math.max(60, curTime + d));
-        socket.emit('updateSettings', { voteTime: v });
-    }
+    if(key === 'maxPlayers') { v = Math.min(15, Math.max(3, curPlayers + d)); socket.emit('updateSettings', { maxPlayers: v }); }
+    else if(key === 'impostors') { v = Math.min(4, Math.max(1, curImps + d)); socket.emit('updateSettings', { impostors: v }); }
+    else if(key === 'timeVote') { v = Math.min(300, Math.max(60, curTime + d)); socket.emit('updateSettings', { voteTime: v }); }
 };
 
 function createRoom() {
@@ -282,23 +278,19 @@ socket.on('roundResult', (data) => {
   const t = qs('resultTitle'), s = qs('resultSubtitle'), i = qs('resultIcon');
   if(!isPremium && AdMob) { AdMob.showInterstitial().catch(()=>{}); AdMob.prepareInterstitial({ adId: ADMOB_IDS.intersticial }); }
   
-  // FIX: SELECCIONAR EL CONTENEDOR DE DETALLES
   const detailsBox = qs('resultDetails');
 
   if (data.result === 'tie') { 
       playSound('soundLose'); 
       t.innerText = "Nadie Expulsado"; t.style.color = "#facc15"; i.innerHTML = SVG_ICONS.tie; 
-      // OCULTAR BARRA VACIA
       if(detailsBox) detailsBox.style.display = 'none';
   } 
   else if (data.result === 'ejected') {
       playSound('soundLose'); 
       t.innerText = "EXPULSADO"; t.style.color = "#f97316"; i.innerHTML = SVG_ICONS.boot;
-      // OCULTAR BARRA VACIA
       if(detailsBox) detailsBox.style.display = 'none';
   }
   else {
-      // MOSTRAR BARRA
       if(detailsBox) detailsBox.style.display = 'block';
       qs('finalSecretWord').innerText = data.secretWord; 
       qs('finalImpostors').innerText = data.impostors.join(', '); 
@@ -337,14 +329,16 @@ function updateGameView(room) {
   if(currentPhase === 'lobby') {
       resetLocalGameData();
       
+      // --- FIX: CERRAR CARTEL AUTOMÁTICAMENTE ---
+      const overlay = document.getElementById('ejectionOverlay');
+      if(overlay) overlay.style.display = 'none';
+
       const lp = qs('lobbyPlayersVal'); if(lp && room.maxPlayers) lp.innerText = room.maxPlayers;
       const li = qs('lobbyImpostorsVal'); if(li && room.impostors) li.innerText = room.impostors;
       const lt = qs('lobbyTimeVal'); if(lt && room.config) lt.innerText = room.config.voteTime / 1000;
       
       const hostPanel = qs('hostControlsArea');
-      if(hostPanel) {
-          hostPanel.style.display = isHost ? 'block' : 'none';
-      }
+      if(hostPanel) hostPanel.style.display = isHost ? 'block' : 'none';
 
       setDisplay('viewLobby', true); 
       const st = document.getElementById('statusText'); if(st) st.innerHTML = isHost ? "Inicia cuando estén listos." : `Esperando al Host...`; 

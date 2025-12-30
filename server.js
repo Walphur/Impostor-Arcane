@@ -69,7 +69,7 @@ function serializeRoom(room) {
   return {
     code: room.code, hostId: room.hostId, phase: room.phase, mode: room.mode,
     config: room.config, 
-    maxPlayers: room.maxPlayers, // --- FIX: AHORA SÍ ENVIAMOS ESTE DATO ---
+    maxPlayers: room.maxPlayers, 
     players: room.players.map(p => ({ 
         id: p.id, userId: p.userId, name: p.name, color: p.color, isDead: p.isDead, disconnected: p.disconnected 
     })),
@@ -197,8 +197,7 @@ io.on('connection', (socket) => {
     const room = getRoom(socket.id);
     if(!room || room.hostId !== socket.id || room.phase !== 'lobby') return;
     
-    // --- FIX: PERMITIR CONFIGURAR LIBREMENTE EN LOBBY ---
-    if(data.impostors) room.impostors = Math.min(4, Math.max(1, parseInt(data.impostors))); // Sin limite por jugadores aun
+    if(data.impostors) room.impostors = Math.min(4, Math.max(1, parseInt(data.impostors))); 
     if(data.maxPlayers) room.maxPlayers = Math.min(15, Math.max(3, parseInt(data.maxPlayers)));
     if(data.voteTime) room.config.voteTime = parseInt(data.voteTime) * 1000;
     
@@ -216,7 +215,6 @@ io.on('connection', (socket) => {
     const shuffled = shuffle([...room.players]); room.players = shuffled;
     
     const activeCount = room.players.length;
-    // --- FIX: APLICAR LIMITE DE IMPOSTORES AL INICIAR ---
     const actualImpostors = Math.min(room.impostors, Math.max(1, activeCount - 1));
 
     const possibleImpostorIndices = [];
@@ -411,6 +409,7 @@ function finishVoting(room, reason) {
 
   io.to(room.code).emit('roundResult', { result, secretWord: room.secretWord, reason: resReason, impostors: finalImpostors });
   
+  // FIX: AUTO RETURN TO LOBBY (10s)
   setTimeout(() => {
     if (!rooms[room.code]) return;
     clearRoomTimer(room);
@@ -432,7 +431,7 @@ function finishVoting(room, reason) {
             startTimer(room, room.config.turnTime / 1000, (r) => avanzarDesdeTurno(r));
         } else resetToLobby(room);
     }
-  }, 8000); 
+  }, 10000); 
 }
 
 function resetToLobby(room) { 
@@ -451,4 +450,4 @@ function resetToLobby(room) {
 }
 
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server 2.2 Fix en puerto ${PORT}`));
+httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server 2.3 Stable en puerto ${PORT}`));
