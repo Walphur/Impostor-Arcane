@@ -149,10 +149,38 @@
       <div class="main-grid">
         <section class="view-panel">
           <div id="viewLobby" class="view-card">
-            <h2 style="font-size:1.8rem; font-weight:800;">Esperando<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span></h2>
-            <div class="stats-row"><div class="stat-item"><span id="currentPlayersCount" class="stat-value">1</span><span class="stat-label">Jugadores</span></div><div class="stat-item"><span id="currentImpostorsCount" class="stat-value">1</span><span class="stat-label">Impostores</span></div></div>
-            <button id="btnStartRound" class="btn-main btn-primary" style="display:none; width:100%; margin-top:30px;">INICIAR PARTIDA</button>
+            <h2 style="font-size:1.8rem; font-weight:800; margin-bottom:10px;">Esperando<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span></h2>
+            
+            <div class="app-card" style="margin-bottom:20px; background:#0f172a; padding:15px; border:1px solid #334155;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;" class="lobby-config-row">
+                    <span class="mini-label" style="align-self:center;">JUGADORES</span>
+                    <div class="mini-controls" style="width:auto;">
+                        <button class="btn-circle" onclick="changeLobbySetting('maxPlayers', -1)">-</button>
+                        <div class="value-display" id="lobbyPlayersVal">10</div>
+                        <button class="btn-circle" onclick="changeLobbySetting('maxPlayers', 1)">+</button>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;" class="lobby-config-row">
+                    <span class="mini-label" style="align-self:center;">IMPOSTORES</span>
+                    <div class="mini-controls" style="width:auto;">
+                        <button class="btn-circle" onclick="changeLobbySetting('impostors', -1)">-</button>
+                        <div class="value-display" id="lobbyImpostorsVal">2</div>
+                        <button class="btn-circle" onclick="changeLobbySetting('impostors', 1)">+</button>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:space-between;" class="lobby-config-row">
+                    <span class="mini-label" style="align-self:center;">TIEMPO</span>
+                    <div class="mini-controls" style="width:auto;">
+                        <button class="btn-circle" onclick="changeLobbySetting('timeVote', -15)">-</button>
+                        <div class="value-display" id="lobbyTimeVal">120</div>
+                        <button class="btn-circle" onclick="changeLobbySetting('timeVote', 15)">+</button>
+                    </div>
+                </div>
+            </div>
+
+            <button id="btnStartRound" class="btn-main btn-primary" style="display:none; width:100%;">INICIAR PARTIDA</button>
           </div>
+          
           <div id="viewWord" class="view-card" style="display:none;">
             <div id="cardContainer" class="secret-card-container">
               <div id="secretCardInner" class="secret-card-inner">

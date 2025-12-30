@@ -17,17 +17,15 @@ let wakeLock = null;
 const qs = (id) => document.getElementById(id);
 function playSound(id) { const audio = qs(id); if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); } }
 
-// --- NUEVOS ICONOS V1.9 ---
+// --- NUEVOS SVGs HD (ESTILO NEON) ---
 const SVG_ICONS = {
-    win: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>',
+    win: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8m-4-9v9m0-9a5 5 0 0 0-5-5V6a5 5 0 0 1 10 0v10a5 5 0 0 0-5 5zm0-9a5 5 0 0 1-5-5h10a5 5 0 0 1-5 5z"/><path d="M12 2a3 3 0 0 0-3 3v1a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/></svg>',
     
-    // Calavera para DERROTA (Crew pierde)
-    lose: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M8 20v2h8v-2"/><path d="M12.5 17l-.5-1-.5 1h1z"/><path d="M16 20a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20"/></svg>',
+    lose: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h.01M15 12h.01M12 2a9 9 0 0 1 9 9c0 2.3-1 4.5-2.6 6.1L16 19.5l-2 2-2-2-2.4-2.4A9 9 0 0 1 3 11a9 9 0 0 1 9-9z"/><path d="M10 16s1 1 2 1 2-1 2-1"/></svg>',
     
-    tie: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>',
+    tie: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18m-9-6l9-3 9 3"/><path d="M3 15h18"/><path d="M5 21h14"/></svg>',
     
-    // Esposas para EJECTED (Alguien expulsado)
-    boot: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="6" width="4" height="6" rx="2"/><rect x="6" y="6" width="4" height="6" rx="2"/><path d="M14 8h-4"/><path d="M6 12v6a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2v-6"/><path d="M14 12v6a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2v-6"/></svg>'
+    boot: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h10c1.5 0 3-1.5 3-3V9a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10c0 1.5 1.5 3 3 3z"/><path d="M4 14h13"/><path d="M8 2v5"/><path d="M16 2v5"/></svg>'
 };
 
 async function requestWakeLock() {
@@ -218,6 +216,7 @@ function updateCategoriesSummary() {
     if(el) el.innerText = CATEGORIES_DATA.filter(c => selectedCategories.has(c.id)).map(c => c.name).join(', '); 
 }
 
+// FUNCION DE CREACIÓN
 window.adjustValue = function(id, d) { 
     const i = qs(id); if(!i) return;
     let v = parseInt(i.value); 
@@ -228,7 +227,28 @@ window.adjustValue = function(id, d) {
     if(id==='maxPlayers') qs('displayPlayers').innerText=v; 
     if(id==='impostors') qs('displayImpostors').innerText=v; 
     if(id==='timeVote') qs('displayVoteTime').innerText=v;
+    // Solo emitir si ya estamos en lobby
     if(isHost && currentRoom && currentPhase === 'lobby') { socket.emit('updateSettings', { [id]: v }); }
+};
+
+// NUEVA FUNCIÓN: CONTROLES DIRECTOS EN LOBBY
+window.changeLobbySetting = function(key, d) {
+    if(!isHost || !currentRoom) return;
+    let v;
+    if(key === 'maxPlayers') {
+        v = Math.min(15, Math.max(3, currentRoom.maxPlayers + d));
+        socket.emit('updateSettings', { maxPlayers: v });
+    }
+    else if(key === 'impostors') {
+        v = Math.min(4, Math.max(1, currentRoom.impostors + d));
+        socket.emit('updateSettings', { impostors: v });
+    }
+    else if(key === 'timeVote') {
+        const currentSecs = currentRoom.config.voteTime / 1000;
+        v = Math.min(300, Math.max(60, currentSecs + d));
+        socket.emit('updateSettings', { voteTime: v });
+    }
+    playSound('soundClick');
 };
 
 function createRoom() {
@@ -286,7 +306,7 @@ socket.on('roundResult', (data) => {
   }
   s.innerText = data.reason;
   
-  // Ajustar botón continuar según el resultado
+  // Botón dinámico
   const btn = qs('btnBackToLobby');
   if (data.result === 'ejected' || data.result === 'tie') {
       btn.innerText = "SIGUIENTE RONDA...";
@@ -314,17 +334,25 @@ function updateGameView(room) {
 
   if(currentPhase === 'lobby') {
       resetLocalGameData();
-      const pDisplay = qs('displayPlayers'); if(pDisplay) pDisplay.innerText = room.maxPlayers;
-      const iDisplay = qs('displayImpostors'); if(iDisplay) iDisplay.innerText = room.impostors;
-      const vDisplay = qs('displayVoteTime'); if(vDisplay && room.config) vDisplay.innerText = room.config.voteTime / 1000;
-      const btns = document.querySelectorAll('.mini-controls button'); btns.forEach(b => b.disabled = !isHost);
+      
+      // --- ACTUALIZAR CONTROLES DEL LOBBY (HOST) ---
+      const lp = qs('lobbyPlayersVal'); if(lp) lp.innerText = room.maxPlayers;
+      const li = qs('lobbyImpostorsVal'); if(li) li.innerText = room.impostors;
+      const lt = qs('lobbyTimeVal'); if(lt && room.config) lt.innerText = room.config.voteTime / 1000;
+      
+      // Habilitar/Deshabilitar botones segun Host
+      const ctrls = document.querySelectorAll('.lobby-config-row button');
+      ctrls.forEach(btn => {
+          btn.disabled = !isHost;
+          btn.style.opacity = isHost ? '1' : '0.5';
+      });
+
       setDisplay('viewLobby', true); 
       const st = document.getElementById('statusText'); if(st) st.innerHTML = isHost ? "Inicia cuando estén listos." : `Esperando al Host...`; 
   }
   else if (currentPhase === 'word') { 
       setDisplay('viewWord', true); 
       updateWordCard(); 
-      // FIX: Check if I am ready
       if(room.introReady && room.introReady.includes(myId)) {
           qs('btnReady').style.display = 'none'; 
       } else {
@@ -366,7 +394,6 @@ function updateGameView(room) {
       setTxt('statusText', "Votación en curso."); 
   }
 
-  // LISTA JUGADORES
   const list = document.getElementById('playersList');
   if (list) {
       list.innerHTML = ''; 
@@ -405,7 +432,6 @@ function updateGameView(room) {
   const btnDiscord = document.getElementById('btnDiscord'); if (btnDiscord) btnDiscord.style.display = room.discordLink ? 'flex' : 'none';
   const btnCancel = document.getElementById('btnCancelRound'); if(btnCancel) btnCancel.style.display = (isHost && currentPhase !== 'lobby') ? 'block' : 'none';
 
-  // VISIBILIDAD PANELES
   ['viewLobby', 'viewWord', 'viewTurn', 'viewVote'].forEach(v => {
       const el = qs(v);
       if(currentPhase === 'lobby' && v === 'viewLobby') el.style.display = 'block';
