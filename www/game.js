@@ -209,7 +209,7 @@ socket.on('publicRoomsList', (rooms) => {
     }
     rooms.forEach(r => {
         const div = document.createElement('div');
-        div.className = 'player-row'; // Reusamos estilo de fila
+        div.className = 'player-row'; 
         div.style.cursor = 'pointer';
         div.innerHTML = `<div style="flex:1;">
             <div style="font-weight:bold; color:#fff;">${r.name}</div>

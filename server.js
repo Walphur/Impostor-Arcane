@@ -81,14 +81,18 @@ function emitRoomState(room) { if (room) io.to(room.code).emit('roomState', seri
 
 io.on('connection', (socket) => {
   
-  // --- NUEVO: LISTAR SALAS PÚBLICAS ---
+  // --- MOSTRAR SOLO SALAS CON GENTE ---
   socket.on('getPublicRooms', () => {
       const publicRooms = Object.values(rooms)
-          .filter(r => r.isPublic && r.phase === 'lobby' && r.players.length < r.maxPlayers)
+          .filter(r => {
+              // Filtro: Debe ser pública, estar en lobby, no estar llena Y tener al menos 1 jugador conectado
+              const activePlayers = r.players.filter(p => !p.disconnected).length;
+              return r.isPublic && r.phase === 'lobby' && r.players.length < r.maxPlayers && activePlayers > 0;
+          })
           .map(r => ({
               code: r.code,
               name: r.players[0] ? r.players[0].name + "'s Sala" : "Sala Pública",
-              players: r.players.length,
+              players: r.players.filter(p => !p.disconnected).length, // Mostrar solo activos
               max: r.maxPlayers,
               mode: r.mode
           }));
@@ -97,12 +101,10 @@ io.on('connection', (socket) => {
 
   socket.on('createRoom', async (data, cb) => {
     const code = generateCode();
-    // Defaults por si vienen vacíos (ahora que quitamos los controles de Crear)
-    const maxP = 10; 
-    const imps = 2;
+    const maxP = 10; const imps = 2;
     const userId = data.userId || socket.id;
     const mode = data.mode || 'group'; 
-    const isPublic = data.isPublic || false; // Nuevo Flag
+    const isPublic = data.isPublic || false;
 
     let discordLink = null; let discordChannelId = null;
     if (mode === 'discord' && discordClient && discordReady) {
@@ -140,6 +142,9 @@ io.on('connection', (socket) => {
         delete socketRoom[oldSocketId]; socketRoom[socket.id] = code;
         existingPlayer.id = socket.id; existingPlayer.disconnected = false; 
         
+        // --- FIX: ACTUALIZAR NOMBRE AL RECONECTAR ---
+        if (data.name) existingPlayer.name = data.name;
+
         if (room.hostId === oldSocketId) room.hostId = socket.id;
         if (room.currentTurnId === oldSocketId) room.currentTurnId = socket.id;
 
@@ -288,10 +293,19 @@ io.on('connection', (socket) => {
     const room = getRoom(socket.id); if (!room) return;
     const player = room.players.find(p => p.id === socket.id); if (!player) return;
     player.disconnected = true; 
+    
+    // Si el host se va, pasar liderazgo
     if (room.hostId === player.id) {
         const active = room.players.find(p => !p.disconnected && p.id !== socket.id);
         if(active) { room.hostId = active.id; emitRoomState(room); }
     }
+
+    // --- FIX: LIMPIEZA RÁPIDA SI ES LOBBY ---
+    // Si todos están desconectados y es Lobby, borrar rápido (5s)
+    // Si es partida, dar 60s para reconectar
+    const activePlayers = room.players.filter(p => !p.disconnected).length;
+    const timeoutDuration = (activePlayers === 0 && room.phase === 'lobby') ? 5000 : 60000;
+
     player.disconnectTimeout = setTimeout(() => {
         if (!rooms[room.code]) return;
         const idx = room.players.indexOf(player);
@@ -303,7 +317,8 @@ io.on('connection', (socket) => {
                  if (room.discordChannelId && discordClient) { try { discordClient.channels.fetch(room.discordChannelId).then(c => c?.delete()); } catch(e){} }
             } else { emitRoomState(room); }
         }
-    }, 60000); 
+    }, timeoutDuration); 
+    
     delete socketRoom[socket.id]; emitRoomState(room);
   });
 });

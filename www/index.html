@@ -127,13 +127,20 @@
       <div style="margin-bottom:10px; border-top:1px solid #334155; padding-top:10px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
               <span class="mini-label">SALAS PÚBLICAS</span>
-              <button onclick="refreshPublicRooms()" style="background:none; border:none; color:#3b82f6; font-weight:bold; cursor:pointer;">↻</button>
+              
+              <button onclick="refreshPublicRooms()" style="background:none; border:none; cursor:pointer; padding:5px;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 3px #3b82f6);">
+                      <path d="M21.5 2v6h-6"></path>
+                      <path d="M2.5 22v-6h6"></path>
+                      <path d="M2 11.5a10 10 0 0 1 18.8-4.3L21.5 8"></path>
+                      <path d="M22 12.5a10 10 0 0 1-18.8 4.3L2.5 16"></path>
+                  </svg>
+              </button>
           </div>
           <div id="publicRoomsContainer" style="display:flex; flex-direction:column; gap:8px; max-height:150px; overflow-y:auto;">
               <div style="color:#64748b; font-style:italic; font-size:0.9rem; text-align:center;">Cargando...</div>
           </div>
       </div>
-    </div>
 
     <div id="screenCategories" class="screen" style="display:none;">
       <div class="screen-header"><button id="backFromCategories" class="btn-icon-back"><img src="images/arrow.png" class="arrow-icon-img"></button><h2>Categorías</h2></div>
