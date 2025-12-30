@@ -41,10 +41,12 @@
       <div id="resultIcon" style="text-align:center; margin-bottom:10px; width:100%; display:flex; justify-content:center;"></div>
       <h1 id="resultTitle" class="result-title">---</h1>
       <p id="resultSubtitle" style="text-align:center; font-weight:600;">---</p>
-      <div style="background:#0f172a; padding:15px; border-radius:10px; margin:20px 0;">
+      
+      <div id="resultDetails" style="background:#0f172a; padding:15px; border-radius:10px; margin:20px 0;">
         <div class="result-row"><span>Palabra:</span><span id="finalSecretWord" class="result-value">---</span></div>
         <div class="result-row"><span>Impostores:</span><span id="finalImpostors" class="result-value highlight">---</span></div>
       </div>
+      
       <button id="btnBackToLobby" class="btn-main btn-primary" style="width:100%" onclick="document.getElementById('ejectionOverlay').style.display='none'">CONTINUAR</button>
     </div>
   </div>
@@ -52,9 +54,9 @@
   <div id="howToPlayOverlay" class="full-overlay" style="display:none;">
     <div class="howto-card">
       <h2 style="text-align:center; margin-bottom:20px; font-weight:800;">Cómo Jugar</h2>
-      <div class="howto-item"><div class="howto-icon">👁️</div><div class="howto-text"><h3>Rol</h3><p>Todos ven la palabra menos el Impostor.</p></div></div>
-      <div class="howto-item"><div class="howto-icon">📝</div><div class="howto-text"><h3>Pista</h3><p>Escribe una sola palabra relacionada para probar que sabes.</p></div></div>
-      <div class="howto-item"><div class="howto-icon">🕵️</div><div class="howto-text"><h3>Votar</h3><p>Descubran quién miente.</p></div></div>
+      <div class="howto-item"><div class="howto-icon">👁️</div><div class="howto-text"><h3>Tu Rol</h3><p>Si eres Agente, verás la palabra secreta. Si eres Impostor, no verás nada y debes fingir.</p></div></div>
+      <div class="howto-item"><div class="howto-icon">📝</div><div class="howto-text"><h3>Tu Pista</h3><p>Escribe una sola palabra relacionada con la secreta para probar que sabes cuál es.</p></div></div>
+      <div class="howto-item"><div class="howto-icon">🕵️</div><div class="howto-text"><h3>Votación</h3><p>Debatan y voten. ¿Quién dio la peor pista? ¡Expulsen al Impostor para ganar!</p></div></div>
       <button id="btnCloseHowToPlay" class="btn-main btn-primary" style="width:100%; margin-top:10px;">ENTENDIDO</button>
     </div>
   </div>
@@ -151,6 +153,8 @@
           <div id="viewLobby" class="view-card">
             <h2 style="font-size:1.8rem; font-weight:800; margin-bottom:10px;">Esperando<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span></h2>
             
+            <p style="color:#64748b; font-size:0.9rem; margin-bottom:20px; font-style:italic;">El Host está configurando la misión...</p>
+
             <div id="hostControlsArea" class="app-card" style="margin-bottom:20px; background:#0f172a; padding:15px; border:1px solid #334155;">
                 <div style="display:flex; justify-content:space-between; margin-bottom:10px;" class="lobby-config-row">
                     <span class="mini-label" style="align-self:center;">JUGADORES</span>

@@ -17,11 +17,12 @@ let wakeLock = null;
 const qs = (id) => document.getElementById(id);
 function playSound(id) { const audio = qs(id); if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); } }
 
+// --- VOLVEMOS A LOS ICONOS DE LINEA (NEÓN) QUE GUSTARON ---
 const SVG_ICONS = {
-    win: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#4ade80"><path d="M12 2a10 10 0 0 1 .38 19.996L12 22a10 10 0 0 1-.38-19.996L12 2Zm0 2a8 8 0 0 0-8 8c0 4.418 3.582 8 8 8s8-3.582 8-8-3.582-8-8-8Zm4 3h-2v5.5a2.5 2.5 0 0 1-5 0V7H7v5.5a4.5 4.5 0 0 0 9 0V7ZM8.5 16h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1Z"/></svg>',
-    lose: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ef4444"><path d="M12 2a9 9 0 0 0-9 9c0 2.3 1.2 4.5 3 6v2a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-2c1.8-1.5 3-3.7 3-6a9 9 0 0 0-9-9zm-3 8a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm6 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm-3 8c-1.5 0-2.8-.8-3.5-2h7c-.7 1.2-2 2-3.5 2z"/></svg>',
-    tie: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#facc15"><path d="M12 2a1 1 0 0 1 1 1v3h6a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1h-1v5a3 3 0 0 1-6 0V9H4v5a3 3 0 0 1-6 0V9H6V8a1 1 0 0 1 1-1h4V3a1 1 0 0 1 1-1zm6 8v3a1 1 0 0 0 2 0v-3h-2zM4 10v3a1 1 0 0 0 2 0v-3H4z"/></svg>',
-    boot: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f97316"><path d="M5 2a3 3 0 0 0-3 3v14a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3V9l-6-7H5zm11 12h-4v-2h4v2zm0-4h-4V8h4v2z"/></svg>'
+    win: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>',
+    lose: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 3 2 3-2 3-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>',
+    tie: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>',
+    boot: '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16v-4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v4"/><path d="M22 16v-4h-2a2 2 0 0 0-2 2v2"/><path d="M2 16v-4h2a2 2 0 0 1 2 2v2"/><path d="M4 22h16a2 2 0 0 0 2-2V16H2v4a2 2 0 0 0 2 2z"/></svg>'
 };
 
 async function requestWakeLock() {
@@ -223,15 +224,12 @@ window.adjustValue = function(id, d) {
     if(id==='maxPlayers') qs('displayPlayers').innerText=v; 
     if(id==='impostors') qs('displayImpostors').innerText=v; 
     if(id==='timeVote') qs('displayVoteTime').innerText=v;
-    // Solo emitir si ya estamos en lobby
     if(isHost && currentRoom && currentPhase === 'lobby') { socket.emit('updateSettings', { [id]: v }); }
 };
 
-// --- FIX: CONTROLES DIRECTOS EN LOBBY CON MEJOR CHEQUEO ---
 window.changeLobbySetting = function(key, d) {
     if(!isHost || !currentRoom) return;
     
-    // --- FIX: Valores por defecto si vienen indefinidos ---
     const curPlayers = currentRoom.maxPlayers || 10;
     const curImps = currentRoom.impostors || 2;
     const curTime = (currentRoom.config && currentRoom.config.voteTime) ? currentRoom.config.voteTime / 1000 : 120;
@@ -284,23 +282,27 @@ socket.on('roundResult', (data) => {
   const t = qs('resultTitle'), s = qs('resultSubtitle'), i = qs('resultIcon');
   if(!isPremium && AdMob) { AdMob.showInterstitial().catch(()=>{}); AdMob.prepareInterstitial({ adId: ADMOB_IDS.intersticial }); }
   
-  const wordRow = qs('finalSecretWord').parentElement;
-  const impsRow = qs('finalImpostors').parentElement;
+  // FIX: SELECCIONAR EL CONTENEDOR DE DETALLES
+  const detailsBox = qs('resultDetails');
 
   if (data.result === 'tie') { 
       playSound('soundLose'); 
       t.innerText = "Nadie Expulsado"; t.style.color = "#facc15"; i.innerHTML = SVG_ICONS.tie; 
-      wordRow.style.display = 'none'; impsRow.style.display = 'none';
+      // OCULTAR BARRA VACIA
+      if(detailsBox) detailsBox.style.display = 'none';
   } 
   else if (data.result === 'ejected') {
       playSound('soundLose'); 
       t.innerText = "EXPULSADO"; t.style.color = "#f97316"; i.innerHTML = SVG_ICONS.boot;
-      wordRow.style.display = 'none'; impsRow.style.display = 'none'; 
+      // OCULTAR BARRA VACIA
+      if(detailsBox) detailsBox.style.display = 'none';
   }
   else {
+      // MOSTRAR BARRA
+      if(detailsBox) detailsBox.style.display = 'block';
       qs('finalSecretWord').innerText = data.secretWord; 
       qs('finalImpostors').innerText = data.impostors.join(', '); 
-      wordRow.style.display = 'flex'; impsRow.style.display = 'flex'; 
+      
       const iWon = (data.result === 'crew' && myRole === 'TRIPULANTE') || (data.result === 'impostor' && myRole === 'IMPOSTOR');
       if(iWon) { playSound('soundWin'); t.innerText = "¡VICTORIA!"; t.style.color = "#4ade80"; i.innerHTML = SVG_ICONS.win; } 
       else { playSound('soundLose'); t.innerText = "DERROTA"; t.style.color = "#ef4444"; i.innerHTML = SVG_ICONS.lose; } 
@@ -339,7 +341,6 @@ function updateGameView(room) {
       const li = qs('lobbyImpostorsVal'); if(li && room.impostors) li.innerText = room.impostors;
       const lt = qs('lobbyTimeVal'); if(lt && room.config) lt.innerText = room.config.voteTime / 1000;
       
-      // --- FIX: OCULTAR PANEL PARA NO-HOST ---
       const hostPanel = qs('hostControlsArea');
       if(hostPanel) {
           hostPanel.style.display = isHost ? 'block' : 'none';
