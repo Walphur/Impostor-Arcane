@@ -1,5 +1,8 @@
 const socket = io('https://incognitogame.online', { transports: ['websocket'], reconnection: true, reconnectionAttempts: 50, reconnectionDelay: 500 });
 
+// --- VERSIÓN DEL CLIENTE (Sube esto cada vez que actualices el APK) ---
+const CLIENT_VERSION = 20;
+
 function getDeviceId() { let id = localStorage.getItem('deviceUUID'); if (!id) { id = 'user_' + Math.random().toString(36).substr(2, 9) + Date.now(); localStorage.setItem('deviceUUID', id); } return id; }
 const MY_DEVICE_ID = getDeviceId();
 
@@ -33,7 +36,7 @@ document.addEventListener('visibilitychange', async () => {
         if (!socket.connected) { 
             socket.connect(); 
         } else {
-            if(currentRoom) socket.emit('joinRoom', { roomCode: currentRoom.code, userId: MY_DEVICE_ID }, handleJoin);
+            if(currentRoom) socket.emit('joinRoom', { roomCode: currentRoom.code, userId: MY_DEVICE_ID, clientVersion: CLIENT_VERSION }, handleJoin);
         }
     }
 });
@@ -88,7 +91,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (isPremium) unlockedCategories = new Set(CATEGORIES_DATA.map(c => c.id));
   await initAdMob(); 
   
-  // PROTECCIÓN CONTRA EL ERROR NULL
   const grid = qs('categoriesGrid');
   if(grid) renderCategoriesGrid(); 
   
@@ -251,7 +253,6 @@ window.adjustValue = function(id, d) { /* Legacy */ };
 
 window.changeLobbySetting = function(key, d) {
     if(!isHost || !currentRoom) return;
-    // --- FIX: VALORES POR DEFECTO PARA NO DAR ERROR ---
     const curPlayers = currentRoom.maxPlayers || 10;
     const curImps = currentRoom.impostors || 2;
     const curTime = (currentRoom.config && currentRoom.config.voteTime) ? currentRoom.config.voteTime / 1000 : 120;
@@ -264,6 +265,9 @@ window.changeLobbySetting = function(key, d) {
 };
 
 function createRoom() {
+  const nameInput = qs('hostName');
+  if(!nameInput || !nameInput.value.trim()) return showModal("Nombre Requerido", "Debes ponerte un nombre para crear sala.");
+  
   if(selectedCategories.size === 0) return alert('Elige categorías');
   let mode = 'group'; 
   const mt = qs('modeText'); if(mt && mt.classList.contains('selected-mode')) mode = 'text';
@@ -271,19 +275,31 @@ function createRoom() {
   const isPublic = qs('chkPublicRoom') ? qs('chkPublicRoom').checked : false;
 
   socket.emit('createRoom', { 
-      name: qs('hostName').value || 'Agente', 
+      name: nameInput.value.trim(), 
       categories: Array.from(selectedCategories), 
       mode: mode,
       isPublic: isPublic, 
-      userId: MY_DEVICE_ID 
+      userId: MY_DEVICE_ID,
+      clientVersion: CLIENT_VERSION 
   }, handleJoin);
 }
+
 function joinRoom() { 
-    const name = qs('joinName').value || 'Agente'; // Tomar valor actual
-    localStorage.setItem('playerName', name); // Guardar para futuro
-    socket.emit('joinRoom', { name: name, roomCode: qs('joinCode').value, userId: MY_DEVICE_ID }, handleJoin); 
+    const nameInput = qs('joinName');
+    if(!nameInput || !nameInput.value.trim()) return showModal("Nombre Requerido", "Debes ponerte un nombre para entrar.");
+
+    const name = nameInput.value.trim();
+    localStorage.setItem('playerName', name); 
+    socket.emit('joinRoom', { name: name, roomCode: qs('joinCode').value, userId: MY_DEVICE_ID, clientVersion: CLIENT_VERSION }, handleJoin); 
 }
+
 function handleJoin(res) {
+  // ERROR DE VERSIÓN VIEJA
+  if(!res.ok && res.error === 'UPDATE_REQUIRED') {
+      qs('updateOverlay').style.display = 'flex';
+      return;
+  }
+
   if(!res.ok) return showModal("Error", res.error);
   myId = res.me.id; isHost = res.isHost;
   qs('lobbyOverlay').style.display = 'none'; qs('mainContent').style.display = 'block'; qs('roomCodeDisplay').innerText = res.roomCode;
@@ -355,12 +371,33 @@ function updateGameView(room) {
   setTxt('currentPlayersCount', room.players.length); 
   setTxt('currentImpostorsCount', room.impostors);
 
+  // RENDERIZAR CLUES EN TURNO Y AHORA TAMBIÉN EN VOTO
+  const isTextMode = (room.mode === 'text');
+  if(isTextMode) {
+      // Función helper para renderizar pistas
+      const renderClues = (containerId) => {
+          const cluesList = qs(containerId); 
+          if(cluesList) {
+              cluesList.innerHTML = '';
+              if(room.clues && room.clues.length > 0) {
+                  room.clues.forEach(clue => {
+                      const div = document.createElement('div'); div.style.marginBottom = '5px'; div.style.fontSize = '0.9rem';
+                      div.innerHTML = `<span style="color:${clue.color}; font-weight:800;">${clue.name}:</span> <span style="color:#fff;">${clue.text}</span>`;
+                      cluesList.appendChild(div);
+                  });
+              } else { cluesList.innerHTML = '<div style="color:#64748b; font-size:0.8rem; font-style:italic;">Sin pistas escritas aún...</div>'; }
+          }
+      };
+
+      if(currentPhase === 'turn') renderClues('cluesHistory');
+      if(currentPhase === 'vote') renderClues('cluesHistoryVote'); // NUEVO ID PARA VOTO
+  }
+
   if(currentPhase === 'lobby') {
       resetLocalGameData();
       const overlay = document.getElementById('ejectionOverlay');
       if(overlay) overlay.style.display = 'none';
 
-      // --- FIX: EVITAR UNDEFINED CON FALLBACKS ---
       const lp = qs('lobbyPlayersVal'); if(lp) lp.innerText = (room.maxPlayers !== undefined) ? room.maxPlayers : 10;
       const li = qs('lobbyImpostorsVal'); if(li) li.innerText = (room.impostors !== undefined) ? room.impostors : 2;
       const lt = qs('lobbyTimeVal'); if(lt && room.config) lt.innerText = (room.config.voteTime / 1000) || 120;
@@ -385,33 +422,26 @@ function updateGameView(room) {
       setDisplay('viewTurn', true); 
       const t = room.players.find(p => p.id === room.currentTurnId); 
       setTxt('currentTurnPlayer', t ? t.name : '...'); 
-      const isTextMode = (room.mode === 'text');
+      
       const cluesContainer = qs('cluesHistoryContainer');
       if(cluesContainer) cluesContainer.style.display = isTextMode ? 'block' : 'none'; 
+      
       const isMyTurn = (room.currentTurnId === myId);
       const inputArea = qs('turnInputArea'); if(inputArea) inputArea.style.display = (isMyTurn && isTextMode) ? 'flex' : 'none';
       const actionsNormal = qs('turnActionsNormal'); if(actionsNormal) actionsNormal.style.display = (isMyTurn && !isTextMode) ? 'block' : 'none';
       const waitMsg = qs('turnWaitMessage');
       if(waitMsg) { waitMsg.style.display = isMyTurn ? 'none' : 'block'; waitMsg.innerText = t ? `Esperando a ${t.name}...` : '...'; }
 
-      if(isTextMode) {
-          const cluesList = qs('cluesHistory'); 
-          if(cluesList) {
-              cluesList.innerHTML = '';
-              if(room.clues && room.clues.length > 0) {
-                  room.clues.forEach(clue => {
-                      const div = document.createElement('div'); div.style.marginBottom = '5px'; div.style.fontSize = '0.9rem';
-                      div.innerHTML = `<span style="color:${clue.color}; font-weight:800;">${clue.name}:</span> <span style="color:#fff;">${clue.text}</span>`;
-                      cluesList.appendChild(div);
-                  });
-              } else { cluesList.innerHTML = '<div style="color:#64748b; font-size:0.8rem; font-style:italic;">Sin pistas escritas aún...</div>'; }
-          }
-      }
       setTxt('statusText', "Ronda de pistas.");
   } 
   else if (currentPhase === 'vote') { 
       setDisplay('viewVote', true); 
       renderVoteGrid(room); 
+      
+      // MOSTRAR CLUES TAMBIÉN EN VOTO SI ES MODO TEXTO
+      const cluesContainerVote = qs('cluesHistoryContainerVote');
+      if(cluesContainerVote) cluesContainerVote.style.display = isTextMode ? 'block' : 'none';
+
       setTxt('statusText', "Votación en curso."); 
   }
 
