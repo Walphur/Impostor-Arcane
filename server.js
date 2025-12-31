@@ -81,18 +81,18 @@ function emitRoomState(room) { if (room) io.to(room.code).emit('roomState', seri
 
 io.on('connection', (socket) => {
   
-  // --- MOSTRAR SOLO SALAS CON GENTE ---
+  // --- LISTA DE SALAS FILTRADA (SOLO ACTIVAS) ---
   socket.on('getPublicRooms', () => {
       const publicRooms = Object.values(rooms)
           .filter(r => {
-              // Filtro: Debe ser pública, estar en lobby, no estar llena Y tener al menos 1 jugador conectado
               const activePlayers = r.players.filter(p => !p.disconnected).length;
+              // Solo salas públicas, en lobby, no llenas y CON GENTE CONECTADA
               return r.isPublic && r.phase === 'lobby' && r.players.length < r.maxPlayers && activePlayers > 0;
           })
           .map(r => ({
               code: r.code,
               name: r.players[0] ? r.players[0].name + "'s Sala" : "Sala Pública",
-              players: r.players.filter(p => !p.disconnected).length, // Mostrar solo activos
+              players: r.players.filter(p => !p.disconnected).length,
               max: r.maxPlayers,
               mode: r.mode
           }));
@@ -101,7 +101,7 @@ io.on('connection', (socket) => {
 
   socket.on('createRoom', async (data, cb) => {
     const code = generateCode();
-    const maxP = 10; const imps = 2;
+    const maxP = 10; const imps = 2; // Defaults seguros
     const userId = data.userId || socket.id;
     const mode = data.mode || 'group'; 
     const isPublic = data.isPublic || false;
@@ -142,24 +142,25 @@ io.on('connection', (socket) => {
         delete socketRoom[oldSocketId]; socketRoom[socket.id] = code;
         existingPlayer.id = socket.id; existingPlayer.disconnected = false; 
         
-        // --- FIX: ACTUALIZAR NOMBRE AL RECONECTAR ---
-        if (data.name) existingPlayer.name = data.name;
+        // --- FIX: ACTUALIZAR NOMBRE SIEMPRE AL RECONECTAR ---
+        if (data.name && data.name.trim() !== '') existingPlayer.name = data.name;
 
         if (room.hostId === oldSocketId) room.hostId = socket.id;
         if (room.currentTurnId === oldSocketId) room.currentTurnId = socket.id;
 
+        // Recuperar rol si existe
         let myRoleData = null;
         if(room.phase !== 'lobby' && room.roles[socket.id]) {
             const isImp = room.roles[socket.id] === 'impostor';
             const catName = getCategoryName(room.secretCategory);
             const partners = room.players.filter(p => room.roles[p.id] === 'impostor' && p.id !== socket.id).map(p => p.name);
-            myRoleData = { role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', word: isImp ? '???' : room.secretWord, hint: isImp ? 'Finge saber.' : 'Escribe una pista.', category: catName, partners: isImp ? partners : [] };
+            myRoleData = { role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', word: isImp ? '???' : room.secretWord, hint: isImp ? 'Finge saber.', category: catName, partners: isImp ? partners : [] };
         } else if (room.phase !== 'lobby' && room.roles[oldSocketId]) {
              room.roles[socket.id] = room.roles[oldSocketId]; delete room.roles[oldSocketId];
              const isImp = room.roles[socket.id] === 'impostor';
              const catName = getCategoryName(room.secretCategory);
              const partners = room.players.filter(p => room.roles[p.id] === 'impostor' && p.id !== socket.id).map(p => p.name);
-             myRoleData = { role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', word: isImp ? '???' : room.secretWord, hint: isImp ? 'Finge saber.' : 'Escribe una pista.', category: catName, partners: isImp ? partners : [] };
+             myRoleData = { role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', word: isImp ? '???' : room.secretWord, hint: isImp ? 'Finge saber.', category: catName, partners: isImp ? partners : [] };
         }
 
         socket.join(code);
@@ -242,7 +243,7 @@ io.on('connection', (socket) => {
     room.players.forEach(p => {
       const isImp = room.roles[p.id] === 'impostor';
       const partners = impostorIds.filter(imp => imp.id !== p.id).map(imp => imp.name);
-      io.to(p.id).emit('privateRole', { role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', word: isImp ? '???' : room.secretWord, hint: isImp ? 'Finge saber.' : 'Escribe una pista.', category: catName, partners: isImp ? partners : [] });
+      io.to(p.id).emit('privateRole', { role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', word: isImp ? '???' : room.secretWord, hint: isImp ? 'Finge saber.', category: catName, partners: isImp ? partners : [] });
     });
     emitRoomState(room);
     startTimer(room, 15, (r) => { r.phase = 'turn'; r.turnIndex = -1; nextTurn(r); });
@@ -294,17 +295,15 @@ io.on('connection', (socket) => {
     const player = room.players.find(p => p.id === socket.id); if (!player) return;
     player.disconnected = true; 
     
-    // Si el host se va, pasar liderazgo
     if (room.hostId === player.id) {
         const active = room.players.find(p => !p.disconnected && p.id !== socket.id);
         if(active) { room.hostId = active.id; emitRoomState(room); }
     }
 
-    // --- FIX: LIMPIEZA RÁPIDA SI ES LOBBY ---
-    // Si todos están desconectados y es Lobby, borrar rápido (5s)
-    // Si es partida, dar 60s para reconectar
+    // --- FIX: LIMPIEZA RÁPIDA (1s) SI ES LOBBY ---
     const activePlayers = room.players.filter(p => !p.disconnected).length;
-    const timeoutDuration = (activePlayers === 0 && room.phase === 'lobby') ? 5000 : 60000;
+    // Si es lobby y no queda nadie, borrar casi ya (1s). Si es juego, 60s.
+    const timeoutDuration = (activePlayers === 0 && room.phase === 'lobby') ? 1000 : 60000;
 
     player.disconnectTimeout = setTimeout(() => {
         if (!rooms[room.code]) return;
@@ -403,4 +402,4 @@ function resetToLobby(room) {
 }
 
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server 2.5 en puerto ${PORT}`));
+httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server 2.6 en puerto ${PORT}`));

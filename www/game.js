@@ -87,7 +87,11 @@ async function handleCreateRoomFlow() {
 document.addEventListener('DOMContentLoaded', async () => {
   if (isPremium) unlockedCategories = new Set(CATEGORIES_DATA.map(c => c.id));
   await initAdMob(); 
-  const grid = qs('categoriesGrid'); if(grid) renderCategoriesGrid(); 
+  
+  // PROTECCIÓN CONTRA EL ERROR NULL
+  const grid = qs('categoriesGrid');
+  if(grid) renderCategoriesGrid(); 
+  
   updateCategoriesSummary(); 
   setupEventListeners();
   const savedName = localStorage.getItem('playerName'); if(savedName) { qs('hostName').value = savedName; qs('joinName').value = savedName; }
@@ -113,7 +117,6 @@ function setupEventListeners() {
   const screens = ['screenHome', 'screenCreate', 'screenJoin', 'screenCategories', 'screenPremium'];
   const show = (id) => {
       screens.forEach(s => { const el = qs(s); if(el) el.style.display = (s === id ? 'flex' : 'none'); });
-      // --- NUEVO: REFRESCAR LISTA SI ENTRO A JOIN ---
       if(id === 'screenJoin') refreshPublicRooms();
   };
 
@@ -195,7 +198,6 @@ function setupEventListeners() {
   }
 }
 
-// --- NUEVO: FUNCIONES DE LISTA DE SALAS ---
 function refreshPublicRooms() {
     socket.emit('getPublicRooms');
 }
@@ -245,11 +247,11 @@ function updateCategoriesSummary() {
     if(el) el.innerText = CATEGORIES_DATA.filter(c => selectedCategories.has(c.id)).map(c => c.name).join(', '); 
 }
 
-// --- FIX: AHORA SOLO SIRVE PARA EL LOBBY, YA NO PARA CREAR ---
-window.adjustValue = function(id, d) { /* Esta función queda obsoleta en create screen pero útil si quisieras reusarla */ };
+window.adjustValue = function(id, d) { /* Legacy */ };
 
 window.changeLobbySetting = function(key, d) {
     if(!isHost || !currentRoom) return;
+    // --- FIX: VALORES POR DEFECTO PARA NO DAR ERROR ---
     const curPlayers = currentRoom.maxPlayers || 10;
     const curImps = currentRoom.impostors || 2;
     const curTime = (currentRoom.config && currentRoom.config.voteTime) ? currentRoom.config.voteTime / 1000 : 120;
@@ -266,20 +268,21 @@ function createRoom() {
   let mode = 'group'; 
   const mt = qs('modeText'); if(mt && mt.classList.contains('selected-mode')) mode = 'text';
   const md = qs('modeDiscord'); if(md && md.classList.contains('selected-mode')) mode = 'discord';
-  
-  // LEER CHECKBOX DE PRIVACIDAD
   const isPublic = qs('chkPublicRoom') ? qs('chkPublicRoom').checked : false;
 
-  // FIX: YA NO ENVIAMOS SETTINGS (Usamos defaults del server)
   socket.emit('createRoom', { 
       name: qs('hostName').value || 'Agente', 
       categories: Array.from(selectedCategories), 
       mode: mode,
-      isPublic: isPublic, // Nuevo param
+      isPublic: isPublic, 
       userId: MY_DEVICE_ID 
   }, handleJoin);
 }
-function joinRoom() { socket.emit('joinRoom', { name: qs('joinName').value || 'Agente', roomCode: qs('joinCode').value, userId: MY_DEVICE_ID }, handleJoin); }
+function joinRoom() { 
+    const name = qs('joinName').value || 'Agente'; // Tomar valor actual
+    localStorage.setItem('playerName', name); // Guardar para futuro
+    socket.emit('joinRoom', { name: name, roomCode: qs('joinCode').value, userId: MY_DEVICE_ID }, handleJoin); 
+}
 function handleJoin(res) {
   if(!res.ok) return showModal("Error", res.error);
   myId = res.me.id; isHost = res.isHost;
@@ -357,9 +360,10 @@ function updateGameView(room) {
       const overlay = document.getElementById('ejectionOverlay');
       if(overlay) overlay.style.display = 'none';
 
-      const lp = qs('lobbyPlayersVal'); if(lp && room.maxPlayers) lp.innerText = room.maxPlayers;
-      const li = qs('lobbyImpostorsVal'); if(li && room.impostors) li.innerText = room.impostors;
-      const lt = qs('lobbyTimeVal'); if(lt && room.config) lt.innerText = room.config.voteTime / 1000;
+      // --- FIX: EVITAR UNDEFINED CON FALLBACKS ---
+      const lp = qs('lobbyPlayersVal'); if(lp) lp.innerText = (room.maxPlayers !== undefined) ? room.maxPlayers : 10;
+      const li = qs('lobbyImpostorsVal'); if(li) li.innerText = (room.impostors !== undefined) ? room.impostors : 2;
+      const lt = qs('lobbyTimeVal'); if(lt && room.config) lt.innerText = (room.config.voteTime / 1000) || 120;
       
       const hostPanel = qs('hostControlsArea');
       if(hostPanel) hostPanel.style.display = isHost ? 'block' : 'none';
