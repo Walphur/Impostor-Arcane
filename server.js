@@ -10,9 +10,7 @@ const httpServer = http.createServer(app);
 const io = new Server(httpServer, { pingTimeout: 60000, pingInterval: 25000 });
 
 // --- CONFIGURACIÓN DE VERSIÓN ---
-// Cada vez que subas una nueva APK, incrementa esto.
-// Los celulares con versión menor recibirán el aviso de actualizar.
-const MIN_APP_VERSION = 17; 
+const MIN_APP_VERSION = 21; 
 
 const rooms = {};
 const socketRoom = {}; 
@@ -42,6 +40,7 @@ async function createDiscordChannelForRoom(code) {
   } catch (err) { return null; }
 }
 
+// DATOS
 const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#f97316', '#a855f7', '#ec4899', '#0ea5e9', '#22d3ee', '#4ade80', '#facc15', '#fb7185', '#8b5cf6', '#14b8a6', '#64748b'];
 const WORD_DB = {
   lugares: ['CINE', 'PLAYA', 'HOSPITAL', 'ESCUELA', 'AEROPUERTO', 'RESTAURANTE', 'GIMNASIO', 'PARQUE', 'MUSEO', 'SUPERMERCADO', 'PLAZA', 'ESTADIO', 'TEATRO', 'OFICINA', 'BIBLIOTECA', 'BANCO', 'HOTEL', 'DISCOTECA', 'ESTACIÓN DE TREN', 'GRANJA', 'PISCINA', 'FÁBRICA', 'ZOO', 'IGLESIA', 'MONTE', 'RIO', 'LAGO', 'DESIERTO', 'SUBMARINO', 'NAVE ESPACIAL', 'CUEVA', 'VOLCÁN', 'ISLA DESIERTA', 'CEMENTERIO', 'LABORATORIO', 'CÁRCEL', 'CASTILLO', 'BOSQUE', 'GARAJE', 'ÁTICO', 'SÓTANO', 'CASINO', 'CRUCERO', 'SPA', 'PELUQUERÍA', 'FARMACIA'],
@@ -73,7 +72,9 @@ function serializeRoom(room) {
   return {
     code: room.code, hostId: room.hostId, phase: room.phase, mode: room.mode,
     config: room.config, maxPlayers: room.maxPlayers, 
-    players: room.players.map(p => ({ id: p.id, userId: p.userId, name: p.name, color: p.color, isDead: p.isDead, disconnected: p.disconnected })),
+    players: room.players.map(p => ({ 
+        id: p.id, userId: p.userId, name: p.name, color: p.color, isDead: p.isDead, disconnected: p.disconnected 
+    })),
     currentTurnId: room.currentTurnId, timerText: room.timerText, remaining: room.remaining,
     votes: room.votes, impostors: room.impostors, discordLink: room.discordLink,
     clues: room.clues || [], introReady: room.introReady || [], impostorNames: room.impostorNames || []
@@ -91,13 +92,14 @@ io.on('connection', (socket) => {
           .map(r => ({
               code: r.code,
               name: r.players[0] ? r.players[0].name + "'s Sala" : "Sala Pública",
-              players: r.players.filter(p => !p.disconnected).length, max: r.maxPlayers, mode: r.mode
+              players: r.players.filter(p => !p.disconnected).length,
+              max: r.maxPlayers,
+              mode: r.mode
           }));
       socket.emit('publicRoomsList', publicRooms);
   });
 
   socket.on('createRoom', async (data, cb) => {
-    // CHEQUEO DE VERSIÓN
     if (data.clientVersion && data.clientVersion < MIN_APP_VERSION) {
         return cb({ ok: false, error: 'UPDATE_REQUIRED' });
     }
@@ -128,7 +130,6 @@ io.on('connection', (socket) => {
   });
 
   socket.on('joinRoom', (data, cb) => {
-    // CHEQUEO DE VERSIÓN
     if (data.clientVersion && data.clientVersion < MIN_APP_VERSION) {
         return cb({ ok: false, error: 'UPDATE_REQUIRED' });
     }
@@ -151,18 +152,31 @@ io.on('connection', (socket) => {
         if (room.hostId === oldSocketId) room.hostId = socket.id;
         if (room.currentTurnId === oldSocketId) room.currentTurnId = socket.id;
 
+        // --- CORRECCIÓN SINTÁCTICA AQUÍ ---
         let myRoleData = null;
         if(room.phase !== 'lobby' && room.roles[socket.id]) {
             const isImp = room.roles[socket.id] === 'impostor';
             const catName = getCategoryName(room.secretCategory);
             const partners = room.players.filter(p => room.roles[p.id] === 'impostor' && p.id !== socket.id).map(p => p.name);
-            myRoleData = { role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', word: isImp ? '???' : room.secretWord, hint: isImp ? 'Finge saber.', category: catName, partners: isImp ? partners : [] };
+            myRoleData = { 
+                role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', 
+                word: isImp ? '???' : room.secretWord, 
+                hint: isImp ? 'Finge saber.' : 'Escribe una pista.', 
+                category: catName, 
+                partners: isImp ? partners : [] 
+            };
         } else if (room.phase !== 'lobby' && room.roles[oldSocketId]) {
              room.roles[socket.id] = room.roles[oldSocketId]; delete room.roles[oldSocketId];
              const isImp = room.roles[socket.id] === 'impostor';
              const catName = getCategoryName(room.secretCategory);
              const partners = room.players.filter(p => room.roles[p.id] === 'impostor' && p.id !== socket.id).map(p => p.name);
-             myRoleData = { role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', word: isImp ? '???' : room.secretWord, hint: isImp ? 'Finge saber.', category: catName, partners: isImp ? partners : [] };
+             myRoleData = { 
+                role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', 
+                word: isImp ? '???' : room.secretWord, 
+                hint: isImp ? 'Finge saber.' : 'Escribe una pista.', 
+                category: catName, 
+                partners: isImp ? partners : [] 
+            };
         }
 
         socket.join(code);
@@ -245,7 +259,15 @@ io.on('connection', (socket) => {
     room.players.forEach(p => {
       const isImp = room.roles[p.id] === 'impostor';
       const partners = impostorIds.filter(imp => imp.id !== p.id).map(imp => imp.name);
-      io.to(p.id).emit('privateRole', { role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', word: isImp ? '???' : room.secretWord, hint: isImp ? 'Finge saber.', category: catName, partners: isImp ? partners : [] });
+      
+      // --- CORRECCIÓN SINTÁCTICA AQUÍ TAMBIÉN ---
+      io.to(p.id).emit('privateRole', { 
+          role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', 
+          word: isImp ? '???' : room.secretWord, 
+          hint: isImp ? 'Finge saber.' : 'Escribe una pista.', 
+          category: catName, 
+          partners: isImp ? partners : [] 
+      });
     });
     emitRoomState(room);
     startTimer(room, 15, (r) => { r.phase = 'turn'; r.turnIndex = -1; nextTurn(r); });
@@ -402,4 +424,4 @@ function resetToLobby(room) {
 }
 
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server 2.7 en puerto ${PORT}`));
+httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server 2.6.1 FIX en puerto ${PORT}`));

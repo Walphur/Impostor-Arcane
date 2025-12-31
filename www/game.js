@@ -1,7 +1,7 @@
 const socket = io('https://incognitogame.online', { transports: ['websocket'], reconnection: true, reconnectionAttempts: 50, reconnectionDelay: 500 });
 
 // --- VERSIÓN DEL CLIENTE (Sube esto cada vez que actualices el APK) ---
-const CLIENT_VERSION = 20;
+const CLIENT_VERSION = 21;
 
 function getDeviceId() { let id = localStorage.getItem('deviceUUID'); if (!id) { id = 'user_' + Math.random().toString(36).substr(2, 9) + Date.now(); localStorage.setItem('deviceUUID', id); } return id; }
 const MY_DEVICE_ID = getDeviceId();
@@ -91,6 +91,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (isPremium) unlockedCategories = new Set(CATEGORIES_DATA.map(c => c.id));
   await initAdMob(); 
   
+  // PROTECCIÓN CONTRA EL ERROR NULL
   const grid = qs('categoriesGrid');
   if(grid) renderCategoriesGrid(); 
   
@@ -398,6 +399,7 @@ function updateGameView(room) {
       const overlay = document.getElementById('ejectionOverlay');
       if(overlay) overlay.style.display = 'none';
 
+      // FIX: EVITAR UNDEFINED CON FALLBACKS
       const lp = qs('lobbyPlayersVal'); if(lp) lp.innerText = (room.maxPlayers !== undefined) ? room.maxPlayers : 10;
       const li = qs('lobbyImpostorsVal'); if(li) li.innerText = (room.impostors !== undefined) ? room.impostors : 2;
       const lt = qs('lobbyTimeVal'); if(lt && room.config) lt.innerText = (room.config.voteTime / 1000) || 120;
