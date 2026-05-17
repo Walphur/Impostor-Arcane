@@ -6,6 +6,24 @@
     -webkit-tap-highlight-color: transparent; outline: none;
 }
 
+/* --- Tokens UI (coherencia visual) --- */
+:root {
+  --ui-bg-deep: #0f172a;
+  --ui-bg-panel: rgba(30, 41, 59, 0.92);
+  --ui-border: rgba(100, 116, 139, 0.22);
+  --ui-text: #e5e7eb;
+  --ui-muted: #94a3b8;
+  --ui-accent: #3b82f6;
+  --ui-accent-glow: rgba(59, 130, 246, 0.35);
+  --ui-danger: #dc2626;
+  --ui-icon-stroke: 2.1;
+}
+
+.icon-svg {
+  display: block;
+  flex-shrink: 0;
+}
+
 body { 
     font-family: "Poppins", sans-serif; 
     /* FONDO DE CIUDAD CON FILTRO OSCURO PARA LEER MEJOR */
@@ -101,7 +119,9 @@ body {
 
 .screen-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
 .screen-header h2 { margin: 0; font-size: 1.2rem; font-weight: 800; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
-.btn-icon-back { background: rgba(51, 65, 85, 0.8); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; }
+.btn-icon-back { background: rgba(51, 65, 85, 0.8); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; color: #e2e8f0; transition: background 0.2s, color 0.2s, transform 0.1s; }
+.btn-icon-back:hover { background: rgba(71, 85, 105, 0.95); color: #fff; }
+.btn-icon-back:active { transform: scale(0.94); }
 .arrow-icon-img { width: 20px; height: 20px; filter: invert(1); }
 
 .mode-button { background: rgba(30, 41, 59, 0.6); border: 2px solid #334155; border-radius: 16px; padding: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: all 0.2s; opacity: 0.8; flex: 1; }
@@ -164,8 +184,7 @@ body {
 .result-row { display: flex; justify-content: space-between; padding: 5px 0; color: #cbd5e1; }
 .result-value { font-weight: bold; color: #fff; }
 .highlight { color: #f87171; }
-.howto-item { display: flex; gap: 15px; align-items: flex-start; margin-bottom: 15px; background: rgba(15, 23, 42, 0.6); padding: 15px; border-radius: 12px; border: 1px solid #334155; }
-.howto-icon { font-size: 1.8rem; }
+.howto-item { display: flex; gap: 15px; align-items: center; margin-bottom: 15px; background: rgba(15, 23, 42, 0.6); padding: 15px; border-radius: 12px; border: 1px solid #334155; }
 .howto-text h3 { margin: 0 0 5px 0; font-size: 1rem; color: #fff; font-weight: 700; }
 .howto-text p { margin: 0; font-size: 0.85rem; color: #cbd5e1; line-height: 1.4; }
 
@@ -186,6 +205,12 @@ body {
 }
 
 .premium-content-box { background: rgba(30, 41, 59, 0.8); border: 2px solid #fbbf24; border-radius: 20px; padding: 25px; width: 90%; max-width: 380px; margin-bottom: 25px; box-shadow: 0 0 25px rgba(251, 191, 36, 0.15); text-align: center; }
+.premium-rocket {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+  color: #fbbf24;
+}
 .premium-title { font-size: 1.3rem; font-weight: 800; color: #fff; text-transform: uppercase; margin: 15px 0 10px; letter-spacing: 1px; }
 .premium-text { font-size: 0.95rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 25px; font-weight: 600; }
 .premium-list { text-align: left; list-style: none; padding: 0; margin: 0 auto; display: inline-block; }
@@ -200,27 +225,26 @@ body {
 
 /* --- CREAR SALA / UNIRSE (pantallas mejoradas) --- */
 .screen.screen-create,
-.screen.screen-join {
+.screen.screen-join,
+.screen.screen-categories-flow {
   padding: 22px 20px 24px;
   border: 1px solid rgba(148, 163, 184, 0.12);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(59, 130, 246, 0.08);
 }
 
-.screen-create-header,
-.screen-join-header {
+.screen-create-header {
   align-items: flex-start;
   margin-bottom: 18px;
   gap: 12px;
 }
 
-.screen-create-heading,
-.screen-join-heading {
+.screen-create-heading {
   flex: 1;
   min-width: 0;
 }
 
 .screen-create-heading h2,
-.screen-join-heading h2 {
+.flow-screen-h2 {
   margin: 0 0 6px;
   font-size: 1.35rem;
   font-weight: 800;
@@ -233,7 +257,7 @@ body {
 }
 
 .screen-create-sub,
-.screen-join-sub {
+.flow-screen-sub {
   margin: 0;
   font-size: 0.78rem;
   color: #94a3b8;
@@ -459,9 +483,20 @@ body {
   color: #93c5fd;
 }
 
-.mode-icon-discord {
-  background: rgba(88, 101, 242, 0.35);
-  color: #fff;
+.mode-icon-users {
+  background: rgba(52, 211, 153, 0.15);
+  color: #6ee7b7;
+}
+
+.mode-icon-voice {
+  background: rgba(139, 92, 246, 0.22);
+  color: #c4b5fd;
+}
+
+.mode-svg {
+  width: 22px;
+  height: 22px;
+  display: block;
 }
 
 .mode-copy {
@@ -652,4 +687,124 @@ body {
 .btn-join-cta:active {
   transform: translateY(2px);
   box-shadow: 0 2px 0 #991b1b, 0 6px 20px rgba(220, 38, 38, 0.3);
+}
+
+/* --- Cómo jugar (iconos SVG + mismo lenguaje que crear/unir) --- */
+.howto-card--flow {
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(16px);
+}
+
+.howto-title-wrap {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.howto-item:last-of-type {
+  margin-bottom: 14px;
+}
+
+.howto-icon-wrap {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(51, 65, 85, 0.9);
+  color: #93c5fd;
+  border: 1px solid rgba(96, 165, 250, 0.28);
+}
+
+.howto-icon-wrap--role { color: #a5b4fc; border-color: rgba(129, 140, 248, 0.35); }
+.howto-icon-wrap--clue { color: #34d399; border-color: rgba(52, 211, 153, 0.35); }
+.howto-icon-wrap--vote { color: #fbbf24; border-color: rgba(251, 191, 36, 0.35); }
+
+.howto-svg {
+  width: 24px;
+  height: 24px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.howto-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.howto-text h3 {
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.btn-howto-close {
+  border-radius: 14px;
+  text-transform: none;
+  letter-spacing: 0.04em;
+  box-shadow: 0 4px 0 #991b1b, 0 12px 28px rgba(220, 38, 38, 0.35);
+  margin-top: 4px;
+}
+
+/* --- Inicio: botones con icono --- */
+.home-btn-with-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.home-btn-icon {
+  opacity: 0.95;
+}
+
+.btn-primary.home-btn-with-icon .home-btn-icon {
+  color: #fff;
+}
+
+.btn-secondary.home-btn-with-icon .home-btn-icon {
+  color: #e2e8f0;
+}
+
+.btn-gold.home-btn-with-icon .home-btn-icon {
+  color: #fff;
+}
+
+.home-btn-howto {
+  text-transform: none;
+  letter-spacing: 0.06em;
+}
+
+/* --- Premium cabecera --- */
+.flow-screen-h2-premium {
+  background: linear-gradient(120deg, #fef9c3 0%, #fbbf24 45%, #d97706 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+}
+
+.screen-premium-flow .screen-create-sub,
+.screen-premium-flow .flow-screen-sub {
+  color: #cbd5e1;
+}
+
+/* --- Código sala: quitar adornos del navegador que parecen un círculo --- */
+input.input-join-code::-webkit-credentials-auto-fill-button,
+input.input-join-code::-webkit-contacts-auto-fill-button {
+  display: none !important;
+  visibility: hidden;
+  pointer-events: none;
+  height: 0;
+  width: 0;
+  margin: 0;
+}
+
+.btn-exit-arrow {
+  margin-right: 6px;
+  color: inherit;
 }

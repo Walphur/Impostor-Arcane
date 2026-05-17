@@ -1,7 +1,7 @@
 const socket = io('https://incognitogame.online', { transports: ['websocket'], reconnection: true, reconnectionAttempts: 50, reconnectionDelay: 500 });
 
 // --- VERSIÓN DEL CLIENTE (Sube esto cada vez que actualices el APK) ---
-const CLIENT_VERSION = 24;
+const CLIENT_VERSION = 25;
 
 function getDeviceId() { let id = localStorage.getItem('deviceUUID'); if (!id) { id = 'user_' + Math.random().toString(36).substr(2, 9) + Date.now(); localStorage.setItem('deviceUUID', id); } return id; }
 const MY_DEVICE_ID = getDeviceId();
