@@ -1,7 +1,7 @@
 const socket = io('https://incognitogame.online', { transports: ['websocket'], reconnection: true, reconnectionAttempts: 50, reconnectionDelay: 500 });
 
 // --- VERSIÓN DEL CLIENTE (Sube esto cada vez que actualices el APK) ---
-const CLIENT_VERSION = 22;
+const CLIENT_VERSION = 24;
 
 function getDeviceId() { let id = localStorage.getItem('deviceUUID'); if (!id) { id = 'user_' + Math.random().toString(36).substr(2, 9) + Date.now(); localStorage.setItem('deviceUUID', id); } return id; }
 const MY_DEVICE_ID = getDeviceId();
@@ -18,6 +18,13 @@ const MAX_VIDEO_UNLOCKS = 2;
 let wakeLock = null; 
 
 const qs = (id) => document.getElementById(id);
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 function playSound(id) { const audio = qs(id); if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); } }
 
 const IMG_ICONS = {
@@ -106,11 +113,18 @@ function setupModeSelectors() {
     const modes = ['modeText', 'modeGroup', 'modeDiscord'];
     modes.forEach(m => {
         const el = qs(m);
-        if(el) {
-            el.addEventListener('click', () => {
-                modes.forEach(om => qs(om).classList.remove('selected-mode'));
+        if (el) {
+            const select = () => {
+                modes.forEach(om => { const o = qs(om); if (o) o.classList.remove('selected-mode'); });
                 el.classList.add('selected-mode');
                 playSound('soundClick');
+            };
+            el.addEventListener('click', select);
+            el.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    select();
+                }
             });
         }
     });
@@ -141,6 +155,15 @@ function setupEventListeners() {
   
   const btnCreateRoom = qs('btnCreateRoom'); if(btnCreateRoom) btnCreateRoom.onclick = () => { playSound('soundClick'); handleCreateRoomFlow(); };
   const btnJoinRoom = qs('btnJoinRoom'); if(btnJoinRoom) btnJoinRoom.onclick = () => { playSound('soundClick'); joinRoom(); };
+
+  const joinCodeEl = qs('joinCode');
+  if (joinCodeEl) {
+    joinCodeEl.addEventListener('input', () => {
+      joinCodeEl.value = joinCodeEl.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+    });
+  }
+  const btnRefreshPublicRooms = qs('btnRefreshPublicRooms');
+  if (btnRefreshPublicRooms) btnRefreshPublicRooms.onclick = () => { playSound('soundClick'); refreshPublicRooms(); };
   
   const btnStart = qs('btnStartRound');
   if(btnStart) btnStart.onclick = () => { 
@@ -209,22 +232,34 @@ socket.on('publicRoomsList', (rooms) => {
     if(!list) return;
     list.innerHTML = '';
     if(rooms.length === 0) {
-        list.innerHTML = '<div style="color:#64748b; font-style:italic; padding:10px;">No hay salas públicas ahora.</div>';
+        list.innerHTML = '<div class="public-rooms-empty">No hay salas públicas ahora.</div>';
         return;
     }
     rooms.forEach(r => {
         const div = document.createElement('div');
-        div.className = 'player-row'; 
-        div.style.cursor = 'pointer';
-        div.innerHTML = `<div style="flex:1;">
-            <div style="font-weight:bold; color:#fff;">${r.name}</div>
-            <div style="font-size:0.75rem; color:#94a3b8;">${r.players}/${r.max} - ${r.mode === 'discord' ? '🎧 Discord' : (r.mode === 'text' ? '📝 Chat' : '🗣️ Grupo')}</div>
-        </div>
-        <button class="btn-main btn-primary" style="padding:6px 12px; font-size:0.8rem;">UNIRSE</button>`;
-        div.onclick = () => {
-            qs('joinCode').value = r.code;
+        div.className = 'public-room-card';
+        div.setAttribute('role', 'listitem');
+        div.tabIndex = 0;
+        const modeLabel = r.mode === 'discord' ? 'Voz · Discord' : (r.mode === 'text' ? 'Chat' : 'Grupal');
+        const title = escapeHtml(r.name || 'Sala');
+        const code = escapeHtml(r.code || '');
+        div.innerHTML = `<div class="public-room-card-info">
+            <div class="public-room-card-title">${title}</div>
+            <div class="public-room-card-meta">${r.players}/${r.max} · ${escapeHtml(modeLabel)}</div>
+          </div>
+          <span class="btn-main btn-primary btn-public-join">Entrar</span>`;
+        const go = () => {
+            const jc = qs('joinCode');
+            if (jc) jc.value = (r.code || '').toUpperCase();
             joinRoom();
         };
+        div.onclick = go;
+        div.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                go();
+            }
+        });
         list.appendChild(div);
     });
 });
@@ -247,7 +282,9 @@ function renderCategoriesGrid() {
 
 function updateCategoriesSummary() { 
     const el = qs('categoriesSummary');
-    if(el) el.innerText = CATEGORIES_DATA.filter(c => selectedCategories.has(c.id)).map(c => c.name).join(', '); 
+    if (!el) return;
+    const names = CATEGORIES_DATA.filter(c => selectedCategories.has(c.id)).map(c => c.name);
+    el.innerHTML = names.map(n => `<span class="cat-pill">${n}</span>`).join('');
 }
 
 window.changeLobbySetting = function(key, d) {
@@ -289,7 +326,7 @@ function joinRoom() {
 
     const name = nameInput.value.trim();
     localStorage.setItem('playerName', name); 
-    socket.emit('joinRoom', { name: name, roomCode: qs('joinCode').value, userId: MY_DEVICE_ID, clientVersion: CLIENT_VERSION }, handleJoin); 
+    socket.emit('joinRoom', { name: name, roomCode: (qs('joinCode').value || '').trim().toUpperCase(), userId: MY_DEVICE_ID, clientVersion: CLIENT_VERSION }, handleJoin); 
 }
 
 function handleJoin(res) {

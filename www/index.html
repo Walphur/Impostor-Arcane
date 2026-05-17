@@ -89,66 +89,99 @@
         </div>
     </div>
 
-    <div id="screenCreate" class="screen" style="display:none;">
-      <div class="screen-header"><button id="backFromCreate" class="btn-icon-back"><img src="images/arrow.png" class="arrow-icon-img"></button><h2>Crear Sala</h2></div>
-      
-      <div class="app-card"><input type="text" id="hostName" class="input-modern" maxlength="12" placeholder="Tu Nombre (Requerido)"></div>
-      
-      <div class="app-card row-between"><div style="overflow:hidden; flex:1;"><span class="mini-label">CATEGORÍAS</span><div id="categoriesSummary" style="font-size:0.85rem; color:#cbd5e1; font-weight:600;">...</div></div><button id="btnOpenCategories" style="background:#3b82f6; border:none; color:white; padding:10px 18px; border-radius:10px; cursor:pointer; font-weight:700;">Elegir</button></div>
-      
-      <div class="app-card">
-          <span class="mini-label" style="display:block; margin-bottom:10px;">VISIBILIDAD</span>
-          <div style="display:flex; align-items:center; gap:10px;">
-              <input type="checkbox" id="chkPublicRoom" style="width:20px; height:20px;">
-              <label for="chkPublicRoom" style="color:#fff; font-weight:bold;">Sala Pública (Aparece en lista)</label>
-          </div>
+    <div id="screenCreate" class="screen screen-create" style="display:none;">
+      <div class="screen-header screen-create-header">
+        <button type="button" id="backFromCreate" class="btn-icon-back" aria-label="Volver"><img src="images/arrow.png" class="arrow-icon-img" alt=""></button>
+        <div class="screen-create-heading">
+          <h2>Crear sala</h2>
+          <p class="screen-create-sub">Configura la partida y comparte el código con tus amigos.</p>
+        </div>
       </div>
 
-      <div class="app-card">
-          <span class="mini-label" style="display:block; margin-bottom:10px;">MODO DE JUEGO</span>
-          <div style="display:flex; flex-direction:column; gap:8px;">
-              <div id="modeText" class="mode-button selected-mode">
-                  <div style="background:#334155; padding:6px; border-radius:6px; display:flex;"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-                  <div style="flex:1;"><div style="font-weight:700; color:#fff;">Texto (Chat)</div><div style="font-size:0.75rem; color:#64748b;">Bitácora de pistas.</div></div>
-              </div>
-              <div id="modeGroup" class="mode-button">
-                  <div style="background:#334155; padding:6px; border-radius:6px; display:flex;"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-                  <div style="flex:1;"><div style="font-weight:700; color:#fff;">Grupal (Cara a Cara)</div><div style="font-size:0.75rem; color:#64748b;">Sin chat. Hablen en persona.</div></div>
-              </div>
-              <div id="modeDiscord" class="mode-button">
-                  <div style="background:#5865F2; padding:6px; border-radius:6px; display:flex;"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.6853-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.419-2.1568 2.419zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.419-2.1568 2.419z"/></svg></div>
-                  <div style="flex:1;"><div style="font-weight:700; color:#fff;">Voz (Discord)</div><div style="font-size:0.75rem; color:#64748b;">Crea canal de voz.</div></div>
-              </div>
-          </div>
-      </div>
+      <div class="create-form-stack">
+        <div class="create-block create-block-glow">
+          <label class="mini-label mini-label-spaced" for="hostName">Tu nombre</label>
+          <input type="text" id="hostName" class="input-modern input-create-name" maxlength="12" placeholder="Cómo te verán en la sala" autocomplete="nickname">
+        </div>
 
-      <button id="btnCreateRoom" class="btn-big btn-main btn-primary" style="margin-top:10px;">CREAR SALA</button>
+        <div class="create-block create-block-glow">
+          <span class="mini-label mini-label-spaced">Categorías</span>
+          <div class="create-categories-row">
+            <div id="categoriesSummary" class="create-categories-pills" aria-live="polite">…</div>
+            <button type="button" id="btnOpenCategories" class="btn-pick-categories">
+              Elegir
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="create-block create-block-glow">
+          <span class="mini-label mini-label-spaced">Visibilidad</span>
+          <label class="toggle-public" for="chkPublicRoom">
+            <input type="checkbox" id="chkPublicRoom" class="toggle-checkbox-native">
+            <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+            <span class="toggle-copy">
+              <span class="toggle-title">Sala pública</span>
+              <span class="toggle-hint">Cualquiera puede verte en la lista y unirse.</span>
+            </span>
+          </label>
+        </div>
+
+        <div class="create-block create-block-glow create-block-modes">
+          <span class="mini-label mini-label-spaced">Modo de juego</span>
+          <div class="mode-picker-row" role="group" aria-label="Modo de juego">
+            <div id="modeText" class="mode-button mode-button-compact selected-mode" role="button" tabindex="0">
+              <div class="mode-icon-wrap mode-icon-chat"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+              <div class="mode-copy"><span class="mode-title">Texto</span><span class="mode-desc">Pistas en el chat</span></div>
+            </div>
+            <div id="modeGroup" class="mode-button mode-button-compact" role="button" tabindex="0">
+              <div class="mode-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+              <div class="mode-copy"><span class="mode-title">Grupal</span><span class="mode-desc">Cara a cara</span></div>
+            </div>
+            <div id="modeDiscord" class="mode-button mode-button-compact" role="button" tabindex="0">
+              <div class="mode-icon-wrap mode-icon-discord"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.6853-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.419-2.1568 2.419zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.419-2.1568 2.419z"/></svg></div>
+              <div class="mode-copy"><span class="mode-title">Voz</span><span class="mode-desc">Canal Discord</span></div>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" id="btnCreateRoom" class="btn-big btn-main btn-primary btn-create-cta">Crear sala</button>
+      </div>
     </div>
 
-    <div id="screenJoin" class="screen" style="display:none;">
-      <div class="screen-header"><button id="backFromJoin" class="btn-icon-back"><img src="images/arrow.png" class="arrow-icon-img"></button><h2>Unirse</h2></div>
-      
-      <div class="app-card"><input type="text" id="joinName" class="input-modern" maxlength="12" placeholder="Tu Nombre (Requerido)"></div>
-      <div class="app-card"><input type="text" id="joinCode" class="input-modern" maxlength="6" placeholder="CÓDIGO" style="text-transform:uppercase; letter-spacing:2px; font-weight:700;"></div>
-      
-      <button id="btnJoinRoom" class="btn-big btn-main btn-primary" style="margin-top:5px; margin-bottom:20px;">ENTRAR</button>
+    <div id="screenJoin" class="screen screen-join" style="display:none;">
+      <div class="screen-header screen-join-header">
+        <button type="button" id="backFromJoin" class="btn-icon-back" aria-label="Volver"><img src="images/arrow.png" class="arrow-icon-img" alt=""></button>
+        <div class="screen-join-heading">
+          <h2>Unirse a sala</h2>
+          <p class="screen-join-sub">Introduce el código o elige una partida pública.</p>
+        </div>
+      </div>
 
-      <div style="margin-bottom:10px; border-top:1px solid #334155; padding-top:10px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-              <span class="mini-label">SALAS PÚBLICAS</span>
-              
-              <button onclick="refreshPublicRooms()" style="background:none; border:none; cursor:pointer; padding:5px;">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 3px #3b82f6);">
-                      <path d="M21.5 2v6h-6"></path>
-                      <path d="M2.5 22v-6h6"></path>
-                      <path d="M2 11.5a10 10 0 0 1 18.8-4.3L21.5 8"></path>
-                      <path d="M22 12.5a10 10 0 0 1-18.8 4.3L2.5 16"></path>
-                  </svg>
-              </button>
+      <div class="join-form-stack">
+        <div class="create-block create-block-glow">
+          <label class="mini-label mini-label-spaced" for="joinName">Tu nombre</label>
+          <input type="text" id="joinName" class="input-modern input-create-name" maxlength="12" placeholder="Cómo te verán en la sala" autocomplete="nickname">
+        </div>
+
+        <div class="create-block create-block-glow">
+          <label class="mini-label mini-label-spaced" for="joinCode">Código de sala</label>
+          <input type="text" id="joinCode" class="input-modern input-create-name input-join-code" maxlength="6" placeholder="Ej. ABC12X" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false">
+        </div>
+
+        <button type="button" id="btnJoinRoom" class="btn-big btn-main btn-primary btn-join-cta">Entrar a la sala</button>
+
+        <div class="create-block create-block-glow join-public-block">
+          <div class="join-public-toolbar">
+            <span class="mini-label mini-label-inline">Salas públicas</span>
+            <button type="button" id="btnRefreshPublicRooms" class="btn-refresh-publics" aria-label="Actualizar lista" title="Actualizar">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"></path><path d="M2.5 22v-6h6"></path><path d="M2 11.5a10 10 0 0 1 18.8-4.3L21.5 8"></path><path d="M22 12.5a10 10 0 0 1-18.8 4.3L2.5 16"></path></svg>
+            </button>
           </div>
-          <div id="publicRoomsContainer" style="display:flex; flex-direction:column; gap:8px; max-height:150px; overflow-y:auto;">
-              <div style="color:#64748b; font-style:italic; font-size:0.9rem; text-align:center;">Cargando...</div>
+          <div id="publicRoomsContainer" class="public-rooms-scroll" role="list">
+            <div class="public-rooms-placeholder">Cargando…</div>
           </div>
+        </div>
       </div>
     </div>
 
