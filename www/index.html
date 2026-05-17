@@ -46,7 +46,7 @@
   </div>
 
   <div id="ejectionOverlay" class="full-overlay" style="display: none;">
-    <div class="result-card">
+    <div class="result-card" id="resultCardPanel">
       <div id="resultIcon" style="text-align:center; margin-bottom:10px; width:100%; display:flex; justify-content:center;"></div>
       <h1 id="resultTitle" class="result-title">---</h1>
       <p id="resultSubtitle" style="text-align:center; font-weight:600;">---</p>
@@ -56,7 +56,18 @@
         <div class="result-row"><span>Impostores:</span><span id="finalImpostors" class="result-value highlight">---</span></div>
       </div>
       
-      <button id="btnBackToLobby" class="btn-main btn-primary" style="width:100%" onclick="document.getElementById('ejectionOverlay').style.display='none'">CONTINUAR</button>
+      <button id="btnBackToLobby" class="btn-main btn-primary" style="width:100%">CONTINUAR</button>
+    </div>
+  </div>
+
+  <div id="welcomeTourOverlay" class="full-overlay welcome-tour-overlay" style="display:none;">
+    <div class="welcome-tour-card" role="dialog" aria-modal="true" aria-labelledby="welcomeTourTitle">
+      <p class="welcome-tour-step" id="welcomeTourStepLabel">1 / 3</p>
+      <h2 id="welcomeTourTitle" class="welcome-tour-title">Bienvenido</h2>
+      <p id="welcomeTourBody" class="welcome-tour-body"></p>
+      <div id="welcomeTourDots" class="welcome-tour-dots" aria-hidden="true"></div>
+      <button type="button" id="welcomeTourNext" class="btn-main btn-primary welcome-tour-cta">Siguiente</button>
+      <button type="button" id="welcomeTourSkip" class="btn-main btn-secondary welcome-tour-skip">Saltar</button>
     </div>
   </div>
 
@@ -310,6 +321,11 @@
                 </div>
             </div>
 
+            <div id="lobbyReadyBar" class="lobby-ready-bar" style="display:none;">
+              <button type="button" id="btnLobbyReady" class="btn-main btn-secondary lobby-ready-btn">Marcar listo</button>
+              <p id="lobbyReadyHint" class="lobby-ready-hint"></p>
+            </div>
+
             <button id="btnStartRound" class="btn-main btn-primary" style="display:none; width:100%;">INICIAR PARTIDA</button>
           </div>
           
@@ -320,7 +336,8 @@
                 <div class="secret-card-face back"><div id="roleTitle" class="role-badge">ROL</div><div id="secretWordDisplay" class="secret-word-reveal">---</div><p id="wordHint" style="font-size:0.9rem; color:#cbd5e1; font-weight:600;">...</p></div>
               </div>
             </div>
-            <p style="margin-top:15px; color:#94a3b8; font-weight:600;">Memoriza tu rol.</p>
+            <p id="cardTensionHint" class="card-tension-hint" aria-live="polite"></p>
+            <p class="word-screen-hint">Memoriza tu rol. Nadie debe leer tu pantalla.</p>
             <button id="btnReady" class="btn-main btn-primary" style="width:100%; margin-top:15px;">¡LISTO! (SALTAR)</button>
           </div>
           
@@ -332,9 +349,9 @@
                 <div id="cluesHistory"></div>
             </div>
 
-            <div class="app-card" style="text-align:center; padding:15px;">
+            <div id="turnSpeakerCard" class="app-card turn-speaker-card">
                 <span class="mini-label">TURNO DE</span>
-                <div id="currentTurnPlayer" style="font-size:1.8rem; font-weight:800; color:#fff;">...</div>
+                <div id="currentTurnPlayer" class="turn-speaker-name">...</div>
             </div>
 
             <div id="turnInputArea" style="display:none; margin-top:15px; gap: 8px;">
@@ -367,7 +384,7 @@
         </section>
 
         <aside class="sidebar-panel" style="display:flex; flex-direction:column; gap:15px;">
-          <div class="sidebar-card"><div class="mini-label">TIEMPO</div><div id="timerNumber" class="timer-display-sidebar">--</div></div>
+          <div class="sidebar-card"><div class="mini-label">TIEMPO</div><div id="timerDisplayWrap" class="timer-sidebar-wrap"><div id="timerNumber" class="timer-display-sidebar">--</div></div></div>
           <div class="sidebar-card" style="flex:1;"><div class="mini-label">AGENTES</div><div id="playersList" class="players-list" style="margin-top:10px;"></div></div>
           <div class="sidebar-card"><div class="mini-label">ESTADO</div><p id="statusText" style="font-size:0.9rem; color:#cbd5e1; font-weight:600; margin-top:5px;">...</p></div>
         </aside>
@@ -375,6 +392,8 @@
     </div>
   </main>
   
+  <div id="confettiRoot" class="confetti-root" aria-hidden="true"></div>
+
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script src="game.js"></script>
 </body>

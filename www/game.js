@@ -1,7 +1,7 @@
 const socket = io('https://incognitogame.online', { transports: ['websocket'], reconnection: true, reconnectionAttempts: 50, reconnectionDelay: 500 });
 
 // --- VERSIÓN DEL CLIENTE (Sube esto cada vez que actualices el APK) ---
-const CLIENT_VERSION = 26;
+const CLIENT_VERSION = 27;
 
 function getDeviceId() { let id = localStorage.getItem('deviceUUID'); if (!id) { id = 'user_' + Math.random().toString(36).substr(2, 9) + Date.now(); localStorage.setItem('deviceUUID', id); } return id; }
 const MY_DEVICE_ID = getDeviceId();
@@ -26,6 +26,60 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 function playSound(id) { const audio = qs(id); if(audio) { audio.currentTime = 0; audio.play().catch(()=>{}); } }
+
+const FIRST_VISIT_KEY = 'incognito_onboarding_v1';
+const WELCOME_STEPS = [
+  { title: 'Crea o únete', body: 'Haz una sala privada con código o entra a una pública. Comparte el código solo con quien quieras en la partida.' },
+  { title: 'Una palabra de pista', body: 'Los agentes conocen la palabra secreta; el impostor no. Da una pista de una sola palabra sin delatarte.' },
+  { title: 'Vota con cabeza fría', body: 'Debatid, señalad pistas raras y expulsad al impostor. Un mal voto puede costar la ronda.' }
+];
+
+let _prevPhaseForFx = null;
+let _prevTurnIdForFx = null;
+
+function haptic(pattern) {
+  try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {}
+}
+
+function playSoftTurnCue() {
+  const a = qs('soundClick');
+  if (!a) return;
+  const prev = a.volume;
+  a.volume = 0.28;
+  a.currentTime = 0;
+  a.play().catch(() => {});
+  setTimeout(() => { a.volume = prev; }, 420);
+}
+
+function initialsFromName(name) {
+  const s = String(name || '?').trim();
+  if (!s) return '??';
+  const parts = s.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return s.slice(0, 2).toUpperCase();
+}
+
+function clearConfetti() {
+  const root = qs('confettiRoot');
+  if (root) root.innerHTML = '';
+}
+
+function spawnConfetti() {
+  const root = qs('confettiRoot');
+  if (!root) return;
+  clearConfetti();
+  const colors = ['#22c55e', '#4ade80', '#86efac', '#fbbf24', '#38bdf8', '#a78bfa', '#f472b6', '#e2e8f0'];
+  for (let i = 0; i < 52; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.left = `${Math.random() * 100}vw`;
+    el.style.background = colors[Math.floor(Math.random() * colors.length)];
+    el.style.animationDuration = `${2.1 + Math.random() * 1.5}s`;
+    el.style.animationDelay = `${Math.random() * 0.35}s`;
+    root.appendChild(el);
+  }
+  setTimeout(clearConfetti, 3400);
+}
 
 const IMG_ICONS = {
     win: '<span class="result-icon-wrap result-icon-wrap--win" role="img" aria-label="Victoria"><svg class="result-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" fill="rgba(253, 224, 71, 0.45)"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" fill="rgba(253, 224, 71, 0.45)"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" fill="rgba(251, 191, 36, 0.28)"/></svg></span>',
@@ -104,10 +158,63 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   updateCategoriesSummary(); 
   setupEventListeners();
+  initWelcomeTour();
   const savedName = localStorage.getItem('playerName'); if(savedName) { qs('hostName').value = savedName; qs('joinName').value = savedName; }
   setupModeSelectors(); 
   requestWakeLock();
+  maybeShowWelcomeTour();
 });
+
+function maybeShowWelcomeTour() {
+  if (localStorage.getItem(FIRST_VISIT_KEY)) return;
+  const overlay = qs('welcomeTourOverlay');
+  if (overlay) overlay.style.display = 'flex';
+}
+
+function initWelcomeTour() {
+  let step = 0;
+  const overlay = qs('welcomeTourOverlay');
+  const titleEl = qs('welcomeTourTitle');
+  const bodyEl = qs('welcomeTourBody');
+  const stepLabel = qs('welcomeTourStepLabel');
+  const dots = qs('welcomeTourDots');
+  const btnNext = qs('welcomeTourNext');
+  const btnSkip = qs('welcomeTourSkip');
+  if (!overlay || !titleEl || !bodyEl || !btnNext || !btnSkip) return;
+
+  const renderDots = () => {
+    if (!dots) return;
+    dots.innerHTML = '';
+    WELCOME_STEPS.forEach((_, i) => {
+      const d = document.createElement('span');
+      d.className = 'welcome-tour-dot' + (i === step ? ' welcome-tour-dot--on' : '');
+      dots.appendChild(d);
+    });
+  };
+
+  const applyStep = () => {
+    const s = WELCOME_STEPS[step];
+    titleEl.textContent = s.title;
+    bodyEl.textContent = s.body;
+    if (stepLabel) stepLabel.textContent = `${step + 1} / ${WELCOME_STEPS.length}`;
+    btnNext.textContent = step >= WELCOME_STEPS.length - 1 ? '¡A jugar!' : 'Siguiente';
+    renderDots();
+  };
+
+  const closeTour = () => {
+    localStorage.setItem(FIRST_VISIT_KEY, '1');
+    overlay.style.display = 'none';
+    playSound('soundClick');
+  };
+
+  btnNext.onclick = () => {
+    playSound('soundClick');
+    if (step >= WELCOME_STEPS.length - 1) closeTour();
+    else { step++; applyStep(); }
+  };
+  btnSkip.onclick = () => closeTour();
+  applyStep();
+}
 
 function setupModeSelectors() {
     const modes = ['modeText', 'modeGroup', 'modeDiscord'];
@@ -174,7 +281,22 @@ function setupEventListeners() {
   };
   
   const btnExit = qs('btnExit'); if(btnExit) btnExit.onclick = () => { showModal("¿Salir?", "Volverás al menú principal.", () => location.reload()); };
-  const btnBackLobby = qs('btnBackToLobby'); if(btnBackLobby) btnBackLobby.onclick = () => { qs('ejectionOverlay').style.display = 'none'; if(currentRoom) updateGameView(currentRoom); };
+  const btnBackLobby = qs('btnBackToLobby'); if(btnBackLobby) btnBackLobby.onclick = () => {
+    const ov = qs('ejectionOverlay');
+    if (ov) ov.classList.remove('result-overlay--show');
+    clearConfetti();
+    qs('ejectionOverlay').style.display = 'none';
+    if(currentRoom) updateGameView(currentRoom);
+  };
+
+  const btnLobbyReady = qs('btnLobbyReady');
+  if (btnLobbyReady) {
+    btnLobbyReady.onclick = () => {
+      playSound('soundClick');
+      haptic(14);
+      socket.emit('toggleLobbyReady');
+    };
+  }
   const btnReady = qs('btnReady'); if(btnReady) btnReady.onclick = () => { socket.emit('skipIntro'); qs('btnReady').style.display='none'; };
 
   const copyBtn = qs('btnCopyCode');
@@ -190,16 +312,16 @@ function setupEventListeners() {
   }
 
   const btnSkip = qs('btnSkipVote');
-  if(btnSkip) btnSkip.onclick = () => { if(!currentRoom || currentPhase !== 'vote') return; socket.emit('submitVote', { targetId: 'skip' }); };
+  if(btnSkip) btnSkip.onclick = () => { if(!currentRoom || currentPhase !== 'vote') return; haptic(12); socket.emit('submitVote', { targetId: 'skip' }); };
   
   const btnEnd = qs('btnEndTurn');
-  if(btnEnd) btnEnd.onclick = () => { if(currentRoom && currentPhase === 'turn') socket.emit('endTurnEarly'); };
+  if(btnEnd) btnEnd.onclick = () => { if(currentRoom && currentPhase === 'turn') { haptic(16); socket.emit('endTurnEarly'); } };
   
   const btnDiscord = qs('btnDiscord');
   if(btnDiscord) btnDiscord.onclick = () => { if(currentRoom?.discordLink) window.open(currentRoom.discordLink, '_blank'); };
   
   const btnSend = qs('btnSendClue');
-  if(btnSend) btnSend.onclick = () => { const input = qs('inputClue'); const text = input.value.trim(); if(!text) return; socket.emit('submitClue', { text: text }); input.value = ''; };
+  if(btnSend) btnSend.onclick = () => { const input = qs('inputClue'); const text = input.value.trim(); if(!text) return; haptic(12); socket.emit('submitClue', { text: text }); input.value = ''; };
 
   const btnCancel = document.getElementById('btnCancelRound');
   if(btnCancel) btnCancel.onclick = () => { showModal("¿Cancelar Ronda?", "Volverán todos al Lobby.", () => socket.emit('cancelRound')); };
@@ -360,6 +482,12 @@ socket.on('roundResult', (data) => {
   if(!isPremium && AdMob) { AdMob.showInterstitial().catch(()=>{}); AdMob.prepareInterstitial({ adId: ADMOB_IDS.intersticial }); }
   
   const detailsBox = qs('resultDetails');
+  const overlay = qs('ejectionOverlay');
+
+  if (overlay) {
+    overlay.classList.remove('result-overlay--show');
+    void overlay.offsetWidth;
+  }
 
   if (data.result === 'tie') { 
       playSound('soundLose'); 
@@ -379,6 +507,10 @@ socket.on('roundResult', (data) => {
       const iWon = (data.result === 'crew' && myRole === 'TRIPULANTE') || (data.result === 'impostor' && myRole === 'IMPOSTOR');
       if(iWon) { playSound('soundWin'); t.innerText = "¡VICTORIA!"; t.style.color = "#4ade80"; i.innerHTML = IMG_ICONS.win; } 
       else { playSound('soundLose'); t.innerText = "DERROTA"; t.style.color = "#ef4444"; i.innerHTML = IMG_ICONS.lose; } 
+      if (data.result === 'crew' && myRole === 'TRIPULANTE' && iWon) {
+        spawnConfetti();
+        haptic([30, 50, 30, 50, 80]);
+      }
   }
   s.innerText = data.reason;
   
@@ -389,21 +521,40 @@ socket.on('roundResult', (data) => {
       btn.innerText = "VOLVER AL LOBBY";
   }
   
-  qs('ejectionOverlay').style.display = 'flex';
+  if (overlay) overlay.style.display = 'flex';
+  requestAnimationFrame(() => {
+    if (overlay) overlay.classList.add('result-overlay--show');
+  });
+  haptic(20);
 });
 
 function updateGameView(room) {
   if (!room) return;
+  const prevPh = _prevPhaseForFx;
+  const prevTurn = _prevTurnIdForFx;
   currentPhase = room.phase; 
   isHost = (room.hostId === myId) || (room.hostId === socket.id);
 
   if (currentPhase !== 'lobby') { qs('lobbyOverlay').style.display = 'none'; qs('mainContent').style.display = 'block'; }
-  if (currentPhase === 'turn' || currentPhase === 'word') { const overlay = document.getElementById('ejectionOverlay'); if (overlay && overlay.style.display !== 'none') overlay.style.display = 'none'; }
+  if (currentPhase === 'turn' || currentPhase === 'word') {
+    const overlay = document.getElementById('ejectionOverlay');
+    if (overlay && overlay.style.display !== 'none') {
+      overlay.style.display = 'none';
+      overlay.classList.remove('result-overlay--show');
+    }
+  }
 
   const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
   const setDisplay = (id, show) => { const el = document.getElementById(id); if (el) el.style.display = show ? 'block' : 'none'; };
 
   setTxt('timerNumber', room.timerText || '--');
+  const tw = qs('timerDisplayWrap');
+  if (tw) {
+    const rawT = String(room.timerText == null ? '' : room.timerText).trim();
+    const n = parseInt(rawT, 10);
+    const active = (room.phase === 'turn' || room.phase === 'vote') && rawT !== '--' && !Number.isNaN(n) && n <= 10 && n > 0;
+    tw.classList.toggle('timer-sidebar-wrap--warn', !!active);
+  }
   setTxt('currentPlayersCount', room.players.length); 
   setTxt('currentImpostorsCount', room.impostors);
 
@@ -444,9 +595,46 @@ function updateGameView(room) {
 
       setDisplay('viewLobby', true); 
       const st = document.getElementById('statusText'); if(st) st.innerHTML = isHost ? "Inicia cuando estén listos." : `Esperando al Host...`; 
+
+      const lrb = qs('lobbyReadyBar');
+      const btnLR = qs('btnLobbyReady');
+      const lrHint = qs('lobbyReadyHint');
+      const lr = room.lobbyReady || [];
+      const connectedPlayers = (room.players || []).filter((p) => !p.disconnected);
+      const total = connectedPlayers.length;
+      const readyCount = lr.filter((id) => connectedPlayers.some((p) => p.id === id)).length;
+      if (btnLR && lrHint) {
+        if (lr.includes(myId)) {
+          btnLR.textContent = 'Quitar listo';
+          btnLR.classList.add('btn-primary');
+          btnLR.classList.remove('btn-secondary');
+        } else {
+          btnLR.textContent = 'Marcar listo';
+          btnLR.classList.remove('btn-primary');
+          btnLR.classList.add('btn-secondary');
+        }
+        if (isHost) {
+          lrHint.textContent = total < 3
+            ? `Listos: ${readyCount}/${total}. Se necesitan al menos 3 jugadores para iniciar.`
+            : `Listos: ${readyCount}/${total}. Cuando quieras, pulsa Iniciar partida.`;
+        } else {
+          lrHint.textContent = lr.includes(myId)
+            ? 'El host ve que estás listo. Puedes quitarlo si aún no estás preparado.'
+            : 'Marca listo cuando conozcas las reglas y estés preparado para jugar.';
+        }
+      }
   }
   else if (currentPhase === 'word') { 
       setDisplay('viewWord', true); 
+      if (prevPh === 'lobby') {
+        const cc = qs('cardContainer');
+        if (cc) {
+          cc.classList.remove('secret-card-container--land');
+          void cc.offsetWidth;
+          cc.classList.add('secret-card-container--land');
+          setTimeout(() => cc.classList.remove('secret-card-container--land'), 820);
+        }
+      }
       updateWordCard(); 
       if(room.introReady && room.introReady.includes(myId)) {
           qs('btnReady').style.display = 'none'; 
@@ -459,6 +647,8 @@ function updateGameView(room) {
       setDisplay('viewTurn', true); 
       const t = room.players.find(p => p.id === room.currentTurnId); 
       setTxt('currentTurnPlayer', t ? t.name : '...'); 
+      const tsCard = qs('turnSpeakerCard');
+      if (tsCard) tsCard.classList.toggle('turn-speaker-card--active', !!(t && room.currentTurnId));
       
       const cluesContainer = qs('cluesHistoryContainer');
       if(cluesContainer) cluesContainer.style.display = isTextMode ? 'block' : 'none'; 
@@ -482,30 +672,47 @@ function updateGameView(room) {
       setTxt('statusText', "Votación en curso."); 
   }
 
+  const tsCardClear = qs('turnSpeakerCard');
+  if (tsCardClear && currentPhase !== 'turn') tsCardClear.classList.remove('turn-speaker-card--active');
+
+  const lobbyReadyBarEl = qs('lobbyReadyBar');
+  if (lobbyReadyBarEl) lobbyReadyBarEl.style.display = currentPhase === 'lobby' ? 'flex' : 'none';
+
   const list = document.getElementById('playersList');
   if (list) {
       list.innerHTML = ''; 
+      const inLobby = room.phase === 'lobby';
+      const lobbyReadyIds = room.lobbyReady || [];
       (room.players || []).forEach(p => {
         try {
             const pName = p.name ? p.name : 'Agente'; 
             const pColor = p.color ? p.color : '#64748b';
-            const initial = pName.charAt(0).toUpperCase();
-            const row = document.createElement('div'); row.className = 'player-row';
-            
-            if(p.isDead) row.style.opacity = '0.5';
-            if(p.disconnected) row.style.border = '1px dashed #ef4444'; 
-            else if(room.currentTurnId === p.id) row.style.border = '1px solid #3b82f6';
+            const initials = initialsFromName(pName);
+            const row = document.createElement('div');
+            let cls = 'player-row';
+            if (p.id === myId) cls += ' player-row--me';
+            if (p.id === room.hostId) cls += ' player-row--host';
+            if (room.phase === 'turn' && room.currentTurnId === p.id) cls += ' player-row--speaking';
+            if (inLobby && lobbyReadyIds.includes(p.id)) cls += ' player-row--ready';
+            if (p.disconnected) cls += ' player-row--disconnected';
+            row.className = cls;
+            if (p.isDead) row.style.opacity = '0.5';
 
-            const badge = p.id === room.hostId ? '<span style="font-size:0.6rem;background:#ffffff20;padding:2px 6px;border-radius:4px;margin-left:auto;">HOST</span>' : '';
             const discIcon = p.disconnected ? '🔌' : '';
             const deadIcon = p.isDead ? '💀' : '';
-            
+            let badges = '';
+            if (p.id === room.hostId) badges += '<span class="player-badge-host">Host</span>';
+            if (inLobby) {
+              badges += lobbyReadyIds.includes(p.id)
+                ? '<span class="player-badge-ready">Listo</span>'
+                : '<span class="player-badge-wait">Espera</span>';
+            }
             let kickBtn = '';
             if(isHost && currentPhase === 'lobby' && p.id !== myId) {
-                kickBtn = `<div style="display:flex; align-items:center; justify-content:center; width:30px;"><button class="btn-kick" onclick="socket.emit('kickPlayer', '${p.id}')">✖</button></div>`;
+                kickBtn = `<button class="btn-kick" onclick="socket.emit('kickPlayer', '${p.id}')">✖</button>`;
             }
 
-            row.innerHTML = `<div style="display:flex;align-items:center;"><div style="width:28px;height:28px;background:${pColor};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#000;font-size:0.8rem;">${initial}</div><div style="font-weight:600;font-size:0.9rem;margin-left:10px; color:#fff;">${pName} ${discIcon} ${deadIcon}</div></div><div style="display:flex;align-items:center;gap:5px;">${badge}${kickBtn}</div>`;
+            row.innerHTML = `<div class="player-row-main"><div class="player-avatar" style="background:${pColor}">${initials}</div><div class="player-row-name">${escapeHtml(pName)} ${discIcon}${deadIcon}</div></div><div class="player-row-meta">${badges}${kickBtn}</div>`;
             list.appendChild(row);
         } catch (err) {}
       });
@@ -528,6 +735,17 @@ function updateGameView(room) {
       else if(currentPhase === 'vote' && v === 'viewVote') el.style.display = 'block';
       else el.style.display = 'none';
   });
+
+  if (prevPh === 'turn' && room.phase === 'vote') {
+    haptic([16, 36, 20]);
+    playSound('soundFlip');
+  } else if (prevPh === 'turn' && room.phase === 'turn' && prevTurn && room.currentTurnId && prevTurn !== room.currentTurnId) {
+    haptic(10);
+    playSoftTurnCue();
+  }
+
+  _prevPhaseForFx = room.phase;
+  _prevTurnIdForFx = room.currentTurnId;
 }
 
 function resetLocalGameData() {
@@ -537,12 +755,20 @@ function resetLocalGameData() {
         card.classList.remove('flipped');
         card.classList.remove('impostor-card');
     }
+    const th = qs('cardTensionHint');
+    if (th) th.textContent = '';
 }
 
 function updateWordCard() { 
     const rt = qs('roleTitle'); if(rt) rt.innerText = myRole || '...'; 
     const sw = qs('secretWordDisplay'); if(sw) sw.innerText = myWord || '...'; 
     const wh = qs('wordHint'); 
+    const tension = qs('cardTensionHint');
+    if (tension) {
+      if (myRole === 'IMPOSTOR') tension.textContent = 'Nadie debe notar que improvisas. Actúa con calma.';
+      else if (myRole === 'TRIPULANTE') tension.textContent = 'La palabra es sagrada: no la digas ni en broma.';
+      else tension.textContent = '';
+    }
     
     if(myRole === 'IMPOSTOR') {
         let partnersText = '';
@@ -592,6 +818,7 @@ function renderVoteGrid(room) {
         if(room.votes && room.votes[myId] === p.id) btn.style.border = '2px solid #ef4444'; 
         btn.innerHTML = `<div style="font-weight:bold;">${p.name}</div>`; 
         btn.onclick = () => { 
+            haptic(18);
             socket.emit('submitVote', { targetId: p.id }); 
             Array.from(grid.children).forEach(c => c.style.border = '1px solid #334155');
             btn.style.border = '2px solid #ef4444';

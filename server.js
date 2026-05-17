@@ -108,7 +108,7 @@ function serializeRoom(room) {
     })),
     currentTurnId: room.currentTurnId, timerText: room.timerText, remaining: room.remaining,
     votes: room.votes, impostors: room.impostors, discordLink: room.discordLink,
-    clues: room.clues || [], introReady: room.introReady || [], impostorNames: room.impostorNames || [],
+    clues: room.clues || [], introReady: room.introReady || [], lobbyReady: room.lobbyReady || [], impostorNames: room.impostorNames || [],
     votesPending
   };
 }
@@ -153,7 +153,7 @@ io.on('connection', (socket) => {
       config: { turnTime: 30000, voteTime: 120000 },
       players: [{ id: socket.id, userId: userId, name: data.name || 'Host', color: assignColor({players:[]}), isDead: false, disconnected: false }],
       phase: 'lobby', roles: {}, votes: {}, spoken: {}, discordLink, discordChannelId, timerText: '--',
-      clues: [], deletionTimer: null, introReady: [], impostorNames: [], lastSecretWord: null
+      clues: [], deletionTimer: null, introReady: [], lobbyReady: [], impostorNames: [], lastSecretWord: null
     };
     
     socketRoom[socket.id] = code; socket.join(code);
@@ -194,6 +194,8 @@ io.on('connection', (socket) => {
         }
         const irIdx = room.introReady ? room.introReady.indexOf(oldSocketId) : -1;
         if (irIdx > -1) room.introReady[irIdx] = socket.id;
+        const lrIdx = room.lobbyReady ? room.lobbyReady.indexOf(oldSocketId) : -1;
+        if (lrIdx > -1) room.lobbyReady[lrIdx] = socket.id;
 
         let myRoleData = null;
         if (room.phase !== 'lobby' && room.roles[socket.id]) {
@@ -229,6 +231,7 @@ io.on('connection', (socket) => {
       if(pIndex > -1) {
           const player = room.players[pIndex];
           room.players.splice(pIndex, 1);
+          if (room.lobbyReady && room.lobbyReady.length) room.lobbyReady = room.lobbyReady.filter((id) => id !== targetId);
           io.to(targetId).emit('kicked');
           const targetSocket = io.sockets.sockets.get(targetId);
           if(targetSocket) { targetSocket.leave(room.code); delete socketRoom[targetId]; }
@@ -251,7 +254,7 @@ io.on('connection', (socket) => {
     if (room.players.length < 3) return; 
     
     clearRoomTimer(room);
-    room.players.forEach(p => p.isDead = false); room.votes = {}; room.spoken = {}; room.clues = []; room.introReady = []; room.impostorNames = []; room.roles = {};
+    room.players.forEach(p => p.isDead = false); room.votes = {}; room.spoken = {}; room.clues = []; room.introReady = []; room.lobbyReady = []; room.impostorNames = []; room.roles = {};
 
     const shuffled = shuffle([...room.players]); room.players = shuffled;
     const activeCount = room.players.length;
@@ -284,6 +287,16 @@ io.on('connection', (socket) => {
     });
     emitRoomState(room);
     startTimer(room, 15, (r) => { r.phase = 'turn'; r.turnIndex = -1; nextTurn(r); });
+  });
+
+  socket.on('toggleLobbyReady', () => {
+    const room = getRoom(socket.id);
+    if (!room || room.phase !== 'lobby') return;
+    if (!room.lobbyReady) room.lobbyReady = [];
+    const idx = room.lobbyReady.indexOf(socket.id);
+    if (idx === -1) room.lobbyReady.push(socket.id);
+    else room.lobbyReady.splice(idx, 1);
+    emitRoomState(room);
   });
 
   socket.on('skipIntro', () => {
@@ -485,7 +498,7 @@ function finishVoting(room, reason) {
 
 function resetToLobby(room) { 
     clearRoomTimer(room); room.phase = 'lobby'; room.timerText = '--'; room.votes = {}; room.spoken = {}; room.turnIndex = -1; 
-    room.currentTurnId = null; room.clues = []; room.introReady = []; room.impostorNames = []; room.roles = {}; emitRoomState(room); 
+    room.currentTurnId = null; room.clues = []; room.introReady = []; room.lobbyReady = []; room.impostorNames = []; room.roles = {}; emitRoomState(room); 
 }
 
 const PORT = process.env.PORT || 3000;
