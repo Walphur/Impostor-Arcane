@@ -42,7 +42,7 @@ async function createDiscordChannelForRoom(code) {
 
 // DATOS
 const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#f97316', '#a855f7', '#ec4899', '#0ea5e9', '#22d3ee', '#4ade80', '#facc15', '#fb7185', '#8b5cf6', '#14b8a6', '#64748b'];
-const WORD_DB = {
+const WORD_DB_RAW = {
   lugares: ['CINE', 'PLAYA', 'HOSPITAL', 'ESCUELA', 'UNIVERSIDAD', 'AEROPUERTO', 'ESTACIÓN DE TREN', 'METRO', 'RESTAURANTE', 'CAFETERÍA', 'GIMNASIO', 'PARQUE', 'MUSEO', 'GALERÍA DE ARTE', 'SUPERMERCADO', 'MERCADO', 'PLAZA', 'CENTRO COMERCIAL', 'ESTADIO', 'TEATRO', 'ÓPERA', 'OFICINA', 'COWORKING', 'BIBLIOTECA', 'BANCO', 'HOTEL', 'MOTEL', 'DISCOTECA', 'CLUB NOCTURNO', 'GRANJA', 'VIÑEDO', 'PISCINA', 'FÁBRICA', 'ALMACÉN', 'ZOO', 'ACUARIO', 'PLANETARIO', 'IGLESIA', 'TEMPLO', 'MEZQUITA', 'SINAGOGA', 'MONTE', 'COLINA', 'RÍO', 'LAGO', 'CASCADA', 'DESIERTO', 'SUBMARINO', 'NAVE ESPACIAL', 'ESTACIÓN ESPACIAL', 'CUEVA', 'VOLCÁN', 'ISLA', 'ISLA DESIERTA', 'CEMENTERIO', 'LABORATORIO', 'CÁRCEL', 'COMISARÍA', 'CASTILLO', 'FORTALEZA', 'BOSQUE', 'SELVA', 'GARAJE', 'ÁTICO', 'SÓTANO', 'CASINO', 'CRUCERO', 'FERRY', 'SPA', 'BARBERÍA', 'PELUQUERÍA', 'SALÓN DE BELLEZA', 'FARMACIA', 'CLÍNICA', 'PUENTE', 'FARO', 'PUERTO', 'MUELLE', 'AERÓDROMO', 'ESTUDIO DE GRABACIÓN', 'SALA DE JUEGOS', 'SKATEPARK', 'GIMNASIO DE ESCALADA', 'OBSERVATORIO', 'TORRE', 'CAMPING'],
   comidas: ['PIZZA', 'HAMBURGUESA', 'HOT DOG', 'SUSHI', 'RAMEN', 'PASTA', 'LASAÑA', 'RAVIOLI', 'ENSALADA', 'SOPA', 'CREMA', 'TACO', 'BURRITO', 'FAJITA', 'NACHOS', 'QUESADILLA', 'AREPA', 'HELADO', 'SORBETE', 'CHOCOLATE', 'BOMBÓN', 'SÁNDWICH', 'PANINI', 'BAGUETTE', 'CROISSANT', 'ARROZ', 'PAELLA', 'RISOTTO', 'CURRY', 'TARTA', 'PASTEL', 'CHEESECAKE', 'PANQUEQUES', 'WAFFLES', 'HUEVO FRITO', 'REVUELTO', 'OMELET', 'POLLO ASADO', 'POLLO FRITO', 'PAVO', 'PESCADO', 'SALMÓN', 'ATÚN', 'CAMARONES', 'CALAMAR', 'FILETE', 'CHULETA', 'COSTILLAS', 'BARBACOA', 'KEBAB', 'GYROS', 'CROQUETA', 'EMPANADA', 'PALOMITAS', 'PAPAS FRITAS', 'CHIPS', 'TORTILLA DE PATATA', 'TORTILLA', 'CEREAL', 'GALLETAS', 'MANDARINA', 'NARANJA', 'LIMÓN', 'LIMA', 'BANANA', 'PLÁTANO', 'MANZANA', 'PERA', 'UVAS', 'FRESA', 'ARÁNDANOS', 'KIWI', 'MANGO', 'PIÑA', 'SANDÍA', 'MELÓN', 'QUESO', 'YOGUR', 'MANTEQUILLA', 'MERMELADA', 'MIEL', 'NUECES', 'ALMENDRAS', 'CAFÉ', 'TÉ', 'CHOCOLATE CALIENTE', 'ZUMO', 'BATIDO', 'SMOOTHIE', 'REFRESCO', 'CERVEZA', 'VINO', 'DONUT', 'MAGDALENA', 'MUFFIN', 'BROWNIE', 'ESTOFADO', 'LENTEJAS', 'CHILI', 'FIDEOS', 'ÑOQUIS', 'COUSCOUS', 'HUMMUS', 'SALSA', 'MOUSSE'],
   objetos: ['CELULAR', 'SMARTPHONE', 'TABLET', 'LÁPIZ', 'BOLÍGRAFO', 'LIBRO', 'REVISTA', 'SILLA', 'SOFÁ', 'MESA', 'ESCRITORIO', 'RELOJ', 'DESPERTADOR', 'AURICULARES', 'ALTAVOZ', 'LÁMPARA', 'VELA', 'TECLADO', 'MOUSE', 'RATÓN', 'CONTROL REMOTO', 'MANDO', 'BICICLETA', 'PATINETE', 'MONOPATÍN', 'AUTO', 'COCHE', 'MOTO', 'LAVADORA', 'SECADORA', 'HELADERA', 'NEVERA', 'HORNO', 'MICROONDAS', 'LICUADORA', 'CAFETERA', 'TELEVISOR', 'MICRÓFONO', 'CÁMARA', 'TRÍPODE', 'CUADERNO', 'BLOC', 'MOCHILA', 'MALETA', 'LLAVES', 'BILLETERA', 'CARTERA', 'GAFAS', 'LENTES', 'GAFAS DE SOL', 'PARAGUAS', 'ZAPATILLAS', 'BOTAS', 'ALMOHADA', 'MANTA', 'CEPILLO DE DIENTES', 'SECADOR DE PELO', 'PEINE', 'ESPEJO', 'GUITARRA', 'PIANO', 'TAMBOR', 'PELOTA', 'RAQUETA', 'MARTILLO', 'DESTORNILLADOR', 'TALADRO', 'SIERRA', 'CAJA DE HERRAMIENTAS', 'CINTA MÉTRICA', 'CORDÓN', 'CARGADOR', 'CABLE USB', 'BATERÍA PORTÁTIL'],
@@ -52,6 +52,28 @@ const WORD_DB = {
   tecnologia: ['COMPUTADORA', 'PC', 'PORTÁTIL', 'TABLET', 'SMARTPHONE', 'RELOJ INTELIGENTE', 'DRON', 'CONSOLA', 'MANDO DE CONSOLA', 'IMPRESORA', 'ESCÁNER', 'ROBOT', 'BRAZO ROBÓTICO', 'SERVIDOR', 'RACK', 'SATÉLITE', 'GPS', 'AURICULARES', 'AURICULARES INALÁMBRICOS', 'MICRÓFONO USB', 'WEBCAM', 'CÁMARA DIGITAL', 'CÁMARA DE ACCIÓN', 'PROYECTOR', 'PANTALLA', 'MEMORIA USB', 'DISCO DURO', 'SSD', 'ROUTER', 'MÓDEM', 'SWITCH', 'CABLE ETHERNET', 'FIBRA ÓPTICA', 'INTELIGENCIA ARTIFICIAL', 'CHATBOT', 'REALIDAD VIRTUAL', 'REALIDAD AUMENTADA', 'BLOCKCHAIN', 'CIBERSEGURIDAD', 'FIREWALL', 'VPN', 'NUBE', 'BACKUP', 'DOMÓTICA', 'ASISTENTE DE VOZ'],
   fantasia: ['DRAGÓN', 'HADA', 'HADA MADRINA', 'BRUJO', 'BRUJA', 'ELFO', 'ELFA', 'ENANO', 'ORCO', 'VAMPIRO', 'VAMPIRESA', 'HOMBRE LOBO', 'UNICORNIO', 'PEGASO', 'FÉNIX', 'QUIMERA', 'HIPOGRIFO', 'OGRO', 'TROLL', 'GIGANTE', 'DUENDE', 'GNOMO', 'SIRENA', 'TRITÓN', 'NEREIDA', 'KRAKEN', 'ZOMBIE', 'ESQUELETO VIVIENTE', 'FANTASMA', 'ESPECTRO', 'POLTERGEIST', 'ALIENÍGENA', 'OVNI', 'CIBORG', 'ANDROIDE', 'SUPERHÉROE', 'SUPERVILLANO', 'VILLANO', 'MAGO', 'HECHICERO', 'ARCHIMAGO', 'NIGROMANTE', 'PALADÍN', 'CABALLERO', 'GUERRERO', 'PÍCARO', 'RANGER', 'CLÉRIGO', 'BÁRBARO', 'BARDO', 'GOLEM', 'ELEMENTAL', 'GENIO', 'DJINN', 'MINOTAURO', 'MEDUSA', 'GORGONA', 'ESFINGE', 'MOMIA', 'LICH', 'DEMONIO', 'ÁNGEL', 'ARCÁNGEL']
 };
+
+function dedupeWordDb(db) {
+  const out = {};
+  for (const k of Object.keys(db)) {
+    const seen = new Set();
+    out[k] = (db[k] || []).filter((w) => {
+      if (seen.has(w)) return false;
+      seen.add(w);
+      return true;
+    });
+  }
+  return out;
+}
+const WORD_DB = dedupeWordDb(WORD_DB_RAW);
+
+function pickSecretWord(room, pool) {
+  const list = pool && pool.length ? pool : (WORD_DB.lugares || []);
+  const avoid = room.lastSecretWord;
+  const filtered = avoid ? list.filter((w) => w !== avoid) : list;
+  const pickFrom = filtered.length > 0 ? filtered : list;
+  return pickFrom[Math.floor(Math.random() * pickFrom.length)];
+}
 
 function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
 function generateCode() { let res = ''; const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; for (let i = 0; i < 6; i++) res += chars[Math.floor(Math.random() * chars.length)]; return res; }
@@ -131,7 +153,7 @@ io.on('connection', (socket) => {
       config: { turnTime: 30000, voteTime: 120000 },
       players: [{ id: socket.id, userId: userId, name: data.name || 'Host', color: assignColor({players:[]}), isDead: false, disconnected: false }],
       phase: 'lobby', roles: {}, votes: {}, spoken: {}, discordLink, discordChannelId, timerText: '--',
-      clues: [], deletionTimer: null, introReady: [], impostorNames: [] 
+      clues: [], deletionTimer: null, introReady: [], impostorNames: [], lastSecretWord: null
     };
     
     socketRoom[socket.id] = code; socket.join(code);
@@ -250,8 +272,9 @@ io.on('connection', (socket) => {
     });
 
     const selectedCat = (room.categories.length ? room.categories : ['lugares'])[Math.floor(Math.random() * room.categories.length)];
-    const pool = WORD_DB[selectedCat] || WORD_DB['lugares'];
-    room.secretWord = pool[Math.floor(Math.random() * pool.length)];
+    const pool = WORD_DB[selectedCat] || WORD_DB.lugares;
+    room.secretWord = pickSecretWord(room, pool);
+    room.lastSecretWord = room.secretWord;
     room.secretCategory = selectedCat;
     
     room.phase = 'word'; room.timerText = '15';
