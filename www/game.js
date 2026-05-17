@@ -1,7 +1,7 @@
 const socket = io('https://incognitogame.online', { transports: ['websocket'], reconnection: true, reconnectionAttempts: 50, reconnectionDelay: 500 });
 
 // --- VERSIÓN DEL CLIENTE (Sube esto cada vez que actualices el APK) ---
-const CLIENT_VERSION = 21;
+const CLIENT_VERSION = 22;
 
 function getDeviceId() { let id = localStorage.getItem('deviceUUID'); if (!id) { id = 'user_' + Math.random().toString(36).substr(2, 9) + Date.now(); localStorage.setItem('deviceUUID', id); } return id; }
 const MY_DEVICE_ID = getDeviceId();
@@ -167,7 +167,7 @@ function setupEventListeners() {
   }
 
   const btnSkip = qs('btnSkipVote');
-  if(btnSkip) btnSkip.onclick = () => { if(!currentRoom || currentPhase !== 'vote') return; socket.emit('submitVote', { targetId: 'skip' }); qs('voteSubtitle').innerText = 'Votaste saltar.'; qs('btnSkipVote').style.opacity = '0.5'; };
+  if(btnSkip) btnSkip.onclick = () => { if(!currentRoom || currentPhase !== 'vote') return; socket.emit('submitVote', { targetId: 'skip' }); };
   
   const btnEnd = qs('btnEndTurn');
   if(btnEnd) btnEnd.onclick = () => { if(currentRoom && currentPhase === 'turn') socket.emit('endTurnEarly'); };
@@ -249,8 +249,6 @@ function updateCategoriesSummary() {
     const el = qs('categoriesSummary');
     if(el) el.innerText = CATEGORIES_DATA.filter(c => selectedCategories.has(c.id)).map(c => c.name).join(', '); 
 }
-
-window.adjustValue = function(id, d) { /* Legacy */ };
 
 window.changeLobbySetting = function(key, d) {
     if(!isHost || !currentRoom) return;
@@ -520,6 +518,12 @@ function updateWordCard() {
     }
 }
 
+function votePendingText(room) {
+    const n = room.votesPending;
+    if (room.phase !== 'vote' || n === undefined || n === null) return '';
+    return n === 1 ? 'Falta 1 jugador por votar.' : `Faltan ${n} jugadores por votar.`;
+}
+
 function renderVoteGrid(room) { 
     const grid = qs('votePlayersGrid'); if(!grid) return; grid.innerHTML = ''; 
     const subtitle = qs('voteSubtitle');
@@ -532,7 +536,19 @@ function renderVoteGrid(room) {
         return;
     }
 
-    qs('btnSkipVote').style.display = 'block'; qs('btnSkipVote').style.opacity = '1';
+    const pendingLine = votePendingText(room);
+    const voted = room.votes && Object.prototype.hasOwnProperty.call(room.votes, myId);
+    if (subtitle) {
+        if (voted) {
+            const v = room.votes[myId];
+            const choice = v === 'skip' ? 'Saltar' : (room.players.find(x => x.id === v)?.name || '—');
+            subtitle.innerText = pendingLine ? `Votaste: ${choice}. ${pendingLine}` : `Votaste: ${choice}.`;
+        } else {
+            subtitle.innerText = pendingLine ? `${pendingLine} ¿A quién expulsas?` : '¿Quién miente?';
+        }
+    }
+
+    qs('btnSkipVote').style.display = 'block'; qs('btnSkipVote').style.opacity = voted && room.votes[myId] === 'skip' ? '0.5' : '1';
     
     room.players.filter(p => !p.isDead && p.id !== myId).forEach(p => { 
         const btn = document.createElement('div'); btn.className = 'mini-card'; btn.style.cursor = 'pointer'; 
@@ -540,7 +556,6 @@ function renderVoteGrid(room) {
         btn.innerHTML = `<div style="font-weight:bold;">${p.name}</div>`; 
         btn.onclick = () => { 
             socket.emit('submitVote', { targetId: p.id }); 
-            qs('voteSubtitle').innerText = `Votaste a ${p.name}`; 
             Array.from(grid.children).forEach(c => c.style.border = '1px solid #334155');
             btn.style.border = '2px solid #ef4444';
         }; 

@@ -10,7 +10,7 @@ const httpServer = http.createServer(app);
 const io = new Server(httpServer, { pingTimeout: 60000, pingInterval: 25000 });
 
 // --- CONFIGURACIÓN DE VERSIÓN ---
-const MIN_APP_VERSION = 21; 
+const MIN_APP_VERSION = 22;
 
 const rooms = {};
 const socketRoom = {}; 
@@ -43,20 +43,28 @@ async function createDiscordChannelForRoom(code) {
 // DATOS
 const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#f97316', '#a855f7', '#ec4899', '#0ea5e9', '#22d3ee', '#4ade80', '#facc15', '#fb7185', '#8b5cf6', '#14b8a6', '#64748b'];
 const WORD_DB = {
-  lugares: ['CINE', 'PLAYA', 'HOSPITAL', 'ESCUELA', 'AEROPUERTO', 'RESTAURANTE', 'GIMNASIO', 'PARQUE', 'MUSEO', 'SUPERMERCADO', 'PLAZA', 'ESTADIO', 'TEATRO', 'OFICINA', 'BIBLIOTECA', 'BANCO', 'HOTEL', 'DISCOTECA', 'ESTACIÓN DE TREN', 'GRANJA', 'PISCINA', 'FÁBRICA', 'ZOO', 'IGLESIA', 'MONTE', 'RIO', 'LAGO', 'DESIERTO', 'SUBMARINO', 'NAVE ESPACIAL', 'CUEVA', 'VOLCÁN', 'ISLA DESIERTA', 'CEMENTERIO', 'LABORATORIO', 'CÁRCEL', 'CASTILLO', 'BOSQUE', 'GARAJE', 'ÁTICO', 'SÓTANO', 'CASINO', 'CRUCERO', 'SPA', 'PELUQUERÍA', 'FARMACIA'],
-  comidas: ['PIZZA', 'HAMBURGUESA', 'SUSHI', 'PASTA', 'ENSALADA', 'SOPA', 'EMPANADAS', 'ASADO', 'TACO', 'HELADO', 'CHOCOLATE', 'SÁNDWICH', 'MILANESA', 'ARROZ', 'PAELLA', 'TARTA', 'PANQUEQUES', 'HUEVO FRITO', 'POLLO ASADO', 'BIFE', 'POCHOCLOS', 'LASAÑA', 'CEREAL', 'GALLETITAS', 'TORTILLA', 'GUISO', 'MANDARINA', 'BANANA', 'MANZANA', 'FRUTILLAS', 'QUESO', 'SALAME', 'MATE', 'CAFÉ', 'TE', 'DONA', 'HOT DOG'],
-  objetos: ['CELULAR', 'LÁPIZ', 'LIBRO', 'SILLA', 'MESA', 'RELOJ', 'AURICULARES', 'LÁMPARA', 'TECLADO', 'MOUSE', 'CONTROL REMOTO', 'BICICLETA', 'AUTO', 'LAVARROPAS', 'HELADERA', 'TELEVISOR', 'MICRÓFONO', 'CÁMARA', 'CUADERNO', 'MOCHILA', 'LLAVES', 'BILLETERA', 'ANTEOJOS', 'ZAPATILLA', 'ALMOHADA', 'CEPILLO DE DIENTES', 'GUITARRA', 'PELOTA', 'MARTILLO', 'DESTORNILLADOR', 'ESPEJO', 'PEINE'],
-  animales: ['PERRO', 'GATO', 'LEÓN', 'ELEFANTE', 'TIGRE', 'CABALLO', 'VACA', 'OVEJA', 'POLLO', 'CERDO', 'MONO', 'DELFIN', 'TIBURÓN', 'PINGÜINO', 'ÁGUILA', 'BUHO', 'ZORRO', 'LOBO', 'OSO', 'JIRAFA', 'SERPIENTE', 'COCODRILO', 'TORTUGA', 'CONEJO', 'PATO', 'PALOMA', 'MURCIÉLAGO', 'BALLENA', 'PULPO'],
-  profesiones: ['MÉDICO', 'ABOGADO', 'INGENIERO', 'DOCENTE', 'POLICÍA', 'CHEF', 'MECÁNICO', 'ELECTRICISTA', 'PROGRAMADOR', 'DISEÑADOR', 'ARQUITECTO', 'ENFERMERO', 'PILOTO', 'CAMARERO', 'BOMBERO', 'ACTOR', 'MÚSICO', 'PINTOR', 'ESCRITOR', 'CIENTÍFICO', 'ASTRONAUTA', 'DETECTIVE', 'GRANJERO', 'PESCADOR'],
-  deportes: ['FÚTBOL', 'BÁSQUET', 'TENIS', 'NATACIÓN', 'CICLISMO', 'RUGBY', 'HANDBALL', 'VOLEY', 'PATÍN', 'BOXEO', 'JUDO', 'SKATE', 'SURF', 'GOLF', 'ATLETISMO', 'HOCKEY', 'BEISBOL', 'ESQUÍ'],
-  tecnologia: ['COMPUTADORA', 'TABLET', 'DRON', 'CONSOLA', 'IMPRESORA', 'ROBOT', 'SERVIDOR', 'SATÉLITE', 'AURICULARES BLUETOOTH', 'SMARTWATCH', 'TECLADO GAMER', 'CÁMARA DIGITAL', 'PROYECTOR', 'MEMORIA USB', 'ROUTER WIFI', 'INTELIGENCIA ARTIFICIAL', 'REALIDAD VIRTUAL'],
-  fantasia: ['DRAGÓN', 'HADA', 'BRUJO', 'ELFO', 'VAMPIRO', 'HOMBRE LOBO', 'UNICORNIO', 'FÉNIX', 'OGRO', 'GIGANTE', 'DUENDE', 'SIRENA', 'ZOMBIE', 'FANTASMA', 'ALIENÍGENA', 'SUPERHÉROE', 'VILLANO', 'MAGO', 'HECHICERO']
+  lugares: ['CINE', 'PLAYA', 'HOSPITAL', 'ESCUELA', 'UNIVERSIDAD', 'AEROPUERTO', 'ESTACIÓN DE TREN', 'METRO', 'RESTAURANTE', 'CAFETERÍA', 'GIMNASIO', 'PARQUE', 'MUSEO', 'GALERÍA DE ARTE', 'SUPERMERCADO', 'MERCADO', 'PLAZA', 'CENTRO COMERCIAL', 'ESTADIO', 'TEATRO', 'ÓPERA', 'OFICINA', 'COWORKING', 'BIBLIOTECA', 'BANCO', 'HOTEL', 'MOTEL', 'DISCOTECA', 'CLUB NOCTURNO', 'GRANJA', 'VIÑEDO', 'PISCINA', 'FÁBRICA', 'ALMACÉN', 'ZOO', 'ACUARIO', 'PLANETARIO', 'IGLESIA', 'TEMPLO', 'MEZQUITA', 'SINAGOGA', 'MONTE', 'COLINA', 'RÍO', 'LAGO', 'CASCADA', 'DESIERTO', 'SUBMARINO', 'NAVE ESPACIAL', 'ESTACIÓN ESPACIAL', 'CUEVA', 'VOLCÁN', 'ISLA', 'ISLA DESIERTA', 'CEMENTERIO', 'LABORATORIO', 'CÁRCEL', 'COMISARÍA', 'CASTILLO', 'FORTALEZA', 'BOSQUE', 'SELVA', 'GARAJE', 'ÁTICO', 'SÓTANO', 'CASINO', 'CRUCERO', 'FERRY', 'SPA', 'BARBERÍA', 'PELUQUERÍA', 'SALÓN DE BELLEZA', 'FARMACIA', 'CLÍNICA', 'PUENTE', 'FARO', 'PUERTO', 'MUELLE', 'AERÓDROMO', 'ESTUDIO DE GRABACIÓN', 'SALA DE JUEGOS', 'SKATEPARK', 'GIMNASIO DE ESCALADA', 'OBSERVATORIO', 'TORRE', 'CAMPING'],
+  comidas: ['PIZZA', 'HAMBURGUESA', 'HOT DOG', 'SUSHI', 'RAMEN', 'PASTA', 'LASAÑA', 'RAVIOLI', 'ENSALADA', 'SOPA', 'CREMA', 'TACO', 'BURRITO', 'FAJITA', 'NACHOS', 'QUESADILLA', 'AREPA', 'HELADO', 'SORBETE', 'CHOCOLATE', 'BOMBÓN', 'SÁNDWICH', 'PANINI', 'BAGUETTE', 'CROISSANT', 'ARROZ', 'PAELLA', 'RISOTTO', 'CURRY', 'TARTA', 'PASTEL', 'CHEESECAKE', 'PANQUEQUES', 'WAFFLES', 'HUEVO FRITO', 'REVUELTO', 'OMELET', 'POLLO ASADO', 'POLLO FRITO', 'PAVO', 'PESCADO', 'SALMÓN', 'ATÚN', 'CAMARONES', 'CALAMAR', 'FILETE', 'CHULETA', 'COSTILLAS', 'BARBACOA', 'KEBAB', 'GYROS', 'CROQUETA', 'EMPANADA', 'PALOMITAS', 'PAPAS FRITAS', 'CHIPS', 'TORTILLA DE PATATA', 'TORTILLA', 'CEREAL', 'GALLETAS', 'MANDARINA', 'NARANJA', 'LIMÓN', 'LIMA', 'BANANA', 'PLÁTANO', 'MANZANA', 'PERA', 'UVAS', 'FRESA', 'ARÁNDANOS', 'KIWI', 'MANGO', 'PIÑA', 'SANDÍA', 'MELÓN', 'QUESO', 'YOGUR', 'MANTEQUILLA', 'MERMELADA', 'MIEL', 'NUECES', 'ALMENDRAS', 'CAFÉ', 'TÉ', 'CHOCOLATE CALIENTE', 'ZUMO', 'BATIDO', 'SMOOTHIE', 'REFRESCO', 'CERVEZA', 'VINO', 'DONUT', 'MAGDALENA', 'MUFFIN', 'BROWNIE', 'ESTOFADO', 'LENTEJAS', 'CHILI', 'FIDEOS', 'ÑOQUIS', 'CUSCUS', 'HUMMUS', 'SALSA', 'MOUSSE'],
+  objetos: ['CELULAR', 'SMARTPHONE', 'TABLET', 'LÁPIZ', 'BOLÍGRAFO', 'LIBRO', 'REVISTA', 'SILLA', 'SOFÁ', 'MESA', 'ESCRITORIO', 'RELOJ', 'DESPERTADOR', 'AURICULARES', 'ALTAVOZ', 'LÁMPARA', 'VELA', 'TECLADO', 'MOUSE', 'RATÓN', 'CONTROL REMOTO', 'MANDO', 'BICICLETA', 'PATINETE', 'MONOPATÍN', 'AUTO', 'COCHE', 'MOTO', 'LAVADORA', 'SECADORA', 'HELADERA', 'NEVERA', 'HORNO', 'MICROONDAS', 'LICUADORA', 'CAFETERA', 'TELEVISOR', 'MICRÓFONO', 'CÁMARA', 'TRÍPODE', 'CUADERNO', 'BLOC', 'MOCHILA', 'MALETA', 'LLAVES', 'BILLETERA', 'CARTERA', 'GAFAS', 'LENTES', 'GAFAS DE SOL', 'PARAGUAS', 'ZAPATILLAS', 'BOTAS', 'ALMOHADA', 'MANTA', 'CEPILLO DE DIENTES', 'SECADOR DE PELO', 'PEINE', 'ESPEJO', 'GUITARRA', 'PIANO', 'TAMBOR', 'PELOTA', 'RAQUETA', 'MARTILLO', 'DESTORNILLADOR', 'TALADRO', 'SIERRA', 'CAJA DE HERRAMIENTAS', 'CINTA MÉTRICA', 'CORDÓN', 'CARGADOR', 'CABLE USB', 'BATERÍA PORTÁTIL'],
+  animales: ['PERRO', 'GATO', 'LEÓN', 'LEONA', 'ELEFANTE', 'TIGRE', 'JAGUAR', 'PANTERA', 'CABALLO', 'VACA', 'TORO', 'OVEJA', 'CABRA', 'CERDO', 'POLLO', 'GALLO', 'PAVO', 'PATO', 'GANSO', 'MONO', 'GORILA', 'CHIMPANCÉ', 'DELFIN', 'BALLENA', 'ORCA', 'TIBURÓN', 'RAYA', 'PULPO', 'CALAMAR', 'CANGREJO', 'LANGOSTA', 'PINGÜINO', 'ÁGUILA', 'HALCÓN', 'BÚHO', 'CUERVO', 'LORO', 'CANARIO', 'COLIBRÍ', 'ZORRO', 'LOBO', 'COYOTE', 'OSO', 'OSO POLAR', 'PANDA', 'JIRAFA', 'RINOCERONTE', 'HIPOPÓTAMO', 'CANGURO', 'KOALA', 'SERPIENTE', 'LAGARTO', 'IGUANA', 'CAMALEÓN', 'COCODRILO', 'TORTUGA', 'RANA', 'SALAMANDRA', 'CONEJO', 'HURÓN', 'HÁMSTER', 'COBAYO', 'PALOMA', 'GAVIOTA', 'MURCIÉLAGO', 'CIERVO', 'ALCE', 'NUTRIA', 'CASTOR'],
+  profesiones: ['MÉDICO', 'ENFERMERO', 'CIRUJANO', 'DENTISTA', 'FARMACÉUTICO', 'VETERINARIO', 'ABOGADO', 'JUEZ', 'NOTARIO', 'INGENIERO', 'ARQUITECTO', 'TOPÓGRAFO', 'DOCENTE', 'PROFESOR', 'PSICÓLOGO', 'TERAPEUTA', 'POLICÍA', 'AGENTE', 'BOMBERO', 'PARAMÉDICO', 'SOLDADO', 'PILOTO', 'COPILOTO', 'AZAFATA', 'MARINERO', 'CAPITÁN', 'CHEF', 'COCINERO', 'REPOSTERO', 'CAMARERO', 'SOMMELIER', 'BARISTA', 'MECÁNICO', 'ELECTRICISTA', 'FONTANERO', 'ALBAÑIL', 'PINTOR', 'CARPINTERO', 'SOLDADOR', 'PROGRAMADOR', 'ANALISTA', 'DISEÑADOR', 'DISEÑADOR WEB', 'CIENTÍFICO', 'INVESTIGADOR', 'QUÍMICO', 'BIOLOGISTA', 'ASTRONAUTA', 'ASTRÓNOMO', 'PERIODISTA', 'FOTÓGRAFO', 'CINEASTA', 'ACTOR', 'MÚSICO', 'DJ', 'PRODUCTOR', 'ESCRITOR', 'EDITOR', 'TRADUCTOR', 'CONTADOR', 'AUDITOR', 'ECONOMISTA', 'BANQUERO', 'CORREDOR', 'AGENTE INMOBILIARIO', 'GRANJERO', 'AGRICULTOR', 'JARDINERO', 'LEÑADOR', 'PESCADOR', 'BUZO', 'MINERO', 'MODELADOR 3D', 'DETECTIVE', 'GUARDAESPALDAS', 'BIBLIOTECARIO', 'CURADOR', 'FÍSICO', 'MATEMÁTICO', 'INFLUENCER', 'STREAMER'],
+  deportes: ['FÚTBOL', 'FÚTBOL AMERICANO', 'RUGBY', 'BÁSQUET', 'BÁSQUETBOL', 'TENIS', 'PÁDEL', 'BÁDMINTON', 'VOLEIBOL', 'VOLEY PLAYA', 'TENIS DE MESA', 'SQUASH', 'BÉISBOL', 'CRÍQUET', 'GOLF', 'MINI GOLF', 'HOCKEY', 'HOCKEY SOBRE HIELO', 'LACROSSE', 'CURLING', 'NATACIÓN', 'WATERPOLO', 'NATACIÓN SINCRONIZADA', 'SALTOS', 'CLAVADOS', 'SURF', 'WINDSURF', 'KITESURF', 'ESQUÍ', 'SNOWBOARD', 'PATINAJE', 'PATINAJE ARTÍSTICO', 'PATINAJE SOBRE HIELO', 'CICLISMO', 'MOUNTAIN BIKE', 'BMX', 'ATLETISMO', 'MARATÓN', 'TRIATLÓN', 'HALTEROFILIA', 'CROSSFIT', 'GIMNASIA', 'PARKOUR', 'ESCALADA', 'BOXEO', 'KICKBOXING', 'MMA', 'JUDO', 'KARATE', 'TAEKWONDO', 'ESGRIMA', 'LUCHA LIBRE', 'YOGA', 'PILATES', 'BAILAR', 'ZUMBA', 'AJEDREZ', 'DARDOS', 'BILLAR', 'BOLICHE', 'SKATEBOARD', 'ROLLER', 'PARACAIDISMO', 'PARAPENTE', 'BALONMANO'],
+  tecnologia: ['COMPUTADORA', 'PC', 'PORTÁTIL', 'TABLET', 'SMARTPHONE', 'RELOJ INTELIGENTE', 'DRON', 'CONSOLA', 'MANDO DE CONSOLA', 'IMPRESORA', 'ESCÁNER', 'ROBOT', 'BRAZO ROBÓTICO', 'SERVIDOR', 'RACK', 'SATÉLITE', 'GPS', 'AURICULARES', 'AURICULARES INALÁMBRICOS', 'MICRÓFONO USB', 'WEBCAM', 'CÁMARA DIGITAL', 'CÁMARA DE ACCIÓN', 'PROYECTOR', 'PANTALLA', 'MEMORIA USB', 'DISCO DURO', 'SSD', 'ROUTER', 'MÓDEM', 'SWITCH', 'CABLE ETHERNET', 'FIBRA ÓPTICA', 'INTELIGENCIA ARTIFICIAL', 'CHATBOT', 'REALIDAD VIRTUAL', 'REALIDAD AUMENTADA', 'BLOCKCHAIN', 'CIBERSEGURIDAD', 'FIREWALL', 'VPN', 'NUBE', 'BACKUP', 'DOMÓTICA', 'ASISTENTE DE VOZ'],
+  fantasia: ['DRAGÓN', 'HADA', 'HADA MADRINA', 'BRUJO', 'BRUJA', 'ELFO', 'ELFA', 'ENANO', 'ORCO', 'VAMPIRO', 'VAMPIRESA', 'HOMBRE LOBO', 'UNICORNIO', 'PEGASO', 'FÉNIX', 'QUIMERA', 'HIPOGRIFO', 'OGRO', 'TROLL', 'GIGANTE', 'DUENDE', 'GNOMO', 'SIRENA', 'TRITÓN', 'NEREIDA', 'KRAKEN', 'ZOMBIE', 'ESQUELETO VIVIENTE', 'FANTASMA', 'ESPECTRO', 'POLTERGEIST', 'ALIENÍGENA', 'OVNI', 'CIBORG', 'ANDROIDE', 'SUPERHÉROE', 'SUPERVILLANO', 'VILLANO', 'MAGO', 'HECHICERO', 'ARCHIMAGO', 'NIGROMANTE', 'PALADÍN', 'CABALLERO', 'GUERRERO', 'LADINO', 'RANGER', 'CLÉRIGO', 'BÁRBARO', 'BARDO', 'GOLEM', 'ELEMENTAL', 'GENIO', 'DJINN', 'MINOTAURO', 'MEDUSA', 'GORGONA', 'ESFINGE', 'MOMIA', 'LICH', 'DEMONIO', 'ÁNGEL', 'ARCÁNGEL']
 };
 
 function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
 function generateCode() { let res = ''; const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; for (let i = 0; i < 6; i++) res += chars[Math.floor(Math.random() * chars.length)]; return res; }
-function pickWord(cats) { const pool = []; (cats.length ? cats : ['lugares']).forEach(c => { if (WORD_DB[c]) pool.push(...WORD_DB[c]); }); return pool[Math.floor(Math.random() * pool.length)]; }
 function assignColor(room) { const used = new Set(room.players.map(p => p.color)); return PLAYER_COLORS.find(c => !used.has(c)) || PLAYER_COLORS[0]; }
+function livingPlayerCount(room) { return room.players.filter(p => !p.isDead && !p.disconnected).length; }
+function livingVotesCast(room) {
+  let n = 0;
+  for (const id of Object.keys(room.votes || {})) {
+    const p = room.players.find(x => x.id === id);
+    if (p && !p.isDead && !p.disconnected) n++;
+  }
+  return n;
+}
 function getRoom(id) { const code = socketRoom[id]; return code ? rooms[code] : null; }
 function clearRoomTimer(room) { if (room._timer) { clearInterval(room._timer); room._timer = null; } }
 function startTimer(room, seconds, onEnd) {
@@ -69,15 +77,17 @@ function startTimer(room, seconds, onEnd) {
 }
 
 function serializeRoom(room) {
+  const votesPending = room.phase === 'vote' ? Math.max(0, livingPlayerCount(room) - livingVotesCast(room)) : 0;
   return {
     code: room.code, hostId: room.hostId, phase: room.phase, mode: room.mode,
-    config: room.config, maxPlayers: room.maxPlayers, 
-    players: room.players.map(p => ({ 
-        id: p.id, userId: p.userId, name: p.name, color: p.color, isDead: p.isDead, disconnected: p.disconnected 
+    config: room.config, maxPlayers: room.maxPlayers,
+    players: room.players.map(p => ({
+        id: p.id, userId: p.userId, name: p.name, color: p.color, isDead: p.isDead, disconnected: p.disconnected
     })),
     currentTurnId: room.currentTurnId, timerText: room.timerText, remaining: room.remaining,
     votes: room.votes, impostors: room.impostors, discordLink: room.discordLink,
-    clues: room.clues || [], introReady: room.introReady || [], impostorNames: room.impostorNames || []
+    clues: room.clues || [], introReady: room.introReady || [], impostorNames: room.impostorNames || [],
+    votesPending
   };
 }
 function emitRoomState(room) { if (room) io.to(room.code).emit('roomState', serializeRoom(room)); }
@@ -152,31 +162,24 @@ io.on('connection', (socket) => {
         if (room.hostId === oldSocketId) room.hostId = socket.id;
         if (room.currentTurnId === oldSocketId) room.currentTurnId = socket.id;
 
-        // --- CORRECCIÓN SINTÁCTICA AQUÍ ---
+        if (room.votes && Object.prototype.hasOwnProperty.call(room.votes, oldSocketId)) {
+          room.votes[socket.id] = room.votes[oldSocketId];
+          delete room.votes[oldSocketId];
+        }
+        if (room.spoken && room.spoken[oldSocketId]) {
+          room.spoken[socket.id] = room.spoken[oldSocketId];
+          delete room.spoken[oldSocketId];
+        }
+        const irIdx = room.introReady ? room.introReady.indexOf(oldSocketId) : -1;
+        if (irIdx > -1) room.introReady[irIdx] = socket.id;
+
         let myRoleData = null;
-        if(room.phase !== 'lobby' && room.roles[socket.id]) {
-            const isImp = room.roles[socket.id] === 'impostor';
-            const catName = getCategoryName(room.secretCategory);
-            const partners = room.players.filter(p => room.roles[p.id] === 'impostor' && p.id !== socket.id).map(p => p.name);
-            myRoleData = { 
-                role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', 
-                word: isImp ? '???' : room.secretWord, 
-                hint: isImp ? 'Finge saber.' : 'Escribe una pista.', 
-                category: catName, 
-                partners: isImp ? partners : [] 
-            };
+        if (room.phase !== 'lobby' && room.roles[socket.id]) {
+            myRoleData = buildPrivateRolePayload(room, socket.id);
         } else if (room.phase !== 'lobby' && room.roles[oldSocketId]) {
-             room.roles[socket.id] = room.roles[oldSocketId]; delete room.roles[oldSocketId];
-             const isImp = room.roles[socket.id] === 'impostor';
-             const catName = getCategoryName(room.secretCategory);
-             const partners = room.players.filter(p => room.roles[p.id] === 'impostor' && p.id !== socket.id).map(p => p.name);
-             myRoleData = { 
-                role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', 
-                word: isImp ? '???' : room.secretWord, 
-                hint: isImp ? 'Finge saber.' : 'Escribe una pista.', 
-                category: catName, 
-                partners: isImp ? partners : [] 
-            };
+            room.roles[socket.id] = room.roles[oldSocketId];
+            delete room.roles[oldSocketId];
+            myRoleData = buildPrivateRolePayload(room, socket.id);
         }
 
         socket.join(code);
@@ -237,11 +240,9 @@ io.on('connection', (socket) => {
     const shuffledIndices = shuffle(possibleImpostorIndices);
     const impostorIndices = shuffledIndices.slice(0, actualImpostors);
 
-    const impostorIds = [];
     room.players.forEach((p, index) => { 
         if(impostorIndices.includes(index)) {
             room.roles[p.id] = 'impostor';
-            impostorIds.push(p);
             room.impostorNames.push(p.name);
         } else {
             room.roles[p.id] = 'crew';
@@ -254,20 +255,9 @@ io.on('connection', (socket) => {
     room.secretCategory = selectedCat;
     
     room.phase = 'word'; room.timerText = '15';
-    const catName = getCategoryName(selectedCat);
     
     room.players.forEach(p => {
-      const isImp = room.roles[p.id] === 'impostor';
-      const partners = impostorIds.filter(imp => imp.id !== p.id).map(imp => imp.name);
-      
-      // --- CORRECCIÓN SINTÁCTICA AQUÍ TAMBIÉN ---
-      io.to(p.id).emit('privateRole', { 
-          role: isImp ? 'IMPOSTOR' : 'TRIPULANTE', 
-          word: isImp ? '???' : room.secretWord, 
-          hint: isImp ? 'Finge saber.' : 'Escribe una pista.', 
-          category: catName, 
-          partners: isImp ? partners : [] 
-      });
+      io.to(p.id).emit('privateRole', buildPrivateRolePayload(room, p.id));
     });
     emitRoomState(room);
     startTimer(room, 15, (r) => { r.phase = 'turn'; r.turnIndex = -1; nextTurn(r); });
@@ -299,8 +289,7 @@ io.on('connection', (socket) => {
     if (!room || room.phase !== 'vote') return;
     const voter = room.players.find(p => p.id === socket.id); if (!voter || voter.isDead) return;
     room.votes[socket.id] = data.targetId; emitRoomState(room);
-    const living = room.players.filter(p => !p.isDead && !p.disconnected).length;
-    if (Object.keys(room.votes).length >= living) finishVoting(room, 'Votación finalizada');
+    if (livingVotesCast(room) >= livingPlayerCount(room)) finishVoting(room, 'Votación finalizada');
   });
 
   socket.on('endTurnEarly', () => {
@@ -349,18 +338,71 @@ function getCategoryName(id) {
     return map[id] || 'General';
 }
 
+function buildPrivateRolePayload(room, playerId) {
+    const isImp = room.roles[playerId] === 'impostor';
+    const catName = getCategoryName(room.secretCategory);
+    const partners = room.players.filter(p => room.roles[p.id] === 'impostor' && p.id !== playerId).map(p => p.name);
+    return {
+        role: isImp ? 'IMPOSTOR' : 'TRIPULANTE',
+        word: isImp ? '???' : room.secretWord,
+        hint: isImp ? 'Finge saber.' : 'Escribe una pista.',
+        category: catName,
+        partners: isImp ? partners : []
+    };
+}
+
 function nextTurn(room) {
   clearRoomTimer(room);
-  const living = room.players.map((p, i) => ({p, i})).filter(o => !o.p.isDead && !o.p.disconnected);
+  const living = room.players
+    .map((p, i) => ({ p, i }))
+    .filter(o => !o.p.isDead && !o.p.disconnected);
   if (living.length < 3) return finishVoting(room, 'No quedan suficientes jugadores');
-  let nextIdx = 0;
-  if (room.turnIndex !== -1) {
-    const currentPos = living.findIndex(o => o.i === room.turnIndex);
-    nextIdx = (currentPos + 1) % living.length;
+
+  const firstUnspoken = () => living.find(o => !room.spoken[o.p.id]) || null;
+
+  let chosen = null;
+  if (room.turnIndex === -1 || !room.currentTurnId) {
+    chosen = firstUnspoken();
+  } else {
+    const currentPos = living.findIndex(o => o.p.id === room.currentTurnId);
+    if (currentPos === -1) {
+      chosen = firstUnspoken();
+    } else {
+      for (let step = 1; step <= living.length; step++) {
+        const j = (currentPos + step) % living.length;
+        if (!room.spoken[living[j].p.id]) {
+          chosen = living[j];
+          break;
+        }
+      }
+      if (!chosen) chosen = firstUnspoken();
+    }
   }
-  if(!living[nextIdx]) { finishVoting(room, 'Error de turno'); return; }
-  room.turnIndex = living[nextIdx].i; room.currentTurnId = room.players[room.turnIndex].id;
-  room.phase = 'turn'; emitRoomState(room);
+
+  if (!chosen) {
+    room.phase = 'vote';
+    room.votes = {};
+    emitRoomState(room);
+    startTimer(room, room.config.voteTime / 1000, (r) => finishVoting(r, 'Tiempo agotado'));
+    return;
+  }
+
+  if (room.spoken[chosen.p.id]) {
+    const alt = living.find(o => !room.spoken[o.p.id]);
+    if (!alt) {
+      room.phase = 'vote';
+      room.votes = {};
+      emitRoomState(room);
+      startTimer(room, room.config.voteTime / 1000, (r) => finishVoting(r, 'Tiempo agotado'));
+      return;
+    }
+    chosen = alt;
+  }
+
+  room.turnIndex = chosen.i;
+  room.currentTurnId = chosen.p.id;
+  room.phase = 'turn';
+  emitRoomState(room);
   startTimer(room, room.config.turnTime / 1000, (r) => avanzarDesdeTurno(r));
 }
 
@@ -424,4 +466,4 @@ function resetToLobby(room) {
 }
 
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server 2.6.1 FIX en puerto ${PORT}`));
+httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server 2.6.2 en puerto ${PORT}`));
