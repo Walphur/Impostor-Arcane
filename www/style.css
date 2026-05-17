@@ -39,7 +39,35 @@ body {
     -webkit-user-select: none; 
 }
 
-/* --- CLASE PARA IMÁGENES PNG --- */
+/* --- Iconos de resultado (SVG inline, sin PNG) --- */
+.result-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 112px;
+    height: 112px;
+    margin-bottom: 12px;
+}
+.result-icon-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.35));
+}
+.result-icon-wrap--win .result-icon-svg {
+    filter: drop-shadow(0 0 22px rgba(251, 191, 36, 0.45)) drop-shadow(0 6px 14px rgba(0, 0, 0, 0.3));
+}
+.result-icon-wrap--lose .result-icon-svg {
+    filter: drop-shadow(0 0 18px rgba(239, 68, 68, 0.35)) drop-shadow(0 6px 14px rgba(0, 0, 0, 0.3));
+}
+.result-icon-wrap--tie .result-icon-svg {
+    filter: drop-shadow(0 0 18px rgba(234, 179, 8, 0.35)) drop-shadow(0 6px 14px rgba(0, 0, 0, 0.3));
+}
+.result-icon-wrap--boot .result-icon-svg {
+    filter: drop-shadow(0 0 18px rgba(234, 88, 12, 0.35)) drop-shadow(0 6px 14px rgba(0, 0, 0, 0.3));
+}
+
+/* --- CLASE PARA IMÁGENES PNG (legacy / otros usos) --- */
 .result-img {
     width: 120px;
     height: 120px;
